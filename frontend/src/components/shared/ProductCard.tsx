@@ -33,7 +33,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const hasDiscount = showWholesale && product.price_retail > product.price_wholesale
   const isAvailable = product.is_available && product.stock_quantity > 0
   const inCart = getItem(product.id)
-  const productUrl = `/catalog/${product.category?.slug || 'products'}/${product.slug}`
+  const productUrl = `/catalog/${product.category?.slug || 'all'}/${product.slug}`
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()

@@ -23,7 +23,7 @@ from app.schemas.product import (
 from app.utils.security import get_current_user_optional
 
 
-def _product_to_response(product, category_name: str = "", is_b2b: bool = False) -> dict:
+def _product_to_response(product, category_name: str = "", is_b2b: bool = False, category_slug: str = "") -> dict:
     """Конвертирует Product в словарь для ProductResponse."""
     cat_id = str(product.category_id.ref.id) if hasattr(
         product.category_id, "ref") else str(product.category_id)
@@ -33,7 +33,7 @@ def _product_to_response(product, category_name: str = "", is_b2b: bool = False)
         "slug": product.slug,
         "category_id": cat_id,
         "category_name": category_name,
-        "category": {"id": cat_id, "name": category_name, "slug": ""} if category_name else None,
+        "category": {"id": cat_id, "name": category_name, "slug": category_slug} if category_name else None,
         "description": product.description,
         "country_of_origin": product.origin_country,
         "unit": product.unit.value if hasattr(product.unit, "value") else product.unit,
@@ -169,26 +169,29 @@ async def get_products(
     skip = (page - 1) * limit
     products = await search_query.sort(sort_field).skip(skip).limit(limit).to_list()
 
-    category_names: dict = {}
+    category_info: dict = {}
     for product in products:
         if product.category_id:
             cat_id = str(product.category_id.ref.id) if hasattr(
                 product.category_id, "ref") else str(product.category_id)
-            if cat_id not in category_names:
+            if cat_id not in category_info:
                 try:
                     fetched_cat = await product.category_id.fetch()
                     if fetched_cat:
-                        category_names[cat_id] = fetched_cat.name
+                        category_info[cat_id] = {"name": fetched_cat.name, "slug": fetched_cat.slug or ""}
+                    else:
+                        category_info[cat_id] = {"name": "", "slug": ""}
                 except Exception:
-                    category_names[cat_id] = ""
+                    category_info[cat_id] = {"name": "", "slug": ""}
 
     items = []
     for product in products:
         cat_id_str = str(product.category_id.ref.id) if hasattr(
             product.category_id, "ref") else str(product.category_id)
-        cat_name = category_names.get(cat_id_str, "")
+        cat_data = category_info.get(cat_id_str, {"name": "", "slug": ""})
+        cat_name = cat_data["name"]
 
-        items.append(ProductResponse(**_product_to_response(product, cat_name, is_b2b)))
+        items.append(ProductResponse(**_product_to_response(product, cat_name, is_b2b, category_slug=cat_data["slug"])))
 
     pages = math.ceil(total / limit) if total > 0 else 0
 
@@ -225,12 +228,15 @@ async def get_product_by_slug(
     )
 
     cat_name = ""
+    cat_slug = ""
+    cat = None
     if product.category_id:
         try:
             cat = await product.category_id.fetch()
             if cat:
                 cat_name = cat.name
+                cat_slug = cat.slug or ""
         except Exception:
             pass
 
-    return ProductResponse(**_product_to_response(product, cat_name, is_b2b))
+    return ProductResponse(**_product_to_response(product, cat_name, is_b2b, category_slug=cat_slug))

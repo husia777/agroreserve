@@ -327,16 +327,36 @@ export const ProductPage: React.FC = () => {
             </p>
           )}
 
-          {/* Сертификат */}
+          {/* Сертификаты (UC-23) */}
           {product.certificate_ids?.length > 0 && (
-            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-5">
-              <Award className="w-5 h-5 text-blue-500 flex-shrink-0" />
-              <div className="text-sm">
-                <span className="text-blue-800 font-medium">Сертификат соответствия</span>
-                <span className="text-blue-500 ml-2 text-xs">
-                  Декларация ТР ТС / Сертификат
-                </span>
+            <div className="p-3 bg-blue-50 rounded-lg mb-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Award className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                <span className="text-blue-800 font-medium text-sm">Сертификат соответствия</span>
               </div>
+              {certsData?.certificates?.map((cert) => (
+                <div key={cert._id} className="flex items-center justify-between gap-2 py-1.5 border-t border-blue-100 first:border-t-0">
+                  <div className="text-xs text-blue-700">
+                    {cert.cert_type_label || 'Сертификат'} №{cert.number}
+                    {cert.expiry_date && <span className="text-blue-400 ml-1">до {new Date(cert.expiry_date).toLocaleDateString('ru-RU')}</span>}
+                  </div>
+                  {cert.has_file && cert.file_url && (
+                    <a
+                      href={cert.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download={cert.file_name || 'certificate.pdf'}
+                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      <FileDown className="w-3.5 h-3.5" />
+                      Скачать
+                    </a>
+                  )}
+                </div>
+              ))}
+              {(!certsData?.certificates || certsData.certificates.length === 0) && (
+                <span className="text-blue-500 text-xs">Декларация ТР ТС / Сертификат</span>
+              )}
             </div>
           )}
 

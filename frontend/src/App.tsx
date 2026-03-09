@@ -157,7 +157,7 @@ const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/catalog', element: <GuestCatalogRedirect /> },
       { path: '/catalog/:category', element: <GuestCatalogRedirect /> },
-      { path: '/catalog/:category/:id', element: <GuestCatalogRedirect /> },
+      { path: '/catalog/:category/:id', element: <ProductPage /> },
       { path: '/about', element: <AboutPage /> },
       { path: '/contacts', element: <ContactsPage /> },
       { path: '/schools', element: <SchoolsPage /> },
