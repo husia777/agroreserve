@@ -162,6 +162,13 @@ async def create_stock_receipt(data: dict, created_by: Optional[str] = None) -> 
     )
     await receipt.insert()
 
+    # ── UC-01: Уведомляем подписчиков о поступлении товара ────
+    try:
+        await notify_stock_waitlist(receipt_items)
+    except Exception as e:
+        logger.warning("Ошибка уведомления waitlist", error=str(e))
+
+
     logger.info(
         "Приходной документ создан",
         receipt_number=receipt_number,
@@ -473,3 +480,72 @@ async def get_expiring_batches(days: int = 7) -> list:
     )
 
     return result
+
+
+async def notify_stock_waitlist(receipt_items: list) -> None:
+    """
+    UC-01: При поступлении товара на склад — уведомляем подписчиков из stock_waitlist.
+    Отправляем email и помечаем подписку как уведомлённую.
+    """
+    from app.models.stock_waitlist import StockWaitlist
+    from app.utils.email_service import send_stock_restock_notification
+    from app.utils.telegram_bot import send_admin_notification
+
+    product_ids = []
+    product_map: dict = {}
+
+    for item in receipt_items:
+        pid = str(item.product_id) if hasattr(item, "product_id") else str(item.get("product_id", ""))
+        pname = item.product_name if hasattr(item, "product_name") else item.get("product_name", "")
+        if pid:
+            product_ids.append(pid)
+            product_map[pid] = pname
+
+    if not product_ids:
+        return
+
+    # Находим все неуведомлённые подписки на эти товары
+    waitlist_entries = await StockWaitlist.find(
+        {"product_id": {"$in": product_ids}, "is_notified": False}
+    ).to_list()
+
+    if not waitlist_entries:
+        return
+
+    notified_count = 0
+    for entry in waitlist_entries:
+        product_name = product_map.get(entry.product_id, entry.product_name)
+
+        # Получаем slug товара для ссылки
+        try:
+            from app.models.product import Product
+            from beanie import PydanticObjectId
+            product = await Product.get(PydanticObjectId(entry.product_id))
+            product_slug = product.slug if product else "unknown"
+        except Exception:
+            product_slug = "unknown"
+
+        # Отправляем email
+        ok = await send_stock_restock_notification(
+            to_email=entry.email,
+            product_name=product_name,
+            product_slug=product_slug,
+        )
+
+        if ok:
+            from datetime import datetime, timezone
+            entry.is_notified = True
+            entry.notified_at = datetime.now(timezone.utc)
+            await entry.save()
+            notified_count += 1
+            logger.info(
+                "Подписчик уведомлён о поступлении",
+                email=entry.email,
+                product=product_name,
+            )
+
+    # Telegram уведомление админу о рассылке
+    if notified_count > 0:
+        await send_admin_notification(
+            f"📬 UC-01: Отправлено {notified_count} уведомлений о поступлении товара"
+        )
