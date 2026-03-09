@@ -1,0 +1,411 @@
+// Страница карточки товара
+import React, { useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { ChevronLeft, ChevronRight, ImageOff, Award, Info, Calculator, FileDown, Shield, Bell, CheckCircle, Loader2 } from 'lucide-react'
+import { getProductBySlug, getProductCertificates, subscribeStockNotify } from '@/api/catalog'
+import { useAuthStore } from '@/stores/authStore'
+import { useCartStore } from '@/stores/cartStore'
+import Breadcrumbs from '@/components/ui/Breadcrumbs'
+import { PageSpinner } from '@/components/ui/Spinner'
+import StockBadge from '@/components/shared/StockBadge'
+import QuantityInput from '@/components/shared/QuantityInput'
+import { formatPrice, formatQuantity } from '@/utils/format'
+import { showToast } from '@/components/ui/Toast'
+import { cn } from '@/utils/cn'
+import SEOHead, { productSchema } from '@/components/shared/SEOHead'
+
+export const ProductPage: React.FC = () => {
+  const { category, id: slug } = useParams<{ category: string; id: string }>()
+  const [selectedImage, setSelectedImage] = useState(0)
+  const [quantity, setQuantity] = useState(1)
+  const [calcKg, setCalcKg] = useState(1)
+  const [calcPcs, setCalcPcs] = useState(1)
+  const [calcMode, setCalcMode] = useState<'kg' | 'pcs'>('kg')
+
+  // UC-01: Состояние подписки на уведомление о поступлении
+  const [notifyEmail, setNotifyEmail] = useState('')
+  const [notifySubscribed, setNotifySubscribed] = useState(false)
+  const [showNotifyForm, setShowNotifyForm] = useState(false)
+
+  const { isAuthenticated, isApproved, user } = useAuthStore()
+  const { addItem } = useCartStore()
+
+  const { data: product, isLoading } = useQuery({
+    queryKey: ['product', slug],
+    queryFn: () => getProductBySlug(slug!),
+    enabled: !!slug,
+  })
+
+  // UC-23: Загрузка сертификатов товара
+  const { data: certsData } = useQuery({
+    queryKey: ['product-certs', product?.id],
+    queryFn: () => getProductCertificates(product!.id),
+    enabled: !!product && (product.certificate_ids?.length ?? 0) > 0,
+  })
+
+  // UC-01: Мутация подписки на уведомление о поступлении
+  const notifyMutation = useMutation({
+    mutationFn: (data: { productId: string; email: string }) =>
+      subscribeStockNotify(data.productId, data.email),
+    onSuccess: (data) => {
+      if (data.subscribed) {
+        setNotifySubscribed(true)
+        showToast.success(data.message)
+      } else {
+        showToast.info(data.message)
+      }
+    },
+    onError: () => {
+      showToast.error('Не удалось подписаться. Попробуйте позже.')
+    },
+  })
+
+  if (isLoading) return <PageSpinner />
+  if (!product) return (
+    <div className="max-w-7xl mx-auto px-4 py-16 text-center">
+      <p className="text-gray-500">Товар не найден</p>
+      <Link to="/catalog" className="text-primary-600 hover:underline mt-4 inline-block">
+        Вернуться в каталог
+      </Link>
+    </div>
+  )
+
+  const showWholesale = isAuthenticated && isApproved
+  const displayPrice = showWholesale ? product.price_wholesale : product.price_retail
+  const isAvailable = product.is_available && product.stock_quantity > 0
+  const hasImages = product.images && product.images.length > 0
+
+  // Поштучный калькулятор (UC-24)
+  const avgWeight = product.unit_weight || 0.15 // кг за штуку
+  const calcKgFromPcs = +(calcPcs * avgWeight).toFixed(2)
+  const calcSumKg = +(calcKg * displayPrice).toFixed(2)
+  const calcSumPcs = +(calcKgFromPcs * displayPrice).toFixed(2)
+
+  const handleAddToCart = () => {
+    addItem(product, quantity, showWholesale)
+    showToast.success(`«${product.name}» добавлен в корзину (${formatQuantity(quantity, product.unit)})`)
+  }
+
+  // UC-01: Обработчик подписки на уведомление
+  const handleNotifySubmit = () => {
+    const emailToUse = notifyEmail || (user?.email ?? '')
+    if (!emailToUse) {
+      showToast.error('Укажите email для уведомления')
+      return
+    }
+    notifyMutation.mutate({ productId: product.id, email: emailToUse })
+  }
+
+  // UC-01: Быстрая подписка (авторизованный пользователь с email)
+  const handleQuickNotify = () => {
+    if (user?.email) {
+      notifyMutation.mutate({ productId: product.id, email: user.email })
+    } else {
+      setShowNotifyForm(true)
+    }
+  }
+
+  const breadcrumbs = [
+    { label: 'Каталог', href: '/catalog' },
+    ...(product.category ? [{ label: product.category.name, href: `/catalog/${product.category.slug}` }] : []),
+    { label: product.name },
+  ]
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <SEOHead
+        title={product.name}
+        description={product.description || `${product.name} — купить оптом в Агрорезерв`}
+        canonical={`/catalog/${product.category?.slug || '_'}/${product.slug}`}
+        ogImage={product.images?.[0]}
+        ogType="product"
+        schema={productSchema({
+          name: product.name,
+          slug: product.slug,
+          description: product.description,
+          price: product.price_retail,
+          unit: product.unit,
+          category_slug: product.category?.slug,
+          image: product.images?.[0],
+          stock_qty: product.stock_quantity,
+        })}
+      />
+
+      {/* Хлебные крошки */}
+      <Breadcrumbs items={breadcrumbs} className="mb-6" />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+        {/* Галерея */}
+        <div>
+          {/* Главное фото */}
+          <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-3">
+            {hasImages && !product.images[selectedImage] ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <ImageOff className="w-16 h-16 text-gray-300" />
+              </div>
+            ) : hasImages ? (
+              <img
+                src={product.images[selectedImage]}
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <ImageOff className="w-16 h-16 text-gray-300" />
+              </div>
+            )}
+          </div>
+
+          {/* Миниатюры */}
+          {hasImages && product.images.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {product.images.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedImage(i)}
+                  className={cn(
+                    'w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors',
+                    selectedImage === i ? 'border-primary-600' : 'border-transparent'
+                  )}
+                >
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Информация о товаре */}
+        <div>
+          {/* Название и статус */}
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
+              {product.name}
+            </h1>
+            <StockBadge
+              quantity={product.stock_quantity}
+              minQuantity={product.min_stock_quantity}
+              unit={product.unit}
+              showQuantity
+            />
+          </div>
+
+          {/* Страна */}
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+            <Info className="w-4 h-4" />
+            <span>Страна: <strong className="text-gray-700">{product.country_of_origin}</strong></span>
+          </div>
+
+          {/* Цена */}
+          <div className="bg-gray-50 rounded-xl p-4 mb-5">
+            {showWholesale ? (
+              <div>
+                <div className="text-xs font-semibold text-primary-600 mb-1">Оптовая цена (для вас)</div>
+                <div className="text-3xl font-bold text-gray-900">
+                  {formatPrice(product.price_wholesale)}
+                  <span className="text-base font-normal text-gray-400 ml-2">
+                    / {product.unit === 'kg' ? 'кг' : 'шт'}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-400 line-through mt-1">
+                  Розница: {formatPrice(product.price_retail)}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="text-3xl font-bold text-gray-900">
+                  {formatPrice(product.price_retail)}
+                  <span className="text-base font-normal text-gray-400 ml-2">
+                    / {product.unit === 'kg' ? 'кг' : 'шт'}
+                  </span>
+                </div>
+                {isAuthenticated ? (
+                  <div className="text-sm text-primary-600 mt-1">
+                    Оптовая цена доступна после подтверждения аккаунта
+                  </div>
+                ) : (
+                  <div className="text-sm text-primary-600 mt-1">
+                    <Link to="/login" className="underline hover:text-primary-700">Войдите</Link> для получения оптовой цены
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Описание */}
+          {product.description && (
+            <p className="text-sm text-gray-600 leading-relaxed mb-5">{product.description}</p>
+          )}
+
+          {/* Добавить в корзину / Уведомить о поступлении (UC-01) */}
+          {isAvailable ? (
+            <div className="flex items-center gap-3 mb-6">
+              <QuantityInput
+                value={quantity}
+                onChange={setQuantity}
+                min={product.min_order_qty || 1}
+                max={product.stock_quantity}
+                step={product.order_step || 1}
+                unit={product.unit === 'kg' ? 'кг' : 'шт'}
+                disabled={false}
+                size="md"
+              />
+              <button
+                onClick={handleAddToCart}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-semibold text-base transition-colors bg-primary-600 text-white hover:bg-primary-700 shadow-sm shadow-primary-200"
+              >
+                Добавить в корзину
+              </button>
+            </div>
+          ) : (
+            <div className="mb-6">
+              {/* Кнопка «Нет в наличии» — неактивная */}
+              <button
+                disabled
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-semibold text-base bg-gray-100 text-gray-400 cursor-not-allowed mb-3"
+              >
+                Нет в наличии
+              </button>
+
+              {/* UC-01: Кнопка/форма подписки на уведомление */}
+              {notifySubscribed ? (
+                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  <span className="text-sm text-green-800">
+                    Мы уведомим вас, когда товар поступит в наличие
+                  </span>
+                </div>
+              ) : isAuthenticated && user?.email && !showNotifyForm ? (
+                <button
+                  onClick={handleQuickNotify}
+                  disabled={notifyMutation.isPending}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-semibold text-sm transition-colors bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+                >
+                  {notifyMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Bell className="w-4 h-4" />
+                  )}
+                  Уведомить о поступлении
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">
+                    Оставьте email — мы сообщим, когда товар появится:
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={notifyEmail || (user?.email ?? '')}
+                      onChange={(e) => setNotifyEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+                    />
+                    <button
+                      onClick={handleNotifySubmit}
+                      disabled={notifyMutation.isPending}
+                      className="flex items-center gap-2 py-2.5 px-4 rounded-xl font-semibold text-sm transition-colors bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50"
+                    >
+                      {notifyMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Bell className="w-4 h-4" />
+                      )}
+                      <span className="hidden sm:inline">Уведомить</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Минимальный заказ */}
+          {product.min_order_qty && product.min_order_qty > 1 && (
+            <p className="text-xs text-gray-500 mb-5">
+              Минимальный заказ: {formatQuantity(product.min_order_qty, product.unit)}
+            </p>
+          )}
+
+          {/* Сертификат */}
+          {product.certificate_ids?.length > 0 && (
+            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-5">
+              <Award className="w-5 h-5 text-blue-500 flex-shrink-0" />
+              <div className="text-sm">
+                <span className="text-blue-800 font-medium">Сертификат соответствия</span>
+                <span className="text-blue-500 ml-2 text-xs">
+                  Декларация ТР ТС / Сертификат
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Условия хранения */}
+          {product.storage_conditions && (
+            <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 mb-5">
+              <span className="font-medium text-gray-900">Условия хранения: </span>
+              {product.storage_conditions}
+            </div>
+          )}
+
+          {/* Поштучный калькулятор (UC-24) */}
+          {product.unit === 'piece' && product.unit_weight && (
+            <div className="border border-gray-200 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Calculator className="w-4 h-4 text-primary-600" />
+                <h3 className="text-sm font-semibold text-gray-900">Поштучный калькулятор</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                1 шт ≈ {product.unit_weight * 1000}г ({product.unit_weight} кг)
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* По кг */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Кол-во (кг)</label>
+                  <input
+                    type="number"
+                    value={calcKg}
+                    onChange={(e) => {
+                      setCalcKg(+e.target.value)
+                      setCalcMode('kg')
+                    }}
+                    min="0"
+                    step="0.1"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    ≈ {Math.round(calcKg / (product.unit_weight || 0.15))} шт
+                  </div>
+                  <div className="text-sm font-bold text-gray-900 mt-0.5">{formatPrice(calcSumKg)}</div>
+                </div>
+
+                {/* По штукам */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Кол-во (шт)</label>
+                  <input
+                    type="number"
+                    value={calcPcs}
+                    onChange={(e) => {
+                      setCalcPcs(+e.target.value)
+                      setCalcMode('pcs')
+                    }}
+                    min="0"
+                    step="1"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    ≈ {calcKgFromPcs} кг
+                  </div>
+                  <div className="text-sm font-bold text-gray-900 mt-0.5">{formatPrice(calcSumPcs)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default ProductPage

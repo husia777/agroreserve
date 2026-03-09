@@ -1,0 +1,31 @@
+{
+	"version": 1,
+	"drive_id": "3e7784c8-7bd2-4e52-8f8b-789bec44faba",
+	"name": "agroreserve-backend",
+	"description": "Агрорезерв — FastAPI backend, полная реализация MVP (Phases 0-4)",
+	"tags": [
+		"fastapi",
+		"mongodb",
+		"beanie",
+		"python",
+		"backend",
+		"agroreserve",
+		"b2b",
+		"wholesale"
+	],
+	"created_at": "2026-03-07T16:30:56.483456+00:00",
+	"updated_at": "2026-03-07T17:20:32.336083+00:00",
+	"parent_project": null,
+	"sessions": [
+		{
+			"session_id": "3c32d68d-85ad-4b71-a0ec-f50cb320e707/subagents/0_backend_20260307_161506",
+			"timestamp": "2026-03-07T16:30:56.483456+00:00",
+			"summary": "Создана полная backend инфраструктура для платформы Агрорезерв: 53 файла, 5000+ строк кода. Docker Compose (FastAPI+MongoDB+Redis+Nginx), все Beanie модели, Pydantic схемы, роутеры auth+catalog+admin, security utils, Celery tasks skeleton."
+		},
+		{
+			"session_id": "3c32d68d-85ad-4b71-a0ec-f50cb320e707/subagents/2_4_backend_20260307_170229",
+			"timestamp": "2026-03-07T17:20:32.336083+00:00",
+			"summary": "Завершена полная реализация backend MVP Агрорезерв. Phases 2-4: все роутеры, сервисы, Celery-задачи реализованы. Исправлены Pydantic v2 конфликты date field name в Phase 0 файлах (models/stock.py, models/finance.py, schemas/stock.py, schemas/finance.py, routers/admin/finance.py). Исправлен импорт python_slugify -> slugify в admin/products.py. Все 49 модулей импортируются без ошибок. Добавлен SYNC_1C_API_KEY в .env.example и config.py."
+		}
+	]
+}

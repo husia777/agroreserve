@@ -1,0 +1,74 @@
+"""
+Роутер профиля пользователя (личный кабинет).
+Эндпоинты: /api/v1/profile/
+"""
+from datetime import datetime, timezone
+
+import structlog
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.models.user import User
+from app.schemas.auth import UserResponse, UserUpdateProfile
+from app.utils.security import get_current_user
+from app.routers.auth import _build_user_response
+
+router = APIRouter(prefix="/api/v1/profile", tags=["Профиль"])
+logger = structlog.get_logger(__name__)
+
+
+@router.get(
+    "/",
+    response_model=UserResponse,
+    summary="Получить профиль",
+)
+async def get_profile(current_user: User = Depends(get_current_user)):
+    return _build_user_response(current_user)
+
+
+@router.patch(
+    "/",
+    response_model=UserResponse,
+    summary="Обновить профиль",
+)
+async def update_profile(
+    data: UserUpdateProfile,
+    current_user: User = Depends(get_current_user),
+):
+    if data.email and str(data.email) != str(current_user.email):
+        existing = await User.find_one({"email": str(data.email)})
+        if existing and str(existing.id) != str(current_user.id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Пользователь с таким email уже зарегистрирован",
+            )
+
+    if data.name is not None:
+        current_user.name = data.name
+    if data.email is not None:
+        current_user.email = data.email
+    if data.delivery_address is not None:
+        current_user.delivery_address = data.delivery_address
+
+    if data.organization is not None:
+        from app.models.user import ClientType, OrganizationDetails
+        if current_user.client_type == ClientType.B2B:
+            current_user.organization = OrganizationDetails(
+                name=data.organization.name,
+                inn=data.organization.inn,
+                kpp=data.organization.kpp,
+                legal_address=data.organization.legal_address,
+                bank_name=data.organization.bank_name,
+                bik=data.organization.bik,
+                account=data.organization.account,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Реквизиты организации можно указать только для B2B клиентов",
+            )
+
+    current_user.updated_at = datetime.now(timezone.utc)
+    await current_user.save()
+    logger.info("Профиль обновлён", user_id=str(current_user.id))
+
+    return _build_user_response(current_user)
