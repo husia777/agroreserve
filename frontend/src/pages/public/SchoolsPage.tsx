@@ -361,7 +361,7 @@ export const SchoolsPage: React.FC = () => {
   const canUseConstructor =
     isAuthenticated &&
     user &&
-    (user.client_type === 'ooo' || user.client_type === 'ip' || (user as { school?: boolean }).school)
+    (['b2b', 'ip', 'ooo'].includes(user.client_type) || (user as { school?: boolean }).school)
 
   return (
     <div>
