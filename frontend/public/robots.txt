@@ -4,4 +4,4 @@ Disallow: /admin/
 Disallow: /account/
 Disallow: /api/
 
-Sitemap: https://agrorezerv.ru/sitemap.xml
+Sitemap: https://agroreserve.ru/sitemap.xml
