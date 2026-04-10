@@ -2,6 +2,7 @@
 Celery задачи уведомлений.
 Отложенная отправка уведомлений через Telegram и Email.
 """
+
 import asyncio
 import structlog
 from celery import Task
@@ -36,6 +37,7 @@ def send_notification_task(self: Task, notification_id: str) -> dict:
     Args:
         notification_id: ID уведомления из коллекции notifications
     """
+
     async def _execute():
         from beanie import PydanticObjectId
 
@@ -62,6 +64,7 @@ def send_notification_task(self: Task, notification_id: str) -> dict:
         if notification.channel == NotificationChannel.TELEGRAM:
             if user.telegram_chat_id:
                 from app.utils.telegram_bot import send_message
+
                 text = f"<b>{notification.title}</b>\n\n{notification.message}"
                 success = await send_message(user.telegram_chat_id, text)
             else:
@@ -93,7 +96,7 @@ def send_notification_task(self: Task, notification_id: str) -> dict:
         return {"status": "ok" if success else "failed", "error": error_msg}
 
     try:
-        return _run_async(_execute())
+        return dict(_run_async(_execute()))
     except Exception as e:
         logger.error(
             "Ошибка задачи отправки уведомления",
@@ -115,6 +118,7 @@ def update_certificate_statuses() -> dict:
     Ежедневное обновление статусов сертификатов и уведомление об истекающих.
     Запускается в 06:00 ежедневно.
     """
+
     async def _execute():
         from datetime import date
 
@@ -196,7 +200,7 @@ def update_certificate_statuses() -> dict:
         }
 
     try:
-        return _run_async(_execute())
+        return dict(_run_async(_execute()))
     except Exception as e:
         logger.error("Ошибка задачи обновления статусов сертификатов", error=str(e))
         return {"status": "error", "error": str(e)}
@@ -213,13 +217,14 @@ def check_overdue_debts() -> dict:
 
     Если долг > 0 у клиента со статусом approved — проверяем дату последнего заказа.
     """
+
     async def _execute():
         from app.models.user import ClientType, User, UserStatus
 
         clients_with_debt = await User.find(
             User.client_type == ClientType.B2B,
             User.status == UserStatus.APPROVED,
-            User.current_debt > 0,  # type: ignore
+            User.current_debt > 0,
         ).to_list()
 
         notified = 0
@@ -233,7 +238,7 @@ def check_overdue_debts() -> dict:
                 {"client_id.$id": client.id},
                 Order.payment_status == PaymentStatus.PENDING,
                 Order.status == OrderStatus.DELIVERED,
-                Order.created_at < cutoff,  # type: ignore
+                Order.created_at < cutoff,
             ).count()
 
             if overdue_orders > 0:
@@ -255,7 +260,7 @@ def check_overdue_debts() -> dict:
         return {"status": "ok", "checked": len(clients_with_debt), "overdue": notified}
 
     try:
-        return _run_async(_execute())
+        return dict(_run_async(_execute()))
     except Exception as e:
         logger.error("Ошибка задачи проверки долгов", error=str(e))
         return {"status": "error", "error": str(e)}

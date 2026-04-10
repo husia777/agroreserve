@@ -6,6 +6,7 @@
 - DELETE — отписаться
 - GET — проверить, подписан ли текущий email
 """
+
 from typing import Optional
 
 import structlog
@@ -22,13 +23,16 @@ logger = structlog.get_logger(__name__)
 
 # ── Схемы запроса/ответа ──────────────────────────────────────
 
+
 class NotifySubscribeRequest(BaseModel):
     """Тело запроса подписки на уведомление."""
+
     email: EmailStr
 
 
 class NotifyStatusResponse(BaseModel):
     """Ответ о статусе подписки."""
+
     subscribed: bool
     email: Optional[str] = None
     product_id: str
@@ -36,12 +40,14 @@ class NotifyStatusResponse(BaseModel):
 
 class NotifySubscribeResponse(BaseModel):
     """Ответ после подписки."""
+
     ok: bool
     message: str
     subscribed: bool
 
 
 # ── Эндпоинты ─────────────────────────────────────────────────
+
 
 @router.post(
     "/{product_id}/notify",

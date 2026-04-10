@@ -2,7 +2,8 @@
 Модель истории закупочных цен поставщиков.
 Коллекция: price_logs
 """
-from datetime import datetime, timezone
+
+from datetime import UTC, datetime
 from typing import Optional
 
 from beanie import Document, PydanticObjectId
@@ -37,7 +38,7 @@ class PriceLog(Document):
 
     # ── Время записи ──────────────────────────────────────────
     logged_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Дата и время записи цены",
     )
 

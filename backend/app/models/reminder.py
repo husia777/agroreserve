@@ -2,7 +2,8 @@
 Модель напоминания.
 Коллекция: reminders
 """
-from datetime import datetime, timezone
+
+from datetime import UTC, datetime
 from typing import Optional
 
 from beanie import Document, PydanticObjectId
@@ -41,9 +42,7 @@ class Reminder(Document):
     created_by: PydanticObjectId = Field(..., description="ID пользователя, создавшего напоминание")
 
     # ── Метаданные ────────────────────────────────────────────
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "reminders"

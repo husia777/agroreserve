@@ -9,9 +9,10 @@ UC-146: Бюджетный контроль 44-ФЗ лимит на питани
 
 + Все существующие функции из menu_service.py
 """
+
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
 import uuid
+from typing import Any, Dict, List, Optional
 
 import structlog
 from beanie import PydanticObjectId
@@ -34,6 +35,7 @@ logger = structlog.get_logger(__name__)
 # Существующие функции (без изменений)
 # ══════════════════════════════════════════════════════════════
 
+
 async def calculate_ingredients(menu: Menu) -> Dict[str, Any]:
     """Рассчитывает суммарные ингредиенты для всего меню."""
     ingredient_totals: Dict[str, Dict[str, Any]] = {}
@@ -49,15 +51,11 @@ async def calculate_ingredients(menu: Menu) -> Dict[str, Any]:
                 continue
 
             for ingredient in dish.ingredients:
-                agg_key = str(
-                    ingredient.product_id) if ingredient.product_id else ingredient.name
-                qty_kg = round(ingredient.qty_per_portion_g *
-                               menu_item.portions / 1000.0, 3)
+                agg_key = str(ingredient.product_id) if ingredient.product_id else ingredient.name
+                qty_kg = round(ingredient.qty_per_portion_g * menu_item.portions / 1000.0, 3)
 
                 if agg_key in ingredient_totals:
-                    ingredient_totals[agg_key]["qty_kg"] = round(
-                        ingredient_totals[agg_key]["qty_kg"] + qty_kg, 3
-                    )
+                    ingredient_totals[agg_key]["qty_kg"] = round(ingredient_totals[agg_key]["qty_kg"] + qty_kg, 3)
                 else:
                     ingredient_totals[agg_key] = {
                         "name": ingredient.name,
@@ -113,29 +111,35 @@ async def calculate_kbzhu(menu: Menu) -> List[Dict[str, Any]]:
                 day_portions += menu_item.portions
                 meal_calories += item_calories
 
-                meal_dishes.append({
-                    "dish_name": dish.name,
-                    "portions": menu_item.portions,
-                    "calories_per_portion": dish.calories,
-                    "total_calories": round(item_calories, 1),
-                })
+                meal_dishes.append(
+                    {
+                        "dish_name": dish.name,
+                        "portions": menu_item.portions,
+                        "calories_per_portion": dish.calories,
+                        "total_calories": round(item_calories, 1),
+                    }
+                )
 
-            meals_info.append({
-                "meal_type": meal_type,
-                "meal_label": MEAL_LABELS.get(meal_type, meal_type),
-                "calories": round(meal_calories, 1),
-                "dishes": meal_dishes,
-            })
+            meals_info.append(
+                {
+                    "meal_type": meal_type,
+                    "meal_label": MEAL_LABELS.get(meal_type, meal_type),
+                    "calories": round(meal_calories, 1),
+                    "dishes": meal_dishes,
+                }
+            )
 
-        daily_kbzhu.append({
-            "date": str(day.date),
-            "calories": round(day_calories, 1),
-            "protein": round(day_protein, 1),
-            "fat": round(day_fat, 1),
-            "carbs": round(day_carbs, 1),
-            "portions": day_portions,
-            "meals": meals_info,
-        })
+        daily_kbzhu.append(
+            {
+                "date": str(day.date),
+                "calories": round(day_calories, 1),
+                "protein": round(day_protein, 1),
+                "fat": round(day_fat, 1),
+                "carbs": round(day_carbs, 1),
+                "portions": day_portions,
+                "meals": meals_info,
+            }
+        )
 
     return daily_kbzhu
 
@@ -163,17 +167,22 @@ async def generate_order_from_menu(menu: Menu, user: Any) -> Any:
             skipped.append(ingredient["name"])
             continue
 
-        unit_price = product.get_price_for_client(user.client_type == "b2b")
+        price = product.get_price_for_client(user.client_type == "b2b")
+        qty = ingredient["qty_kg"]
         cart_items.append(
             CartItem(
-                item_id=uuid.uuid4().hex,
+                item_id=str(uuid.uuid4()),
                 product_id=ingredient["product_id"],
                 product_name=product.name,
-                product_slug=product.slug,
-                qty=ingredient["qty_kg"],
+                product_slug=product.slug if hasattr(product, "slug") else ingredient["product_id"],
+                qty=qty,
                 unit="kg",
-                price=unit_price,
-                total=round(ingredient["qty_kg"] * unit_price, 2),
+                price=price,
+                cost_price=product.cost_price if hasattr(product, "cost_price") else 0.0,
+                total=round(qty * price, 2),
+                min_order_qty=0.0,
+                order_step=0.5,
+                stock_qty=product.stock_qty if hasattr(product, "stock_qty") else 0.0,
             )
         )
 
@@ -242,6 +251,7 @@ async def recalculate_menu_totals(menu: Menu) -> Menu:
 # UC-109: Меню-генератор СанПиН compliant (обновлён)
 # ══════════════════════════════════════════════════════════════
 
+
 async def generate_kbzhu_pdf(menu: Menu, age_group: str = "school_7_11") -> Dict[str, Any]:
     """
     Формирует данные для КБЖУ-отчёта с проверкой по СанПиН.
@@ -258,10 +268,8 @@ async def generate_kbzhu_pdf(menu: Menu, age_group: str = "school_7_11") -> Dict
 
     days_count = len(daily_kbzhu)
     if days_count > 0:
-        avg_calories = round(sum(d["calories"]
-                             for d in daily_kbzhu) / days_count, 1)
-        avg_protein = round(sum(d["protein"]
-                            for d in daily_kbzhu) / days_count, 1)
+        avg_calories = round(sum(d["calories"] for d in daily_kbzhu) / days_count, 1)
+        avg_protein = round(sum(d["protein"] for d in daily_kbzhu) / days_count, 1)
         avg_fat = round(sum(d["fat"] for d in daily_kbzhu) / days_count, 1)
         avg_carbs = round(sum(d["carbs"] for d in daily_kbzhu) / days_count, 1)
     else:
@@ -270,8 +278,7 @@ async def generate_kbzhu_pdf(menu: Menu, age_group: str = "school_7_11") -> Dict
     # UC-109: Проверка по СанПиН нормам
     compliance = None
     if norm:
-        compliance = norm.check_compliance(
-            avg_calories, avg_protein, avg_fat, avg_carbs)
+        compliance = norm.check_compliance(avg_calories, avg_protein, avg_fat, avg_carbs)
 
     report_data = {
         "menu_id": str(menu.id),
@@ -312,6 +319,7 @@ async def generate_kbzhu_pdf(menu: Menu, age_group: str = "school_7_11") -> Dict
 # ══════════════════════════════════════════════════════════════
 # UC-136: Еженедельный план питания — авто-генерация
 # ══════════════════════════════════════════════════════════════
+
 
 async def auto_generate_weekly_menu(
     age_group: str,
@@ -355,8 +363,7 @@ async def auto_generate_weekly_menu(
         dishes_by_category[cat].append(dish)
 
     # Определяем приёмы пищи
-    distribution = MEAL_DISTRIBUTION.get(
-        norm.meals_per_day, MEAL_DISTRIBUTION[2])
+    distribution = MEAL_DISTRIBUTION.get(norm.meals_per_day, MEAL_DISTRIBUTION[2])
     meal_types = meals_config or list(distribution.keys())
 
     # Целевые калории по приёмам пищи
@@ -378,7 +385,7 @@ async def auto_generate_weekly_menu(
 
             # Подбираем блюда для приёма пищи
             # Приоритет: СанПиН-совместимые, подходящие по возрасту, не использованные вчера
-            candidates = []
+            candidates: list[Any] = []
             for dish in all_dishes:
                 if dish.id in used_dishes and len(all_dishes) > 10:
                     continue  # Пропускаем если были вчера (и есть выбор)
@@ -398,20 +405,24 @@ async def auto_generate_weekly_menu(
                     selected_dish = dish
 
             if selected_dish:
-                day_items.append({
-                    "dish_id": str(selected_dish.id),
-                    "dish_name": selected_dish.name,
-                    "portions": children_count,
-                    "meal_type": meal_type,
-                })
+                day_items.append(
+                    {
+                        "dish_id": str(selected_dish.id),
+                        "dish_name": selected_dish.name,
+                        "portions": children_count,
+                        "meal_type": meal_type,
+                    }
+                )
 
         # Обновляем использованные
         used_dishes = {item["dish_id"] for item in day_items}
 
-        days.append({
-            "date": current_date.isoformat(),
-            "items": day_items,
-        })
+        days.append(
+            {
+                "date": current_date.isoformat(),
+                "items": day_items,
+            }
+        )
 
     logger.info(
         "Меню автосгенерировано",
@@ -440,6 +451,7 @@ async def auto_generate_weekly_menu(
 # ══════════════════════════════════════════════════════════════
 # UC-141: Расчёт стоимости меню ("100 детей × 7 дней")
 # ══════════════════════════════════════════════════════════════
+
 
 async def calculate_menu_cost(
     menu: Menu,
@@ -481,24 +493,24 @@ async def calculate_menu_cost(
             products_not_found.append(ingredient["name"])
 
         total_cost += cost
-        product_costs.append({
-            "name": ingredient["name"],
-            "qty_kg": qty_kg,
-            "price_per_kg": price,
-            "cost": cost,
-            "product_id": ingredient["product_id"],
-            "in_catalog": product is not None,
-        })
+        product_costs.append(
+            {
+                "name": ingredient["name"],
+                "qty_kg": qty_kg,
+                "price_per_kg": price,
+                "cost": cost,
+                "product_id": ingredient["product_id"],
+                "in_catalog": product is not None,
+            }
+        )
 
     # Сортируем по стоимости (дорогие сверху)
     product_costs.sort(key=lambda x: x["cost"], reverse=True)
 
     days_count = len(menu.days) if menu.days else 1
     cost_per_day = round(total_cost / days_count, 2) if days_count > 0 else 0
-    cost_per_child = round(total_cost / children_count,
-                           2) if children_count > 0 else 0
-    cost_per_child_per_day = round(
-        cost_per_day / children_count, 2) if children_count > 0 else 0
+    cost_per_child = round(total_cost / children_count, 2) if children_count > 0 else 0
+    cost_per_child_per_day = round(cost_per_day / children_count, 2) if children_count > 0 else 0
 
     result = {
         "menu_id": str(menu.id),
@@ -529,6 +541,7 @@ async def calculate_menu_cost(
 # ══════════════════════════════════════════════════════════════
 # UC-145: Ежедневный отчёт повара — фактические расходы
 # ══════════════════════════════════════════════════════════════
+
 
 async def generate_daily_cook_report(
     menu: Menu,
@@ -578,32 +591,30 @@ async def generate_daily_cook_report(
         total_actual_portions += actual_qty
 
         deviation = actual_qty - plan_qty
-        deviation_pct = round((deviation / plan_qty) *
-                              100, 1) if plan_qty > 0 else 0
+        deviation_pct = round((deviation / plan_qty) * 100, 1) if plan_qty > 0 else 0
 
-        meals_report.append({
-            "dish_id": str(dish.id),
-            "dish_name": dish.name,
-            "meal_type": menu_item.meal_type,
-            "meal_label": MEAL_LABELS.get(menu_item.meal_type, menu_item.meal_type),
-            "plan_portions": plan_qty,
-            "actual_portions": actual_qty,
-            "deviation": deviation,
-            "deviation_percent": deviation_pct,
-            "calories_per_portion": dish.calories,
-        })
+        meals_report.append(
+            {
+                "dish_id": str(dish.id),
+                "dish_name": dish.name,
+                "meal_type": menu_item.meal_type,
+                "meal_label": MEAL_LABELS.get(menu_item.meal_type, menu_item.meal_type),
+                "plan_portions": plan_qty,
+                "actual_portions": actual_qty,
+                "deviation": deviation,
+                "deviation_percent": deviation_pct,
+                "calories_per_portion": dish.calories,
+            }
+        )
 
         # Расчёт расхода продуктов
         for ingredient in dish.ingredients:
             name = ingredient.name
             plan_kg = round(ingredient.qty_per_portion_g * plan_qty / 1000, 3)
-            actual_kg = round(ingredient.qty_per_portion_g *
-                              actual_qty / 1000, 3)
+            actual_kg = round(ingredient.qty_per_portion_g * actual_qty / 1000, 3)
 
-            ingredient_plan[name] = round(
-                ingredient_plan.get(name, 0) + plan_kg, 3)
-            ingredient_actual[name] = round(
-                ingredient_actual.get(name, 0) + actual_kg, 3)
+            ingredient_plan[name] = round(ingredient_plan.get(name, 0) + plan_kg, 3)
+            ingredient_actual[name] = round(ingredient_actual.get(name, 0) + actual_kg, 3)
 
     # Сводка по продуктам
     products_report = []
@@ -611,13 +622,15 @@ async def generate_daily_cook_report(
         plan = ingredient_plan[name]
         actual = ingredient_actual.get(name, 0)
         diff = round(actual - plan, 3)
-        products_report.append({
-            "product": name,
-            "plan_kg": plan,
-            "actual_kg": actual,
-            "difference_kg": diff,
-            "status": "ok" if abs(diff) < 0.01 else ("over" if diff > 0 else "under"),
-        })
+        products_report.append(
+            {
+                "product": name,
+                "plan_kg": plan,
+                "actual_kg": actual,
+                "difference_kg": diff,
+                "status": "ok" if abs(diff) < 0.01 else ("over" if diff > 0 else "under"),
+            }
+        )
 
     return {
         "menu_id": str(menu.id),
@@ -636,6 +649,7 @@ async def generate_daily_cook_report(
 # ══════════════════════════════════════════════════════════════
 # UC-146: Бюджетный контроль 44-ФЗ — лимит на питание
 # ══════════════════════════════════════════════════════════════
+
 
 async def check_budget_compliance(
     contract_id: str,
@@ -661,7 +675,7 @@ async def check_budget_compliance(
     if not contract:
         raise ValueError(f"Контракт {contract_id} не найден")
 
-    contract_amount = contract.total_amount or 0
+    contract_amount = contract.amount or 0
 
     # Считаем уже потраченное (заказы по контракту)
     orders = await Order.find({"contract_id": str(contract.id)}).to_list()
@@ -682,16 +696,16 @@ async def check_budget_compliance(
 
     # Лимит на питание на 1 ребёнка/день (СанПиН рекомендация)
     days_in_menu = len(menu.days) if menu.days else 1
-    cost_per_child_day = round(menu_cost / (children_count * days_in_menu),
-                               2) if children_count > 0 and days_in_menu > 0 else 0
+    cost_per_child_day = (
+        round(menu_cost / (children_count * days_in_menu), 2) if children_count > 0 and days_in_menu > 0 else 0
+    )
 
     # Процент исполнения
-    execution_pct = round((spent / contract_amount) * 100,
-                          1) if contract_amount > 0 else 0
+    execution_pct = round((spent / contract_amount) * 100, 1) if contract_amount > 0 else 0
 
     result = {
         "contract_id": str(contract.id),
-        "contract_number": contract.contract_number,
+        "contract_number": contract.number,
         "budget": {
             "contract_amount": contract_amount,
             "spent": round(spent, 2),
@@ -714,20 +728,26 @@ async def check_budget_compliance(
 
     # Алерты
     if remaining_after < 0:
-        result["alerts"].append({
-            "level": "error",
-            "message": f"Меню выходит за бюджет на {abs(remaining_after):,.0f} ₽",
-        })
+        result["alerts"].append(
+            {
+                "level": "error",
+                "message": f"Меню выходит за бюджет на {abs(remaining_after):,.0f} ₽",
+            }
+        )
     elif execution_pct >= 90:
-        result["alerts"].append({
-            "level": "warning",
-            "message": f"Исполнено {execution_pct}% бюджета. Осталось {remaining:,.0f} ₽",
-        })
+        result["alerts"].append(
+            {
+                "level": "warning",
+                "message": f"Исполнено {execution_pct}% бюджета. Осталось {remaining:,.0f} ₽",
+            }
+        )
     elif weeks_remaining <= 2 and weeks_remaining > 0:
-        result["alerts"].append({
-            "level": "warning",
-            "message": f"Бюджета хватит ещё на ~{weeks_remaining} нед.",
-        })
+        result["alerts"].append(
+            {
+                "level": "warning",
+                "message": f"Бюджета хватит ещё на ~{weeks_remaining} нед.",
+            }
+        )
 
     logger.info(
         "Бюджетный контроль",

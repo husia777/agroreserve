@@ -3,6 +3,7 @@
 
 UC-12: Аналитика продаж — выручка, маржа, топ товаров/клиентов, тренды.
 """
+
 from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
@@ -48,14 +49,14 @@ async def get_overview(start: date, end: date) -> dict:
     # Доставленные заказы за период
     delivered_orders = await Order.find(
         Order.status == OrderStatus.DELIVERED,
-        Order.created_at >= start_dt,  # type: ignore
-        Order.created_at <= end_dt,    # type: ignore
+        Order.created_at >= start_dt,
+        Order.created_at <= end_dt,
     ).to_list()
 
     # Все заказы за период (для общей статистики)
     all_orders = await Order.find(
-        Order.created_at >= start_dt,  # type: ignore
-        Order.created_at <= end_dt,    # type: ignore
+        Order.created_at >= start_dt,
+        Order.created_at <= end_dt,
     ).to_list()
 
     revenue = round(sum(o.total for o in delivered_orders), 2)
@@ -74,9 +75,10 @@ async def get_overview(start: date, end: date) -> dict:
 
     # Расходы за период
     from app.models.finance import Expense
+
     expenses = await Expense.find(
-        Expense.date >= start,  # type: ignore
-        Expense.date <= end,    # type: ignore
+        Expense.date >= start,
+        Expense.date <= end,
     ).to_list()
     total_expenses = round(sum(e.amount for e in expenses), 2)
 
@@ -94,13 +96,15 @@ async def get_overview(start: date, end: date) -> dict:
 
     # Новые клиенты за период
     from app.models.user import User
+
     new_clients = await User.find(
-        User.created_at >= start_dt,  # type: ignore
-        User.created_at <= end_dt,    # type: ignore
+        User.created_at >= start_dt,
+        User.created_at <= end_dt,
     ).count()
 
     # Оплаченные заказы
     from app.models.order import PaymentStatus
+
     paid_orders = [o for o in delivered_orders if o.payment_status == PaymentStatus.PAID]
     paid_revenue = round(sum(o.paid_amount for o in all_orders), 2)
 
@@ -148,11 +152,15 @@ async def get_revenue_chart(start: date, end: date, granularity: str = "day") ->
     start_dt = _to_start_dt(start)
     end_dt = _to_end_dt(end)
 
-    orders = await Order.find(
-        Order.status == OrderStatus.DELIVERED,
-        Order.created_at >= start_dt,  # type: ignore
-        Order.created_at <= end_dt,    # type: ignore
-    ).sort(Order.created_at).to_list()
+    orders = (
+        await Order.find(
+            Order.status == OrderStatus.DELIVERED,
+            Order.created_at >= start_dt,
+            Order.created_at <= end_dt,
+        )
+        .sort(Order.created_at)
+        .to_list()
+    )
 
     # Группируем по периоду
     buckets: dict = {}
@@ -187,14 +195,16 @@ async def get_revenue_chart(start: date, end: date, granularity: str = "day") ->
         revenue = round(data["revenue"], 2)
         cogs = round(data["cogs"], 2)
         gross_profit = round(revenue - cogs, 2)
-        result.append({
-            "period": period_key,
-            "revenue": revenue,
-            "cogs": cogs,
-            "gross_profit": gross_profit,
-            "orders_count": data["orders_count"],
-            "margin_pct": round(gross_profit / revenue * 100, 1) if revenue > 0 else 0.0,
-        })
+        result.append(
+            {
+                "period": period_key,
+                "revenue": revenue,
+                "cogs": cogs,
+                "gross_profit": gross_profit,
+                "orders_count": data["orders_count"],
+                "margin_pct": round(gross_profit / revenue * 100, 1) if revenue > 0 else 0.0,
+            }
+        )
 
     return result
 
@@ -216,8 +226,8 @@ async def get_top_products(start: date, end: date, limit: int = 10) -> list:
 
     orders = await Order.find(
         Order.status == OrderStatus.DELIVERED,
-        Order.created_at >= start_dt,  # type: ignore
-        Order.created_at <= end_dt,    # type: ignore
+        Order.created_at >= start_dt,
+        Order.created_at <= end_dt,
     ).to_list()
 
     # Агрегируем по товарам
@@ -249,14 +259,16 @@ async def get_top_products(start: date, end: date, limit: int = 10) -> list:
         revenue = round(data["revenue"], 2)
         cogs = round(data["cogs"], 2)
         gross_profit = round(revenue - cogs, 2)
-        result.append({
-            **data,
-            "revenue": revenue,
-            "qty_sold": round(data["qty_sold"], 2),
-            "cogs": cogs,
-            "gross_profit": gross_profit,
-            "margin_pct": round(gross_profit / revenue * 100, 1) if revenue > 0 else 0.0,
-        })
+        result.append(
+            {
+                **data,
+                "revenue": revenue,
+                "qty_sold": round(data["qty_sold"], 2),
+                "cogs": cogs,
+                "gross_profit": gross_profit,
+                "margin_pct": round(gross_profit / revenue * 100, 1) if revenue > 0 else 0.0,
+            }
+        )
 
     # Сортируем по выручке
     result.sort(key=lambda x: x["revenue"], reverse=True)
@@ -280,8 +292,8 @@ async def get_top_clients(start: date, end: date, limit: int = 10) -> list:
 
     orders = await Order.find(
         Order.status == OrderStatus.DELIVERED,
-        Order.created_at >= start_dt,  # type: ignore
-        Order.created_at <= end_dt,    # type: ignore
+        Order.created_at >= start_dt,
+        Order.created_at <= end_dt,
     ).to_list()
 
     # Агрегируем по клиентам
@@ -305,11 +317,13 @@ async def get_top_clients(start: date, end: date, limit: int = 10) -> list:
     result = []
     for data in clients.values():
         revenue = round(data["revenue"], 2)
-        result.append({
-            **data,
-            "revenue": revenue,
-            "avg_order_value": round(revenue / data["orders_count"], 2) if data["orders_count"] > 0 else 0.0,
-        })
+        result.append(
+            {
+                **data,
+                "revenue": revenue,
+                "avg_order_value": round(revenue / data["orders_count"], 2) if data["orders_count"] > 0 else 0.0,
+            }
+        )
 
     result.sort(key=lambda x: x["revenue"], reverse=True)
     return result[:limit]
@@ -333,8 +347,8 @@ async def get_margin_by_products(start: date, end: date) -> list:
 
     orders = await Order.find(
         Order.status == OrderStatus.DELIVERED,
-        Order.created_at >= start_dt,  # type: ignore
-        Order.created_at <= end_dt,    # type: ignore
+        Order.created_at >= start_dt,
+        Order.created_at <= end_dt,
     ).to_list()
 
     products: dict = {}
@@ -367,18 +381,20 @@ async def get_margin_by_products(start: date, end: date) -> list:
         qty = round(data["qty_sold"], 2)
         margin_per_unit = round(gross_profit / qty, 2) if qty > 0 else 0.0
 
-        result.append({
-            "product_id": data["product_id"],
-            "product_name": data["product_name"],
-            "revenue": revenue,
-            "cogs": cogs,
-            "gross_profit": gross_profit,
-            "margin_pct": round(gross_profit / revenue * 100, 1) if revenue > 0 else 0.0,
-            "margin_per_unit": margin_per_unit,
-            "qty_sold": qty,
-            "avg_price": data["avg_price"],
-            "avg_cost_price": data["avg_cost_price"],
-        })
+        result.append(
+            {
+                "product_id": data["product_id"],
+                "product_name": data["product_name"],
+                "revenue": revenue,
+                "cogs": cogs,
+                "gross_profit": gross_profit,
+                "margin_pct": round(gross_profit / revenue * 100, 1) if revenue > 0 else 0.0,
+                "margin_per_unit": margin_per_unit,
+                "qty_sold": qty,
+                "avg_price": data["avg_price"],
+                "avg_cost_price": data["avg_cost_price"],
+            }
+        )
 
     result.sort(key=lambda x: x["gross_profit"], reverse=True)
     return result
@@ -420,8 +436,8 @@ async def get_trends(months: int = 6) -> list:
 
         orders = await Order.find(
             Order.status == OrderStatus.DELIVERED,
-            Order.created_at >= start_dt,  # type: ignore
-            Order.created_at <= end_dt,    # type: ignore
+            Order.created_at >= start_dt,
+            Order.created_at <= end_dt,
         ).to_list()
 
         revenue = round(sum(o.total for o in orders), 2)
@@ -435,25 +451,28 @@ async def get_trends(months: int = 6) -> list:
 
         # Расходы за месяц
         from app.models.finance import Expense
+
         expenses = await Expense.find(
-            Expense.date >= month_start,  # type: ignore
-            Expense.date <= month_end,    # type: ignore
+            Expense.date >= month_start,
+            Expense.date <= month_end,
         ).to_list()
         total_expenses = round(sum(e.amount for e in expenses), 2)
         tax = round(revenue * 0.06, 2)
         net_profit = round(gross_profit - total_expenses - tax, 2)
 
-        result.append({
-            "month": f"{month_start.year}-{month_start.month:02d}",
-            "month_label": month_start.strftime("%b %Y"),
-            "revenue": revenue,
-            "cogs": cogs,
-            "gross_profit": gross_profit,
-            "gross_margin_pct": round(gross_profit / revenue * 100, 1) if revenue > 0 else 0.0,
-            "net_profit": net_profit,
-            "net_margin_pct": round(net_profit / revenue * 100, 1) if revenue > 0 else 0.0,
-            "orders_count": len(orders),
-        })
+        result.append(
+            {
+                "month": f"{month_start.year}-{month_start.month:02d}",
+                "month_label": month_start.strftime("%b %Y"),
+                "revenue": revenue,
+                "cogs": cogs,
+                "gross_profit": gross_profit,
+                "gross_margin_pct": round(gross_profit / revenue * 100, 1) if revenue > 0 else 0.0,
+                "net_profit": net_profit,
+                "net_margin_pct": round(net_profit / revenue * 100, 1) if revenue > 0 else 0.0,
+                "orders_count": len(orders),
+            }
+        )
 
     return result
 
@@ -471,10 +490,14 @@ async def get_client_analytics(client_id: str) -> dict:
     from beanie import PydanticObjectId
 
     # Все заказы клиента (только доставленные)
-    delivered_orders = await Order.find(
-        {"client_id.$id": PydanticObjectId(client_id)},
-        Order.status == OrderStatus.DELIVERED,
-    ).sort(Order.created_at).to_list()
+    delivered_orders = (
+        await Order.find(
+            {"client_id.$id": PydanticObjectId(client_id)},
+            Order.status == OrderStatus.DELIVERED,
+        )
+        .sort(Order.created_at)
+        .to_list()
+    )
 
     total_orders = len(delivered_orders)
     total_spent = round(sum(o.total for o in delivered_orders), 2)
@@ -514,10 +537,7 @@ async def get_client_analytics(client_id: str) -> dict:
         key = f"{order.created_at.year}-{order.created_at.month:02d}"
         monthly[key] = monthly.get(key, 0.0) + order.total
 
-    monthly_chart = [
-        {"month": k, "spent": round(v, 2)}
-        for k, v in sorted(monthly.items())
-    ]
+    monthly_chart = [{"month": k, "spent": round(v, 2)} for k, v in sorted(monthly.items())]
 
     # Последний заказ
     last_order = delivered_orders[-1] if delivered_orders else None

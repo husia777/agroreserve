@@ -2,6 +2,7 @@
 Роутер управления заказами (администратор).
 Эндпоинты: /api/v1/admin/orders/
 """
+
 import math
 from datetime import date, datetime, timezone
 from typing import List, Optional
@@ -14,10 +15,13 @@ from pydantic import BaseModel, Field
 from app.models.order import Order, OrderStatus
 from app.schemas.order import (
     ActualQtyUpdate,
+    OrderDocumentResponse,
+    OrderItemResponse,
     OrderListItem,
     OrderListResponse,
     OrderResponse,
     OrderStatusUpdate,
+    StatusHistoryResponse,
 )
 from app.utils.security import require_admin
 
@@ -28,65 +32,62 @@ router = APIRouter(prefix="/api/v1/admin/orders", tags=["Админ: Заказ�
 
 def _order_to_response(order: Order) -> OrderResponse:
     """Конвертирует Order в ответ API."""
-    client_id_str = (
-        str(order.client_id.id)
-        if hasattr(order.client_id, "id")
-        else str(order.client_id)
-    )
+    client_id_str = str(order.client_id.id) if hasattr(
+        order.client_id, "id") else str(order.client_id)
 
     return OrderResponse(
-        **{
-            "_id": str(order.id),
-            "order_number": order.order_number,
-            "client_id": client_id_str,
-            "client_name": order.client_name,
-            "client_phone": order.client_phone,
-            "status": order.status.value,
-            "items": [
-                {
-                    "product_id": item.product_id,
-                    "product_name": item.product_name,
-                    "ordered_qty": item.ordered_qty,
-                    "actual_qty": item.actual_qty,
-                    "unit": item.unit,
-                    "price": item.price,
-                    "total": item.total,
-                }
-                for item in order.items
-            ],
-            "subtotal": order.subtotal,
-            "discount": order.discount,
-            "total": order.total,
-            "delivery_date": str(order.delivery_date) if order.delivery_date else None,
-            "delivery_slot": order.delivery_slot,
-            "delivery_address": order.delivery_address,
-            "delivery_priority": order.delivery_priority.value
-            if hasattr(order.delivery_priority, "value")
-            else order.delivery_priority,
-            "payment_method": order.payment_method.value
-            if hasattr(order.payment_method, "value")
-            else order.payment_method,
-            "payment_status": order.payment_status.value
-            if hasattr(order.payment_status, "value")
-            else order.payment_status,
-            "paid_amount": order.paid_amount,
-            "note": order.note,
-            "documents": [
-                {"doc_type": d.doc_type, "url": d.url, "doc_id": d.doc_id}
-                for d in order.documents
-            ],
-            "status_history": [
-                {
-                    "status": h.status.value if hasattr(h.status, "value") else h.status,
-                    "timestamp": h.timestamp.isoformat(),
-                    "by": h.by,
-                    "comment": h.comment,
-                }
-                for h in order.status_history
-            ],
-            "created_at": order.created_at.isoformat(),
-            "updated_at": order.updated_at.isoformat(),
-        }
+        id=str(order.id),
+        order_number=order.order_number,
+        client_id=client_id_str,
+        client_name=order.client_name,
+        client_phone=order.client_phone,
+        status=order.status.value,
+        items=[OrderItemResponse(
+            product_id=item.product_id,
+            product_name=item.product_name,
+            ordered_qty=item.ordered_qty,
+            actual_qty=item.actual_qty,
+            unit=item.unit,
+            price=item.price,
+            total=item.total)
+            for item in order.items
+        ],
+        subtotal=order.subtotal,
+        discount=order.discount,
+        total=order.total,
+        delivery_date=str(
+            order.delivery_date) if order.delivery_date else None,
+        delivery_slot=order.delivery_slot,
+        delivery_address=order.delivery_address,
+        delivery_priority=order.delivery_priority.value
+        if hasattr(order.delivery_priority, "value")
+        else order.delivery_priority,
+        payment_method=order.payment_method.value
+        if hasattr(order.payment_method, "value")
+        else order.payment_method,
+        payment_status=order.payment_status.value
+        if hasattr(order.payment_status, "value")
+        else order.payment_status,
+        paid_amount=order.paid_amount,
+        note=order.note,
+        documents=[
+            OrderDocumentResponse(doc_type=d.doc_type,
+                                  url=d.url, doc_id=d.doc_id)
+            for d in order.documents
+        ],
+        status_history=[
+            StatusHistoryResponse(
+                status=h.status.value if hasattr(
+                    h.status, "value") else h.status,
+                timestamp=h.timestamp.isoformat(),
+                by=h.by,
+                comment=h.comment,
+            )
+            for h in order.status_history
+        ],
+        created_at=order.created_at.isoformat(),
+        updated_at=order.updated_at.isoformat(),
+
     )
 
 
@@ -147,7 +148,6 @@ async def get_all_orders(
     if sort_field_name == "created_at":
         query = query.sort(-Order.created_at if not sort_asc else Order.created_at)
     elif sort_field_name == "delivery_date":
-        # type: ignore
         query = query.sort(-Order.delivery_date if not sort_asc else Order.delivery_date)
     else:
         query = query.sort(-Order.created_at)
@@ -164,9 +164,7 @@ async def get_all_orders(
                 "total": o.total,
                 "delivery_date": str(o.delivery_date) if o.delivery_date else None,
                 "delivery_slot": o.delivery_slot,
-                "payment_status": o.payment_status.value
-                if hasattr(o.payment_status, "value")
-                else o.payment_status,
+                "payment_status": o.payment_status.value if hasattr(o.payment_status, "value") else o.payment_status,
                 "items_count": len(o.items),
                 "created_at": o.created_at.isoformat(),
             }
@@ -283,8 +281,7 @@ async def update_actual_qty(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                "Фактическое количество можно вводить только для заказов "
-                "со статусом: собирается, собран, в пути"
+                "Фактическое количество можно вводить только для заказов " "со статусом: собирается, собран, в пути"
             ),
         )
 
@@ -376,9 +373,10 @@ async def confirm_order_payment(
 
     # Добавляем в историю статусов
     from app.models.order import StatusHistoryEntry
+
     order.status_history.append(
         StatusHistoryEntry(
-            status="payment_confirmed",
+            status=OrderStatus.CONFIRMED,  # payment_confirmed maps to confirmed
             by=str(admin.id),
             comment="Оплата подтверждена администратором",
             timestamp=datetime.now(timezone.utc),
@@ -386,9 +384,10 @@ async def confirm_order_payment(
     )
 
     # Уменьшаем задолженность B2B клиента
-    if order.payment_method in ("bank_transfer", "prepayment"):
+    if order.payment_method in ("bank_transfer", "credit"):
         from app.models.user import User
-        user = await User.get(str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id))
+
+        user = await User.get(order.user_id)
         if user and user.current_debt:
             user.current_debt = max(0, user.current_debt - (order.total or 0))
             await user.save()
@@ -398,6 +397,7 @@ async def confirm_order_payment(
     # Уведомляем клиента
     try:
         from app.services.notification_service import notify_client_status_change
+
         await notify_client_status_change(order, "payment_confirmed")
     except Exception:
         pass  # Не блокируем при ошибке уведомления

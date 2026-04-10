@@ -4,6 +4,7 @@
 Отправка уведомлений через Telegram Bot API.
 Webhook handler для приёма сообщений от пользователей.
 """
+
 from typing import Optional
 
 import structlog
@@ -65,8 +66,7 @@ async def send_message(chat_id: str, text: str, parse_mode: str = "HTML") -> boo
                 return False
 
     except Exception as e:
-        logger.error("Ошибка отправки Telegram сообщения",
-                     chat_id=chat_id, error=str(e))
+        logger.error("Ошибка отправки Telegram сообщения", chat_id=chat_id, error=str(e))
         return False
 
 
@@ -104,9 +104,7 @@ def format_order_message(order) -> str:
         "normal": "🟡",
         "flexible": "🟢",
     }.get(
-        order.delivery_priority.value
-        if hasattr(order.delivery_priority, "value")
-        else str(order.delivery_priority),
+        order.delivery_priority.value if hasattr(order.delivery_priority, "value") else str(order.delivery_priority),
         "🟡",
     )
 
@@ -120,20 +118,20 @@ def format_order_message(order) -> str:
         "cancelled": "❌ Отменён",
     }
     status_str = status_names.get(
-        order.status.value if hasattr(
-            order.status, "value") else str(order.status),
+        order.status.value if hasattr(order.status, "value") else str(order.status),
         str(order.status),
     )
 
     items_text = ""
     for item in order.items[:5]:  # Показываем первые 5 позиций
-        items_text += f"\n  • {item.product_name}: {item.ordered_qty:.1f} {item.unit} × {item.price:,.0f} ₽ = {item.total:,.0f} ₽"
+        items_text += (
+            f"\n  • {item.product_name}: {item.ordered_qty:.1f} {item.unit} × {item.price:,.0f} ₽ = {item.total:,.0f} ₽"
+        )
 
     if len(order.items) > 5:
         items_text += f"\n  ... и ещё {len(order.items) - 5} позиций"
 
-    delivery_date_str = str(
-        order.delivery_date) if order.delivery_date else "не указана"
+    delivery_date_str = str(order.delivery_date) if order.delivery_date else "не указана"
 
     return (
         f"<b>📦 Заказ {order.order_number}</b>\n"
@@ -172,6 +170,7 @@ async def send_notification_to_user(user, title: str, message: str) -> bool:
 
 
 # ── Обработчик Telegram Webhook ───────────────────────────────
+
 
 async def process_webhook_update(update: dict) -> Optional[str]:
     """

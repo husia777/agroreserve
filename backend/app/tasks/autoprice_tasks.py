@@ -3,10 +3,12 @@ Celery задачи автоматической рассылки прайс-л�
 
 UC-17: Еженедельная отправка прайс-листа всем клиентам через Telegram.
 """
+
 import asyncio
 
 import structlog
 
+from app.database import connect_to_mongo
 from app.tasks.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
@@ -58,47 +60,59 @@ def send_pricelist_telegram(self) -> dict:
     • Морковь — 45 ₽/кг
     ...
     """
+
     async def _execute() -> dict:
+        from app.database import connect_to_mongo
 
         await connect_to_mongo()
 
         from datetime import datetime, timezone
-        from app.models.product import Product, Category
-        from app.models.user import User, UserRole
+
         from app.config import settings
+        from app.models.product import Category, Product
+        from app.models.user import User, UserRole
         from app.utils.telegram_bot import send_message
 
         now = datetime.now(timezone.utc)
         date_str = now.strftime("%d.%m.%Y")
 
-        result = {
-            "status": "ok",
-            "date": date_str,
-            "products_count": 0,
-            "clients_sent": 0,
-            "clients_failed": 0,
-        }
+        clients_sent = 0
+        clients_failed = 0
+        products_count = 0
 
         # ── 1. Собираем активные товары ───────────────────────
-        products = await Product.find(
-            Product.is_active == True,  # noqa: E712
-        ).sort(Product.name).to_list()
+        products = (
+            await Product.find(
+                Product.is_active == True,  # noqa: E712
+            )
+            .sort(Product.name)
+            .to_list()
+        )
 
         if not products:
             logger.warning("Нет активных товаров для прайс-листа")
-            return result
+            return {
+                "status": "ok",
+                "date": date_str,
+                "products_count": 0,
+                "clients_sent": 0,
+                "clients_failed": 0,
+            }
 
-        result["products_count"] = len(products)
+        products_count = len(products)
 
         # ── 2. Группируем по категориям ───────────────────────
         # Собираем категории
-        category_ids = list({str(p.category_id.id) if hasattr(
-            p.category_id, "id") else str(p.category_id) for p in products})
+        category_ids = list(
+            {str(p.category_id.id) if hasattr(p.category_id, "id")
+             else str(p.category_id) for p in products}
+        )
         categories: dict = {}
 
         for cat_id in category_ids:
             try:
                 from beanie import PydanticObjectId
+
                 cat = await Category.get(PydanticObjectId(cat_id))
                 if cat:
                     categories[cat_id] = cat.name
@@ -139,11 +153,8 @@ def send_pricelist_telegram(self) -> dict:
         }
 
         for cat_name, cat_products in sorted(grouped.items()):
-            emoji = next(
-                (v for k, v in category_emojis.items()
-                 if k.lower() in cat_name.lower()),
-                "📦"
-            )
+            emoji = next((v for k, v in category_emojis.items()
+                         if k.lower() in cat_name.lower()), "📦")
             lines.append(f"{emoji} <b>{cat_name}</b>")
 
             for product in cat_products:
@@ -159,14 +170,16 @@ def send_pricelist_telegram(self) -> dict:
 
             lines.append("")
 
-        lines.extend([
-            "💬 Для заказа отвечайте на это сообщение",
-            "📱 или звоните: " +
-            (settings.TELEGRAM_ADMIN_CHAT_ID and "+7 (xxx) xxx-xx-xx" or "+7 (xxx) xxx-xx-xx"),
-            "",
-            "🚚 Бесплатная доставка по Тобольску",
-            "📑 Полный пакет документов (ТОРГ-12, счёт, декларации)",
-        ])
+        lines.extend(
+            [
+                "💬 Для заказа отвечайте на это сообщение",
+                "📱 или звоните: " +
+                    (settings.TELEGRAM_ADMIN_CHAT_ID and "+7 (xxx) xxx-xx-xx" or "+7 (xxx) xxx-xx-xx"),
+                "",
+                "🚚 Бесплатная доставка по Тобольску",
+                "📑 Полный пакет документов (ТОРГ-12, счёт, декларации)",
+            ]
+        )
 
         pricelist_text = "\n".join(lines)
 
@@ -190,37 +203,45 @@ def send_pricelist_telegram(self) -> dict:
             try:
                 success = await send_message(client.telegram_chat_id, full_message)
                 if success:
-                    result["clients_sent"] += 1
+                    clients_sent += 1
                     logger.debug(
                         "Прайс-лист отправлен клиенту",
                         client_id=str(client.id),
                         client_name=client.name,
                     )
                 else:
-                    result["clients_failed"] += 1
+                    clients_failed += 1
                     logger.warning(
                         "Не удалось отправить прайс-лист клиенту",
                         client_id=str(client.id),
                     )
             except Exception as e:
-                result["clients_failed"] += 1
+                clients_failed += 1
                 logger.error(
                     "Ошибка отправки прайс-листа клиенту",
                     client_id=str(client.id),
                     error=str(e),
                 )
 
+        result = {
+            "status": "ok",
+            "date": date_str,
+            "products_count": products_count,
+            "clients_sent": clients_sent,
+            "clients_failed": clients_failed,
+        }
+
         logger.info(
             "Рассылка прайс-листа завершена",
-            products_count=result["products_count"],
-            clients_sent=result["clients_sent"],
-            clients_failed=result["clients_failed"],
+            products_count=products_count,
+            clients_sent=clients_sent,
+            clients_failed=clients_failed,
         )
 
         return result
 
     try:
-        return _run_async(_execute())
+        return dict(_run_async(_execute()))
     except Exception as exc:
         logger.error("Ошибка задачи send_pricelist_telegram", error=str(exc))
         raise self.retry(exc=exc)

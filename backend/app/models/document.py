@@ -2,22 +2,24 @@
 Модель сгенерированного документа (счёт, ТОРГ-12, УПД, ярлык).
 Коллекция: documents
 """
-from datetime import datetime, timezone
+
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Optional
 
-from beanie import Document, Indexed
+from beanie import Document
 from pydantic import Field
 
 
 class DocumentType(str, Enum):
     """Типы документов системы."""
-    INVOICE = "invoice"           # Счёт на оплату
-    TORG12 = "torg12"             # ТОРГ-12 (товарная накладная)
-    UPD = "upd"                   # УПД (универсальный передаточный документ)
-    ACT_SVERKI = "act_sverki"     # Акт сверки взаиморасчётов
-    LABEL = "label"               # Ярлык для упаковки
-    CONTRACT = "contract"         # Договор поставки
+
+    INVOICE = "invoice"  # Счёт на оплату
+    TORG12 = "torg12"  # ТОРГ-12 (товарная накладная)
+    UPD = "upd"  # УПД (универсальный передаточный документ)
+    ACT_SVERKI = "act_sverki"  # Акт сверки взаиморасчётов
+    LABEL = "label"  # Ярлык для упаковки
+    CONTRACT = "contract"  # Договор поставки
 
 
 class DocumentRecord(Document):
@@ -49,9 +51,7 @@ class DocumentRecord(Document):
     file_size_bytes: Optional[int] = Field(None, description="Размер файла в байтах")
 
     # ── Метаданные ────────────────────────────────────────────
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     created_by: Optional[str] = Field(None, description="ID пользователя, создавшего документ")
 
     class Settings:

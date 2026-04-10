@@ -4,10 +4,11 @@
 
 UC-22: Печать ярлыков/сертификатов — генерация PDF с ярлыками для наклейки на упаковку.
 """
+
 import io
 import math
-from datetime import date, datetime, timedelta, timezone
-from typing import List, Optional
+from datetime import date, timedelta
+from typing import Optional
 
 import structlog
 from beanie import PydanticObjectId
@@ -15,8 +16,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
-from app.models.product import Product
 from app.models.certificate import Certificate
+from app.models.product import Product
 from app.models.settings import SystemSettings
 from app.utils.security import require_admin
 
@@ -27,8 +28,10 @@ router = APIRouter(prefix="/api/v1/admin/labels", tags=["Админ: Ярлык�
 
 # ── Pydantic схемы ─────────────────────────────────────────────────────────────
 
+
 class LabelItem(BaseModel):
     """Один товар для генерации ярлыка."""
+
     product_id: str = Field(..., description="ID товара")
     packing_date: Optional[str] = Field(None, description="Дата фасовки (YYYY-MM-DD). По умолчанию — сегодня")
     net_weight: Optional[str] = Field(None, description="Масса нетто (если пустая — поле для ручного заполнения)")
@@ -43,7 +46,8 @@ class LabelItem(BaseModel):
 
 class LabelGenerateRequest(BaseModel):
     """Запрос на генерацию PDF с ярлыками."""
-    items: List[LabelItem] = Field(..., min_length=1, max_length=50, description="Товары для ярлыков")
+
+    items: list[LabelItem] = Field(..., min_length=1, max_length=50, description="Товары для ярлыков")
     labels_per_page: int = Field(6, description="Количество ярлыков на странице (6, 8, 12, 24)")
     label_format: str = Field("a4_grid", description="Формат: a4_grid (несколько на A4) или a6_single (по одному A6)")
 
@@ -58,6 +62,7 @@ class LabelGenerateRequest(BaseModel):
 
 class ProductForLabel(BaseModel):
     """Данные товара для предпросмотра."""
+
     _id: str
     name: str
     origin_country: str
@@ -69,6 +74,7 @@ class ProductForLabel(BaseModel):
 
 
 # ── Утилиты ────────────────────────────────────────────────────────────────────
+
 
 async def _get_certificate_info(product: Product) -> tuple[Optional[str], Optional[str]]:
     """Получает номер и тип первого действующего сертификата товара."""
@@ -132,7 +138,7 @@ def _generate_label_html(
     """
 
 
-def _build_pdf_html(labels_html: List[str], labels_per_page: int) -> str:
+def _build_pdf_html(labels_html: list[str], labels_per_page: int) -> str:
     """Собирает полный HTML документ с сеткой ярлыков для WeasyPrint."""
     # Определяем сетку в зависимости от кол-ва ярлыков на странице
     grid_configs = {
@@ -245,6 +251,7 @@ def _build_pdf_html(labels_html: List[str], labels_per_page: int) -> str:
 
 # ── Эндпоинты ──────────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/products",
     summary="Список товаров для ярлыков (UC-22)",
@@ -271,16 +278,18 @@ async def get_products_for_labels(
     result = []
     for p in products:
         cert_number, cert_type = await _get_certificate_info(p)
-        result.append({
-            "_id": str(p.id),
-            "name": p.name,
-            "origin_country": p.origin_country,
-            "storage_conditions": p.storage_conditions,
-            "shelf_life_days": p.shelf_life_days,
-            "unit": p.unit.value if p.unit else "kg",
-            "certificate_number": cert_number,
-            "certificate_type": cert_type,
-        })
+        result.append(
+            {
+                "_id": str(p.id),
+                "name": p.name,
+                "origin_country": p.origin_country,
+                "storage_conditions": p.storage_conditions,
+                "shelf_life_days": p.shelf_life_days,
+                "unit": p.unit.value if p.unit else "kg",
+                "certificate_number": cert_number,
+                "certificate_type": cert_type,
+            }
+        )
 
     return result
 
@@ -353,7 +362,7 @@ async def generate_labels_pdf(
     settings = await SystemSettings.find_one({"singleton_key": "main"})
     company_name = settings.company_name if settings else "ИП Наимов Хусейн Вохиджонович"
 
-    labels_html: List[str] = []
+    labels_html: list[str] = []
 
     for item in data.items:
         # Получаем товар
@@ -407,6 +416,7 @@ async def generate_labels_pdf(
     # Генерируем PDF через WeasyPrint
     try:
         from weasyprint import HTML
+
         pdf_bytes = HTML(string=full_html).write_pdf()
     except ImportError:
         # Если WeasyPrint не установлен — отдаём HTML
@@ -420,7 +430,7 @@ async def generate_labels_pdf(
         logger.error("Ошибка генерации PDF ярлыков", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка генерации PDF: {str(e)}",
+            detail=f"Ошибка генерации PDF: {e!s}",
         )
 
     # Формируем имя файла

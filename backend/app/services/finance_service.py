@@ -10,6 +10,7 @@
 - Дебиторская задолженность
 - UC-36: Автосверка оплат
 """
+
 from datetime import date, datetime, timezone
 from typing import List, Optional
 
@@ -40,11 +41,11 @@ async def get_revenue(start: date, end: date) -> float:
 
     orders = await Order.find(
         Order.status == OrderStatus.DELIVERED,
-        Order.created_at >= start_dt,  # type: ignore
-        Order.created_at <= end_dt,   # type: ignore
+        Order.created_at >= start_dt,
+        Order.created_at <= end_dt,
     ).to_list()
 
-    return round(sum(o.total for o in orders), 2)
+    return float(round(sum(o.total for o in orders), 2))
 
 
 async def get_cogs(start: date, end: date) -> float:
@@ -65,8 +66,8 @@ async def get_cogs(start: date, end: date) -> float:
 
     orders = await Order.find(
         Order.status == OrderStatus.DELIVERED,
-        Order.created_at >= start_dt,  # type: ignore
-        Order.created_at <= end_dt,   # type: ignore
+        Order.created_at >= start_dt,
+        Order.created_at <= end_dt,
     ).to_list()
 
     cogs = 0.0
@@ -86,8 +87,8 @@ async def get_expenses(start: date, end: date) -> tuple[float, dict]:
         Tuple (total_expenses, expenses_by_category)
     """
     expenses = await Expense.find(
-        Expense.date >= start,  # type: ignore
-        Expense.date <= end,    # type: ignore
+        Expense.date >= start,
+        Expense.date <= end,
     ).to_list()
 
     by_category: dict = {}
@@ -133,18 +134,14 @@ async def calculate_pnl(period_start: date, period_end: date) -> dict:
     Returns:
         Словарь с показателями P&L
     """
-    start_dt = datetime(
-        period_start.year, period_start.month, period_start.day, 0, 0, 0, tzinfo=timezone.utc
-    )
-    end_dt = datetime(
-        period_end.year, period_end.month, period_end.day, 23, 59, 59, tzinfo=timezone.utc
-    )
+    start_dt = datetime(period_start.year, period_start.month, period_start.day, 0, 0, 0, tzinfo=timezone.utc)
+    end_dt = datetime(period_end.year, period_end.month, period_end.day, 23, 59, 59, tzinfo=timezone.utc)
 
     # Получаем все доставленные заказы
     orders = await Order.find(
         Order.status == OrderStatus.DELIVERED,
-        Order.created_at >= start_dt,  # type: ignore
-        Order.created_at <= end_dt,    # type: ignore
+        Order.created_at >= start_dt,
+        Order.created_at <= end_dt,
     ).to_list()
 
     # Выручка и себестоимость
@@ -204,11 +201,15 @@ async def get_receivables() -> list:
     """
     from app.models.user import ClientType, User, UserStatus
 
-    clients = await User.find(
-        User.client_type == ClientType.B2B,
-        User.status == UserStatus.APPROVED,
-        User.current_debt > 0,  # type: ignore
-    ).sort(-User.current_debt).to_list()
+    clients = (
+        await User.find(
+            User.client_type == ClientType.B2B,
+            User.status == UserStatus.APPROVED,
+            User.current_debt > 0,
+        )
+        .sort(-User.current_debt)
+        .to_list()
+    )
 
     result = []
     for client in clients:
@@ -228,9 +229,7 @@ async def get_receivables() -> list:
                 "current_debt": client.current_debt,
                 "credit_limit": client.credit_limit,
                 "debt_ratio": round(
-                    client.current_debt / client.credit_limit * 100
-                    if client.credit_limit > 0
-                    else 100.0,
+                    client.current_debt / client.credit_limit * 100 if client.credit_limit > 0 else 100.0,
                     1,
                 ),
                 "unpaid_orders_count": len(unpaid_orders),
@@ -242,8 +241,10 @@ async def get_receivables() -> list:
 
 # ── UC-36: Автосверка оплат ────────────────────────────────────────────────────
 
+
 class PaymentInput:
     """Входные данные для автосверки одного платежа."""
+
     def __init__(
         self,
         amount: float,
@@ -292,10 +293,12 @@ async def auto_reconcile_payments(payments: List[dict]) -> dict:
         description = payment.get("description", "")
 
         if amount <= 0:
-            unmatched.append({
-                **payment,
-                "reason": "Некорректная сумма платежа",
-            })
+            unmatched.append(
+                {
+                    **payment,
+                    "reason": "Некорректная сумма платежа",
+                }
+            )
             continue
 
         matched_order = None
@@ -304,7 +307,7 @@ async def auto_reconcile_payments(payments: List[dict]) -> dict:
         if order_number:
             order = await Order.find_one(
                 Order.order_number == order_number,
-                Order.payment_status != PaymentStatus.PAID,  # type: ignore
+                Order.payment_status != PaymentStatus.PAID,
             )
             if order:
                 matched_order = order
@@ -312,10 +315,14 @@ async def auto_reconcile_payments(payments: List[dict]) -> dict:
         # ── Поиск по client_id и сумме ────────────────────────
         if not matched_order and client_id:
             try:
-                pending_orders = await Order.find(
-                    {"client_id.$id": PydanticObjectId(client_id)},
-                    Order.payment_status.in_([PaymentStatus.PENDING, PaymentStatus.PARTIAL]),  # type: ignore
-                ).sort(Order.created_at).to_list()
+                pending_orders = (
+                    await Order.find(
+                        {"client_id.$id": PydanticObjectId(client_id)},
+                        Order.payment_status.in_([PaymentStatus.PENDING, PaymentStatus.PARTIAL]),
+                    )
+                    .sort(Order.created_at)
+                    .to_list()
+                )
 
                 for order in pending_orders:
                     remaining = round(order.total - order.paid_amount, 2)
@@ -347,6 +354,7 @@ async def auto_reconcile_payments(payments: List[dict]) -> dict:
                 if payment_date:
                     try:
                         from datetime import datetime
+
                         matched_order.paid_at = datetime.fromisoformat(payment_date).replace(tzinfo=timezone.utc)
                     except Exception:
                         matched_order.paid_at = datetime.now(timezone.utc)
@@ -359,14 +367,16 @@ async def auto_reconcile_payments(payments: List[dict]) -> dict:
                 # Уменьшаем текущий долг клиента
                 await _decrease_client_debt(matched_order, amount)
 
-                matched.append({
-                    "order_number": matched_order.order_number,
-                    "client_name": matched_order.client_name,
-                    "amount_applied": amount,
-                    "order_total": matched_order.total,
-                    "new_status": "paid",
-                    "input_payment": payment,
-                })
+                matched.append(
+                    {
+                        "order_number": matched_order.order_number,
+                        "client_name": matched_order.client_name,
+                        "amount_applied": amount,
+                        "order_total": matched_order.total,
+                        "new_status": "paid",
+                        "input_payment": payment,
+                    }
+                )
 
                 logger.info(
                     "Оплата сопоставлена (полная)",
@@ -384,16 +394,18 @@ async def auto_reconcile_payments(payments: List[dict]) -> dict:
                 # Уменьшаем текущий долг клиента
                 await _decrease_client_debt(matched_order, amount)
 
-                partial.append({
-                    "order_number": matched_order.order_number,
-                    "client_name": matched_order.client_name,
-                    "amount_applied": amount,
-                    "order_total": matched_order.total,
-                    "paid_amount": new_paid,
-                    "remaining": round(matched_order.total - new_paid, 2),
-                    "new_status": "partial",
-                    "input_payment": payment,
-                })
+                partial.append(
+                    {
+                        "order_number": matched_order.order_number,
+                        "client_name": matched_order.client_name,
+                        "amount_applied": amount,
+                        "order_total": matched_order.total,
+                        "paid_amount": new_paid,
+                        "remaining": round(matched_order.total - new_paid, 2),
+                        "new_status": "partial",
+                        "input_payment": payment,
+                    }
+                )
 
                 logger.info(
                     "Оплата сопоставлена (частичная)",
@@ -404,10 +416,12 @@ async def auto_reconcile_payments(payments: List[dict]) -> dict:
 
         else:
             # Не найдено совпадение
-            unmatched.append({
-                **payment,
-                "reason": "Не найден соответствующий заказ",
-            })
+            unmatched.append(
+                {
+                    **payment,
+                    "reason": "Не найден соответствующий заказ",
+                }
+            )
 
             logger.warning(
                 "Оплата не сопоставлена",
@@ -426,8 +440,7 @@ async def auto_reconcile_payments(payments: List[dict]) -> dict:
             "partial_count": len(partial),
             "unmatched_count": len(unmatched),
             "total_applied": round(
-                sum(m["amount_applied"] for m in matched)
-                + sum(p["amount_applied"] for p in partial),
+                sum(m["amount_applied"] for m in matched) + sum(p["amount_applied"] for p in partial),
                 2,
             ),
         },

@@ -2,6 +2,7 @@
 Роутер настроек системы (для администратора).
 Эндпоинты: /api/v1/admin/settings/
 """
+
 from datetime import datetime, timezone
 
 import structlog
@@ -18,6 +19,7 @@ logger = structlog.get_logger(__name__)
 
 class SettingsUpdate(BaseModel):
     """Запрос на обновление настроек системы."""
+
     company_name: Optional[str] = None
     inn: Optional[str] = None
     kpp: Optional[str] = None
@@ -81,14 +83,6 @@ async def get_settings(admin=Depends(require_admin)):
         "updated_at": settings_doc.updated_at.isoformat(),
     }
 
-
-@router.put(
-    "/",
-    summary="Обновить настройки (PUT)",
-)
-async def update_settings_put(data: SettingsUpdate, admin=Depends(require_admin)):
-    """PUT-алиас — фронтенд использует PUT."""
-    return await update_settings(data, admin)
 
 @router.put(
     "/",

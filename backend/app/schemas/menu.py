@@ -1,40 +1,46 @@
 """
 Схемы для школьного меню.
 """
+
 from datetime import date as DateType
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
 
 class MenuItemSchema(BaseModel):
     """Позиция меню — блюдо с порциями."""
+
     dish_id: str = Field(..., description="ID блюда")
     dish_name: str = Field(..., description="Название блюда")
     portions: int = Field(..., ge=1, description="Количество порций")
-    meal_type: str = Field(..., description="Тип приёма пищи: breakfast, lunch, snack")
+    meal_type: str = Field(...,
+                           description="Тип приёма пищи: breakfast, lunch, snack")
 
 
 class MenuDaySchema(BaseModel):
     """День меню."""
+
     date: DateType = Field(..., description="Дата")
-    items: List[MenuItemSchema] = Field(default_factory=list)
+    items: list[MenuItemSchema] = Field(default_factory=list)
 
 
 class MenuCreate(BaseModel):
     """Создание меню на неделю."""
+
     week_start: DateType = Field(..., description="Начало недели")
     week_end: DateType = Field(..., description="Конец недели")
-    days: List[MenuDaySchema] = Field(..., description="Меню по дням")
+    days: list[MenuDaySchema] = Field(..., description="Меню по дням")
 
 
 class MenuResponse(BaseModel):
     """Ответ с данными меню."""
-    id: str = Field(..., alias="_id")
+
+    id: str = Field(...)
     client_id: str
     week_start: str
     week_end: str
-    days: List[MenuDaySchema]
+    days: list[MenuDaySchema]
     total_portions: int
     total_calories: float
     total_protein: float
@@ -49,7 +55,8 @@ class MenuResponse(BaseModel):
 
 class MenuListResponse(BaseModel):
     """Список меню с пагинацией."""
-    items: List[MenuResponse]
+
+    items: list[MenuResponse]
     total: int
     page: int
     limit: int
@@ -58,21 +65,23 @@ class MenuListResponse(BaseModel):
 
 class KbzhuReportDay(BaseModel):
     """КБЖУ за один день."""
+
     date: str
     calories: float
     protein: float
     fat: float
     carbs: float
     portions: int
-    meals: List[Dict[str, Any]] = Field(default_factory=list)
+    meals: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class KbzhuReport(BaseModel):
     """Отчёт КБЖУ по меню."""
+
     menu_id: str
     week_start: str
     week_end: str
-    days: List[KbzhuReportDay]
+    days: list[KbzhuReportDay]
     avg_daily_calories: float
     avg_daily_protein: float
     avg_daily_fat: float

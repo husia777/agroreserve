@@ -2,6 +2,7 @@
 Роутер управления сертификатами (администратор).
 Эндпоинты: /api/v1/admin/certificates/
 """
+
 import math
 import os
 import shutil
@@ -67,6 +68,7 @@ STATUS_MAP: Dict[str, str] = {
 
 class CertificateUpdate(BaseModel):
     """Обновление метаданных сертификата (поля фронтенда)."""
+
     cert_number: Optional[str] = Field(None, description="Номер сертификата")
     cert_type: Optional[str] = Field(None, description="Тип сертификата")
     issuing_authority: Optional[str] = Field(None, max_length=300)
@@ -95,16 +97,16 @@ def _cert_to_dict(cert: Certificate) -> dict:
 
     return {
         "id": str(cert.id),
-        "cert_number": cert.number,          # Фронтенд: cert_number
-        "cert_type": frontend_type,           # Фронтенд: declaration/vet_cert/...
+        "cert_number": cert.number,  # Фронтенд: cert_number
+        "cert_type": frontend_type,  # Фронтенд: declaration/vet_cert/...
         "issuing_authority": cert.issuing_authority or "",
-        "issued_at": str(cert.issued_date),   # Фронтенд: issued_at
+        "issued_at": str(cert.issued_date),  # Фронтенд: issued_at
         "expires_at": str(cert.expiry_date),  # Фронтенд: expires_at
         "days_until_expiry": days_until_expiry,
         "product_ids": cert.product_ids,
         "file_url": cert.file_url,
         "file_name": cert.file_name,
-        "status": current_status,             # Фронтенд: valid/expiring_soon/expired
+        "status": current_status,  # Фронтенд: valid/expiring_soon/expired
         "is_active": current_status != "expired",
         "notes": cert.notes,
         "created_at": cert.created_at.isoformat(),
@@ -142,9 +144,13 @@ async def get_expiring_certificates(
     threshold = today + timedelta(days=days)
 
     # Находим сертификаты с датой истечения <= threshold (включая уже просроченные)
-    certs = await Certificate.find(
-        Certificate.expiry_date <= threshold,  # type: ignore
-    ).sort(Certificate.expiry_date).to_list()
+    certs = (
+        await Certificate.find(
+            Certificate.expiry_date <= threshold,
+        )
+        .sort(Certificate.expiry_date)
+        .to_list()
+    )
 
     expiring = []
     expired = []
@@ -401,10 +407,9 @@ async def update_certificate(
     if data.product_ids is not None:
         cert_id_str = str(cert.id)
         from app.models.product import Product
+
         # Снимаем привязку у всех товаров, у которых был этот сертификат
-        old_products = await Product.find(
-            {"certificate_ids": {"$in": [cert_id_str]}}
-        ).to_list()
+        old_products = await Product.find({"certificate_ids": {"$in": [cert_id_str]}}).to_list()
         for p in old_products:
             if cert_id_str in p.certificate_ids:
                 p.certificate_ids = [cid for cid in p.certificate_ids if cid != cert_id_str]
@@ -477,9 +482,8 @@ async def delete_certificate(
     # Снимаем привязку у товаров
     cert_id_str = str(cert.id)
     from app.models.product import Product
-    products = await Product.find(
-        {"certificate_ids": {"$in": [cert_id_str]}}
-    ).to_list()
+
+    products = await Product.find({"certificate_ids": {"$in": [cert_id_str]}}).to_list()
     for p in products:
         p.certificate_ids = [cid for cid in p.certificate_ids if cid != cert_id_str]
         await p.save()

@@ -2,15 +2,16 @@
 Роутер управления уведомлениями (администратор).
 Эндпоинты: /api/v1/admin/notifications/
 """
+
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 
 import structlog
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.models.notification import Notification, NotificationChannel
+from app.models.notification import Notification
 from app.utils.security import require_admin
 
 logger = structlog.get_logger(__name__)
@@ -39,9 +40,7 @@ async def get_notifications(
         query_filter["is_read"] = is_read
 
     total = await Notification.find(query_filter).count()
-    unread_count = await Notification.find(
-        {"user_id": user_id, "is_read": False}
-    ).count()
+    unread_count = await Notification.find({"user_id": user_id, "is_read": False}).count()
 
     notifications = (
         await Notification.find(query_filter)
@@ -113,7 +112,7 @@ async def mark_as_read(
 
     if not notification.is_read:
         notification.is_read = True
-        notification.read_at = datetime.now(timezone.utc)
+        notification.read_at = datetime.now(UTC)
         await notification.save()
 
     return {
@@ -131,7 +130,7 @@ async def mark_all_as_read(
     admin=Depends(require_admin),
 ):
     """Отмечает все непрочитанные уведомления как прочитанные."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     user_id = str(admin.id)
 
     # Получаем все непрочитанные

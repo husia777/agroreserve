@@ -4,6 +4,7 @@
 
 UC-57: Аналитика клиента в ЛК — статистика заказов, топ товаров, расходы по месяцам.
 """
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -35,6 +36,7 @@ async def get_client_analytics(
 
     try:
         from app.services.analytics_service import get_client_analytics
+
         data = await get_client_analytics(client_id)
     except Exception as e:
         logger.error(

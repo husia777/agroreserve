@@ -2,10 +2,11 @@
 Сервис отправки email через SMTP (Яндекс.Почта).
 UC-01: уведомление о поступлении товара.
 """
+
 import smtplib
 import ssl
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Optional
 
 import structlog
@@ -44,8 +45,7 @@ async def send_email(
             timeout=15,
         ) as server:
             server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-            server.sendmail(settings.SMTP_FROM_EMAIL,
-                            to_email, msg.as_string())
+            server.sendmail(settings.SMTP_FROM_EMAIL, to_email, msg.as_string())
 
         logger.info("Email отправлен", to=to_email, subject=subject)
         return True
@@ -70,15 +70,15 @@ async def send_stock_restock_notification(
         '<div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">'
         '<h2 style="color:#111;margin-top:0;">Товар снова в наличии!</h2>'
         f'<p style="color:#374151;font-size:16px;line-height:1.6;">'
-        f'Товар <strong>{product_name}</strong> снова доступен для заказа.</p>'
+        f"Товар <strong>{product_name}</strong> снова доступен для заказа.</p>"
         '<div style="text-align:center;margin:24px 0;">'
         f'<a href="https://agrorezerv.ru/quick-order" '
         'style="display:inline-block;background:#16a34a;color:white;padding:12px 32px;'
         'text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">'
-        'Перейти к заказу</a></div>'
+        "Перейти к заказу</a></div>"
         '<p style="color:#6b7280;font-size:13px;">'
-        'Вы получили это письмо, потому что подписались на уведомление о поступлении товара.</p>'
-        '</div></div>'
+        "Вы получили это письмо, потому что подписались на уведомление о поступлении товара.</p>"
+        "</div></div>"
     )
 
     body_text = f"Товар {product_name} снова в наличии! Заказать: https://agrorezerv.ru/quick-order"

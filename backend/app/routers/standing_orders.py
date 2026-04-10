@@ -2,6 +2,7 @@
 Роутер регулярных заказов для клиентов.
 Эндпоинты: /api/v1/standing-orders/
 """
+
 import math
 from datetime import datetime, timezone
 from typing import Optional
@@ -14,6 +15,7 @@ from app.models.order import Order
 from app.models.standing_order import StandingOrder, StandingOrderItem
 from app.schemas.standing_order import (
     StandingOrderCreate,
+    StandingOrderItemSchema,
     StandingOrderListResponse,
     StandingOrderResponse,
     StandingOrderUpdate,
@@ -22,14 +24,21 @@ from app.utils.security import require_approved_client
 
 logger = structlog.get_logger(__name__)
 
-router = APIRouter(prefix="/api/v1/standing-orders", tags=["Регулярные заказы"])
+router = APIRouter(prefix="/api/v1/standing-orders",
+                   tags=["Регулярные заказы"])
 
 # Допустимые расписания
 VALID_SCHEDULES = {
-    "weekly_mon", "weekly_tue", "weekly_wed", "weekly_thu",
-    "weekly_fri", "weekly_sat", "weekly_sun",
+    "weekly_mon",
+    "weekly_tue",
+    "weekly_wed",
+    "weekly_thu",
+    "weekly_fri",
+    "weekly_sat",
+    "weekly_sun",
     "biweekly",
-    "monthly_1", "monthly_15",
+    "monthly_1",
+    "monthly_15",
 }
 
 # Допустимые слоты доставки
@@ -39,28 +48,27 @@ VALID_SLOTS = {"08:00-11:00", "11:00-14:00", "14:00-17:00"}
 def _to_response(so: StandingOrder) -> StandingOrderResponse:
     """Конвертирует StandingOrder в ответ API."""
     return StandingOrderResponse(
-        **{
-            "_id": str(so.id),
-            "client_id": str(so.client_id),
-            "client_name": so.client_name,
-            "items": [
-                {
-                    "product_id": str(item.product_id),
-                    "product_name": item.product_name,
-                    "qty": item.qty,
-                    "unit": item.unit,
-                }
-                for item in so.items
-            ],
-            "schedule": so.schedule,
-            "delivery_slot": so.delivery_slot,
-            "delivery_address": so.delivery_address,
-            "is_active": so.is_active,
-            "last_generated_at": so.last_generated_at.isoformat() if so.last_generated_at else None,
-            "next_generation_at": so.next_generation_at.isoformat() if so.next_generation_at else None,
-            "note": so.note,
-            "created_at": so.created_at.isoformat(),
-        }
+        id=str(so.id),
+        client_id=str(so.client_id),
+        client_name=so.client_name,
+        items=[
+            StandingOrderItemSchema(
+                product_id=str(item.product_id),
+                product_name=item.product_name,
+                qty=item.qty,
+                unit=item.unit,
+            )
+            for item in so.items
+        ],
+        schedule=so.schedule,
+        delivery_slot=so.delivery_slot,
+        delivery_address=so.delivery_address,
+        is_active=so.is_active,
+        last_generated_at=so.last_generated_at.isoformat() if so.last_generated_at else None,
+        next_generation_at=so.next_generation_at.isoformat(
+        ) if so.next_generation_at else None,
+        note=so.note,
+        created_at=so.created_at.isoformat(),
     )
 
 
@@ -81,8 +89,13 @@ def _calculate_next_generation(schedule: str, from_now: Optional[datetime] = Non
 
     if schedule.startswith("weekly_"):
         day_map = {
-            "weekly_mon": 0, "weekly_tue": 1, "weekly_wed": 2,
-            "weekly_thu": 3, "weekly_fri": 4, "weekly_sat": 5, "weekly_sun": 6,
+            "weekly_mon": 0,
+            "weekly_tue": 1,
+            "weekly_wed": 2,
+            "weekly_thu": 3,
+            "weekly_fri": 4,
+            "weekly_sat": 5,
+            "weekly_sun": 6,
         }
         target_weekday = day_map.get(schedule, 0)
         current_weekday = now.weekday()
@@ -104,6 +117,7 @@ def _calculate_next_generation(schedule: str, from_now: Optional[datetime] = Non
         except ValueError:
             # Если число не существует в месяце — последний день
             import calendar
+
             last_day = calendar.monthrange(next_year, next_month)[1]
             return now.replace(year=next_year, month=next_month, day=last_day)
 
@@ -123,7 +137,8 @@ async def get_my_standing_orders(
     Список регулярных заказов текущего клиента.
     По умолчанию возвращает только активные подписки.
     """
-    query = {"client_id": PydanticObjectId(str(current_user.id))}
+    query: dict[str, object] = {
+        "client_id": PydanticObjectId(str(current_user.id))}
     if only_active:
         query["is_active"] = True
 
@@ -240,14 +255,17 @@ async def update_standing_order(
     try:
         so = await StandingOrder.get(PydanticObjectId(order_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Регулярный заказ не найден")
 
     if not so:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Регулярный заказ не найден")
 
     # Проверяем владельца
     if str(so.client_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
 
     # Обновляем поля
     if data.items is not None:
@@ -328,14 +346,17 @@ async def delete_standing_order(
     try:
         so = await StandingOrder.get(PydanticObjectId(order_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Регулярный заказ не найден")
 
     if not so:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Регулярный заказ не найден")
 
     # Проверяем владельца
     if str(so.client_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
 
     so.is_active = False
     await so.save()
@@ -365,14 +386,17 @@ async def confirm_generated_order(
     try:
         so = await StandingOrder.get(PydanticObjectId(order_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Регулярный заказ не найден")
 
     if not so:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Регулярный заказ не найден")
 
     # Проверяем владельца
     if str(so.client_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
 
     if not so.is_active:
         raise HTTPException(
@@ -401,13 +425,24 @@ async def confirm_generated_order(
             )
             continue
 
+        import uuid as _so_uuid
+
         cart_items.append(
             CartItem(
+                item_id=str(_so_uuid.uuid4()),
                 product_id=str(item.product_id),
                 product_name=product.name,
+                product_slug=product.slug or "",
                 qty=item.qty,
                 unit=item.unit,
-                price=product.get_price_for_client(current_user.client_type == "b2b"),
+                price=product.get_price_for_client(
+                    current_user.client_type == "b2b"),
+                cost_price=product.cost_price,
+                total=round(
+                    item.qty * product.get_price_for_client(current_user.client_type == "b2b"), 2),
+                min_order_qty=product.min_order_qty,
+                order_step=product.order_step,
+                stock_qty=product.stock_qty,
             )
         )
 
@@ -420,8 +455,10 @@ async def confirm_generated_order(
     # Ближайшая дата доставки — дата следующей генерации
     from datetime import timedelta
 
-    next_delivery = so.next_generation_at.date() if so.next_generation_at else (
-        datetime.now(timezone.utc).date() + timedelta(days=1)
+    next_delivery = (
+        so.next_generation_at.date()
+        if so.next_generation_at
+        else (datetime.now(timezone.utc).date() + timedelta(days=1))
     )
 
     delivery_info = {
@@ -440,7 +477,8 @@ async def confirm_generated_order(
             delivery_info=delivery_info,
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Обновляем дату последней генерации и следующей
     so.last_generated_at = datetime.now(timezone.utc)

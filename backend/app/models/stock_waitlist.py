@@ -6,6 +6,7 @@
 При обновлении stock_quantity > 0 — отправляем уведомление
 и помечаем запись как notified.
 """
+
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -22,36 +23,25 @@ class StockWaitlist(Document):
     """
 
     # ── Товар ─────────────────────────────────────────────────
-    product_id: Indexed(str) = Field(
-        ..., description="ID товара (Product)"
-    )
-    product_name: str = Field(
-        ..., max_length=200, description="Название товара (для удобства в уведомлении)"
-    )
+    product_id: str = Field(..., description="ID товара (Product)")
+    product_name: str = Field(..., max_length=200,
+                              description="Название товара (для удобства в уведомлении)")
 
     # ── Подписчик ─────────────────────────────────────────────
-    email: EmailStr = Field(
-        ..., description="Email для уведомления"
-    )
+    email: EmailStr = Field(..., description="Email для уведомления")
     user_id: Optional[str] = Field(
-        None, description="ID пользователя (если авторизован)"
-    )
+        None, description="ID пользователя (если авторизован)")
     user_name: Optional[str] = Field(
-        None, max_length=200, description="Имя пользователя (если авторизован)"
-    )
+        None, max_length=200, description="Имя пользователя (если авторизован)")
 
     # ── Статус ────────────────────────────────────────────────
-    is_notified: bool = Field(
-        False, description="Уведомление уже отправлено"
-    )
+    is_notified: bool = Field(False, description="Уведомление уже отправлено")
     notified_at: Optional[datetime] = Field(
-        None, description="Дата отправки уведомления"
-    )
+        None, description="Дата отправки уведомления")
 
     # ── Метаданные ────────────────────────────────────────────
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+        default_factory=lambda: datetime.now(timezone.utc))
 
     class Settings:
         name = "stock_waitlist"

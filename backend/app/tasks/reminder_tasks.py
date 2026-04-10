@@ -3,8 +3,10 @@ Celery задачи для напоминаний.
 
 UC-53: Ежечасная проверка напоминаний и отправка уведомлений.
 """
+
 import asyncio
 from datetime import datetime, timezone
+from typing import Any
 
 import structlog
 
@@ -43,8 +45,10 @@ def check_reminders(self) -> dict:
     Напоминания не удаляются автоматически — остаются как невыполненные
     до явного подтверждения администратором.
     """
+
     async def _execute() -> dict:
         from app.database import connect_to_mongo
+
         await connect_to_mongo()
 
         from app.models.reminder import Reminder
@@ -52,19 +56,24 @@ def check_reminders(self) -> dict:
         from app.utils.telegram_bot import send_message
 
         now = datetime.now(timezone.utc)
-        result = {
+        result: dict[str, Any] = {
             "status": "ok",
             "checked_at": now.isoformat(),
             "reminders_found": 0,
             "notifications_sent": 0,
             "errors": [],
         }
+        errors: list[dict] = []
 
         # Находим просроченные невыполненные напоминания
-        due_reminders = await Reminder.find(
-            Reminder.remind_at <= now,      # type: ignore
-            Reminder.is_completed == False,  # noqa: E712
-        ).sort(Reminder.remind_at).to_list()
+        due_reminders = (
+            await Reminder.find(
+                Reminder.remind_at <= now,
+                Reminder.is_completed == False,  # noqa: E712
+            )
+            .sort(Reminder.remind_at)
+            .to_list()
+        )
 
         result["reminders_found"] = len(due_reminders)
 
@@ -126,17 +135,20 @@ def check_reminders(self) -> dict:
                 success = await send_message(settings.TELEGRAM_ADMIN_CHAT_ID, message)
 
                 if success:
-                    result["notifications_sent"] += 1
+                    result["notifications_sent"] = int(
+                        result["notifications_sent"]) + 1
                     logger.info(
                         "Уведомление о напоминании отправлено",
                         reminder_id=str(reminder.id),
                         title=reminder.title,
                     )
                 else:
-                    result["errors"].append({
-                        "reminder_id": str(reminder.id),
-                        "error": "Telegram не отправил сообщение",
-                    })
+                    errors.append(
+                        {
+                            "reminder_id": str(reminder.id),
+                            "error": "Telegram не отправил сообщение",
+                        }
+                    )
 
             except Exception as e:
                 logger.error(
@@ -144,22 +156,26 @@ def check_reminders(self) -> dict:
                     reminder_id=str(reminder.id),
                     error=str(e),
                 )
-                result["errors"].append({
-                    "reminder_id": str(reminder.id),
-                    "error": str(e),
-                })
+                errors.append(
+                    {
+                        "reminder_id": str(reminder.id),
+                        "error": str(e),
+                    }
+                )
+
+        result["errors"] = errors
 
         logger.info(
             "Проверка напоминаний завершена",
             found=result["reminders_found"],
             sent=result["notifications_sent"],
-            errors=len(result["errors"]),
+            errors=len(errors),
         )
 
-        return result
+        return dict(result)
 
     try:
-        return _run_async(_execute())
+        return dict(_run_async(_execute()))
     except Exception as exc:
         logger.error("Ошибка задачи check_reminders", error=str(exc))
         raise self.retry(exc=exc)

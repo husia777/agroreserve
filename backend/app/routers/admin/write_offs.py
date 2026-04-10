@@ -2,6 +2,7 @@
 Роутер управления списаниями товаров (администратор).
 Эндпоинты: /api/v1/admin/write-offs/
 """
+
 import math
 import os
 import uuid
@@ -33,21 +34,19 @@ UPLOAD_DIR = "/app/uploads/write_offs"
 def _to_response(wo: WriteOff) -> WriteOffResponse:
     """Конвертирует WriteOff в ответ API."""
     return WriteOffResponse(
-        **{
-            "_id": str(wo.id),
-            "product_id": str(wo.product_id),
-            "product_name": wo.product_name,
-            "qty": wo.qty,
-            "unit": wo.unit,
-            "cost_price": wo.cost_price,
-            "total_loss": wo.total_loss,
-            "reason": wo.reason,
-            "description": wo.description,
-            "photo_url": wo.photo_url,
-            "batch_id": str(wo.batch_id) if wo.batch_id else None,
-            "created_by": str(wo.created_by),
-            "created_at": wo.created_at.isoformat(),
-        }
+        id=str(wo.id),
+        product_id=str(wo.product_id),
+        product_name=wo.product_name,
+        qty=wo.qty,
+        unit=wo.unit,
+        cost_price=wo.cost_price,
+        total_loss=wo.total_loss,
+        reason=wo.reason,
+        description=wo.description,
+        photo_url=wo.photo_url,
+        batch_id=str(wo.batch_id) if wo.batch_id else None,
+        created_by=str(wo.created_by),
+        created_at=wo.created_at.isoformat(),
     )
 
 
@@ -116,13 +115,7 @@ async def get_write_offs(
         query["created_at"] = date_filter
 
     total = await WriteOff.find(query).count()
-    write_offs = (
-        await WriteOff.find(query)
-        .sort(-WriteOff.created_at)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .to_list()
-    )
+    write_offs = await WriteOff.find(query).sort(-WriteOff.created_at).skip((page - 1) * limit).limit(limit).to_list()
 
     return WriteOffListResponse(
         items=[_to_response(wo) for wo in write_offs],
@@ -258,10 +251,7 @@ async def create_write_off(
         "damage": "Механическое повреждение",
         "other": "Списание товара",
     }
-    expense_desc = (
-        f"{reason_descriptions.get(data.reason, 'Списание')}: "
-        f"{product.name} {data.qty} {data.unit}"
-    )
+    expense_desc = f"{reason_descriptions.get(data.reason, 'Списание')}: " f"{product.name} {data.qty} {data.unit}"
     if data.description:
         expense_desc += f". {data.description}"
 
@@ -389,8 +379,8 @@ async def upload_write_off_photo(
 
     # Сохранение
     os.makedirs(UPLOAD_DIR, exist_ok=True)
-    ext = file.filename.rsplit(
-        ".", 1)[-1] if "." in (file.filename or "") else "jpg"
+    _filename = file.filename or ""
+    ext = _filename.rsplit(".", 1)[-1] if "." in _filename else "jpg"
     filename = f"{uuid.uuid4().hex}.{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
 

@@ -6,6 +6,7 @@
 - Расчёт общего веса и сумм по заказам
 - Генерацию PDF маршрутного листа
 """
+
 from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -33,12 +34,16 @@ async def get_route_sheet(delivery_date: date) -> Dict[str, Any]:
     # Статусы, включаемые в маршрутный лист
     active_statuses = ["confirmed", "assembling", "assembled", "delivering"]
 
-    orders = await Order.find(
-        {
-            "delivery_date": delivery_date,
-            "status": {"$in": active_statuses},
-        }
-    ).sort(Order.delivery_slot).to_list()
+    orders = (
+        await Order.find(
+            {
+                "delivery_date": delivery_date,
+                "status": {"$in": active_statuses},
+            }
+        )
+        .sort(Order.delivery_slot)
+        .to_list()
+    )
 
     if not orders:
         return {
@@ -76,46 +81,40 @@ async def get_route_sheet(delivery_date: date) -> Dict[str, Any]:
         total_amount += order.total
 
         # Получаем client_id строкой
-        client_id_str = (
-            str(order.client_id.id)
-            if hasattr(order.client_id, "id")
-            else str(order.client_id)
-        )
+        client_id_str = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
 
-        slots[slot].append({
-            "order_id": str(order.id),
-            "order_number": order.order_number,
-            "client_id": client_id_str,
-            "client_name": order.client_name,
-            "client_phone": order.client_phone,
-            "delivery_address": order.delivery_address,
-            "status": order.status.value if hasattr(order.status, "value") else order.status,
-            "payment_method": (
-                order.payment_method.value
-                if hasattr(order.payment_method, "value")
-                else order.payment_method
-            ),
-            "payment_status": (
-                order.payment_status.value
-                if hasattr(order.payment_status, "value")
-                else order.payment_status
-            ),
-            "total": order.total,
-            "paid_amount": order.paid_amount,
-            "items": [
-                {
-                    "product_name": item.product_name,
-                    "qty": item.actual_qty if item.actual_qty is not None else item.ordered_qty,
-                    "unit": item.unit,
-                    "price": item.price,
-                    "total": item.total,
-                }
-                for item in order.items
-            ],
-            "weight_kg": order_weight,
-            "note": order.note,
-            "admin_note": order.admin_note,
-        })
+        slots[slot].append(
+            {
+                "order_id": str(order.id),
+                "order_number": order.order_number,
+                "client_id": client_id_str,
+                "client_name": order.client_name,
+                "client_phone": order.client_phone,
+                "delivery_address": order.delivery_address,
+                "status": order.status.value if hasattr(order.status, "value") else order.status,
+                "payment_method": (
+                    order.payment_method.value if hasattr(order.payment_method, "value") else order.payment_method
+                ),
+                "payment_status": (
+                    order.payment_status.value if hasattr(order.payment_status, "value") else order.payment_status
+                ),
+                "total": order.total,
+                "paid_amount": order.paid_amount,
+                "items": [
+                    {
+                        "product_name": item.product_name,
+                        "qty": item.actual_qty if item.actual_qty is not None else item.ordered_qty,
+                        "unit": item.unit,
+                        "price": item.price,
+                        "total": item.total,
+                    }
+                    for item in order.items
+                ],
+                "weight_kg": order_weight,
+                "note": order.note,
+                "admin_note": order.admin_note,
+            }
+        )
 
     # Сортируем слоты в хронологическом порядке
     slot_order = ["08:00-11:00", "11:00-14:00", "14:00-17:00"]
@@ -123,23 +122,27 @@ async def get_route_sheet(delivery_date: date) -> Dict[str, Any]:
     for slot_key in slot_order:
         if slot_key in slots:
             slot_orders = slots.pop(slot_key)
-            by_slot.append({
-                "slot": slot_key,
-                "orders_count": len(slot_orders),
-                "slot_weight_kg": round(sum(o["weight_kg"] for o in slot_orders), 2),
-                "slot_amount": round(sum(o["total"] for o in slot_orders), 2),
-                "orders": slot_orders,
-            })
+            by_slot.append(
+                {
+                    "slot": slot_key,
+                    "orders_count": len(slot_orders),
+                    "slot_weight_kg": round(sum(o["weight_kg"] for o in slot_orders), 2),
+                    "slot_amount": round(sum(o["total"] for o in slot_orders), 2),
+                    "orders": slot_orders,
+                }
+            )
 
     # Добавляем заказы без слота
     for remaining_slot, remaining_orders in slots.items():
-        by_slot.append({
-            "slot": remaining_slot,
-            "orders_count": len(remaining_orders),
-            "slot_weight_kg": round(sum(o["weight_kg"] for o in remaining_orders), 2),
-            "slot_amount": round(sum(o["total"] for o in remaining_orders), 2),
-            "orders": remaining_orders,
-        })
+        by_slot.append(
+            {
+                "slot": remaining_slot,
+                "orders_count": len(remaining_orders),
+                "slot_weight_kg": round(sum(o["weight_kg"] for o in remaining_orders), 2),
+                "slot_amount": round(sum(o["total"] for o in remaining_orders), 2),
+                "orders": remaining_orders,
+            }
+        )
 
     logger.info(
         "Маршрутный лист сформирован",
@@ -176,10 +179,7 @@ async def generate_route_sheet_pdf(delivery_date: date) -> bytes:
     for slot_data in route_data["by_slot"]:
         orders_html = ""
         for order in slot_data["orders"]:
-            items_text = "; ".join(
-                f"{item['product_name']} {item['qty']} {item['unit']}"
-                for item in order["items"]
-            )
+            items_text = "; ".join(f"{item['product_name']} {item['qty']} {item['unit']}" for item in order["items"])
 
             # Статус оплаты по-русски
             payment_labels = {
@@ -284,7 +284,7 @@ async def generate_route_sheet_pdf(delivery_date: date) -> bytes:
     try:
         import weasyprint
 
-        pdf_bytes = weasyprint.HTML(string=html_content).write_pdf()
+        pdf_bytes = bytes(weasyprint.HTML(string=html_content).write_pdf())
         logger.info(
             "PDF маршрутного листа сгенерирован",
             date=str(delivery_date),

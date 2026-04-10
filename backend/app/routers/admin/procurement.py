@@ -2,9 +2,9 @@
 Роутер управления закупками (администратор).
 Эндпоинты: /api/v1/admin/procurement/
 """
-import math
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+
+from datetime import UTC, datetime
+from typing import Any, Optional
 
 import structlog
 from beanie import PydanticObjectId
@@ -20,6 +20,7 @@ router = APIRouter(prefix="/api/v1/admin/procurement", tags=["Админ: Зак
 
 class PurchaseOrderItem(BaseModel):
     """Позиция заявки поставщику."""
+
     product_id: str = Field(..., description="ID товара")
     product_name: str = Field(..., description="Название товара")
     qty: float = Field(..., gt=0, description="Количество")
@@ -29,8 +30,9 @@ class PurchaseOrderItem(BaseModel):
 
 class PurchaseOrderRequest(BaseModel):
     """Запрос на формирование заявки поставщику."""
+
     supplier_id: str = Field(..., description="ID поставщика")
-    items: List[PurchaseOrderItem] = Field(..., min_length=1, description="Позиции заявки")
+    items: list[PurchaseOrderItem] = Field(..., min_length=1, description="Позиции заявки")
     note: Optional[str] = Field(None, description="Примечание к заявке")
 
 
@@ -112,7 +114,7 @@ async def create_purchase_order(
 
     # Определяем тип контента
     content_type = "application/pdf" if content[:4] == b"%PDF" else "text/html; charset=utf-8"
-    filename = f"purchase_order_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+    filename = f"purchase_order_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
     filename += ".pdf" if content[:4] == b"%PDF" else ".html"
 
     logger.info(
@@ -152,7 +154,7 @@ async def get_price_logs(
 
     from app.models.price_log import PriceLog
 
-    since = datetime.now(timezone.utc) - timedelta(days=days)
+    since = datetime.now(UTC) - timedelta(days=days)
     query: dict = {"logged_at": {"$gte": since}}
 
     if product_id:
@@ -176,7 +178,7 @@ async def get_price_logs(
     logs = await PriceLog.find(query).sort(-PriceLog.logged_at).to_list()
 
     # Группируем по товарам для анализа трендов
-    by_product: Dict[str, Any] = {}
+    by_product: dict[str, Any] = {}
     for log in logs:
         pid = str(log.product_id)
         if pid not in by_product:
@@ -192,12 +194,14 @@ async def get_price_logs(
             }
 
         entry = by_product[pid]
-        entry["price_points"].append({
-            "price": log.price,
-            "supplier_id": str(log.supplier_id),
-            "supplier_name": log.supplier_name,
-            "logged_at": log.logged_at.isoformat(),
-        })
+        entry["price_points"].append(
+            {
+                "price": log.price,
+                "supplier_id": str(log.supplier_id),
+                "supplier_name": log.supplier_name,
+                "logged_at": log.logged_at.isoformat(),
+            }
+        )
         entry["suppliers"].add(log.supplier_name)
         entry["min_price"] = min(entry["min_price"], log.price)
         entry["max_price"] = max(entry["max_price"], log.price)
@@ -230,5 +234,5 @@ async def get_price_logs(
             }
             for log in logs[:500]  # Ограничиваем вывод сырых данных
         ],
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }

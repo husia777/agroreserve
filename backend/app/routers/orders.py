@@ -2,6 +2,7 @@
 Роутер заказов для клиентов (личный кабинет).
 Эндпоинты: /api/v1/orders/
 """
+
 from datetime import date as DateType
 from typing import List, Optional
 
@@ -14,6 +15,8 @@ from app.models.cart import Cart
 from app.models.order import Order, OrderStatus
 from app.schemas.order import (
     OrderCreate,
+    OrderDocumentResponse,
+    OrderItemResponse,
     OrderListItem,
     OrderListResponse,
     OrderResponse,
@@ -24,6 +27,7 @@ from app.utils.security import get_current_user, require_approved_client
 
 class RepeatOrderRequest(BaseModel):
     """Запрос на повтор заказа. Дата доставки опциональна — если не указана, позиции добавляются в корзину."""
+
     delivery_date: Optional[DateType] = Field(
         None, description="Новая дата доставки")
     delivery_slot: Optional[str] = Field(None, description="Слот доставки")
@@ -35,12 +39,14 @@ class RepeatOrderRequest(BaseModel):
 
 class RetailOrderItemCreate(BaseModel):
     """Позиция розничного заказа."""
+
     product_id: str = Field(..., description="ID товара")
     qty: float = Field(..., gt=0, description="Количество")
 
 
 class RetailOrderCreate(BaseModel):
     """Розничный заказ без регистрации (UC-10)."""
+
     name: str = Field(..., min_length=2, description="Имя покупателя")
     phone: str = Field(..., description="Телефон покупателя")
     items: List[RetailOrderItemCreate] = Field(
@@ -60,65 +66,65 @@ router = APIRouter(prefix="/api/v1/orders", tags=["Заказы"])
 def _order_to_response(order: Order) -> OrderResponse:
     """Конвертирует объект Order в ответ API."""
     # Безопасно получаем client_id строкой
-    client_id_str = (
-        str(order.client_id.id)
-        if hasattr(order.client_id, "id")
-        else str(order.client_id)
-    )
+    client_id_str = str(order.client_id.id) if hasattr(
+        order.client_id, "id") else str(order.client_id)
 
     return OrderResponse(
-        **{
-            "_id": str(order.id),
-            "order_number": order.order_number,
-            "client_id": client_id_str,
-            "client_name": order.client_name,
-            "client_phone": order.client_phone,
-            "status": order.status.value,
-            "items": [
-                {
-                    "product_id": item.product_id,
-                    "product_name": item.product_name,
-                    "ordered_qty": item.ordered_qty,
-                    "actual_qty": item.actual_qty,
-                    "unit": item.unit,
-                    "price": item.price,
-                    "total": item.total,
-                }
-                for item in order.items
-            ],
-            "subtotal": order.subtotal,
-            "discount": order.discount,
-            "total": order.total,
-            "delivery_date": str(order.delivery_date) if order.delivery_date else None,
-            "delivery_slot": order.delivery_slot,
-            "delivery_address": order.delivery_address,
-            "delivery_priority": order.delivery_priority.value
-            if hasattr(order.delivery_priority, "value")
-            else order.delivery_priority,
-            "payment_method": order.payment_method.value
-            if hasattr(order.payment_method, "value")
-            else order.payment_method,
-            "payment_status": order.payment_status.value
-            if hasattr(order.payment_status, "value")
-            else order.payment_status,
-            "paid_amount": order.paid_amount,
-            "note": order.note,
-            "documents": [
-                {"doc_type": d.doc_type, "url": d.url, "doc_id": d.doc_id}
-                for d in order.documents
-            ],
-            "status_history": [
-                {
-                    "status": h.status.value if hasattr(h.status, "value") else h.status,
-                    "timestamp": h.timestamp.isoformat(),
-                    "by": h.by,
-                    "comment": h.comment,
-                }
-                for h in order.status_history
-            ],
-            "created_at": order.created_at.isoformat(),
-            "updated_at": order.updated_at.isoformat(),
-        }
+
+        id=str(order.id),
+        order_number=order.order_number,
+        client_id=client_id_str,
+        client_name=order.client_name,
+        client_phone=order.client_phone,
+        status=order.status.value,
+        items=[
+            OrderItemResponse(
+                product_id=item.product_id,
+                product_name=item.product_name,
+                ordered_qty=item.ordered_qty,
+                actual_qty=item.actual_qty,
+                unit=item.unit,
+                price=item.price,
+                total=item.total,
+            )
+            for item in order.items
+        ],
+        subtotal=order.subtotal,
+        discount=order.discount,
+        total=order.total,
+        delivery_date=str(
+            order.delivery_date) if order.delivery_date else None,
+        delivery_slot=order.delivery_slot,
+        delivery_address=order.delivery_address,
+        delivery_priority=order.delivery_priority.value
+        if hasattr(order.delivery_priority, "value")
+        else order.delivery_priority,
+        payment_method=order.payment_method.value
+        if hasattr(order.payment_method, "value")
+        else order.payment_method,
+        payment_status=order.payment_status.value
+        if hasattr(order.payment_status, "value")
+        else order.payment_status,
+        paid_amount=order.paid_amount,
+        note=order.note,
+        documents=[
+            OrderDocumentResponse(doc_type=d.doc_type,
+                                  url=d.url, doc_id=d.doc_id)
+            for d in order.documents
+        ],
+        status_history=[
+            StatusHistoryResponse(
+                status=h.status.value if hasattr(
+                    h.status, "value") else h.status,
+                timestamp=h.timestamp.isoformat(),
+                by=h.by,
+                comment=h.comment,
+            )
+            for h in order.status_history
+        ],
+        created_at=order.created_at.isoformat(),
+        updated_at=order.updated_at.isoformat(),
+
     )
 
 
@@ -246,18 +252,13 @@ async def get_my_orders(
     user_id_str = str(current_user.id)
 
     # Формируем запрос
-    query_filter = {"client_id.$id": PydanticObjectId(user_id_str)}
+    query_filter: dict[str, object] = {
+        "client_id.$id": PydanticObjectId(user_id_str)}
     if status_filter:
         query_filter["status"] = status_filter
 
     total = await Order.find(query_filter).count()
-    orders = (
-        await Order.find(query_filter)
-        .sort(-Order.created_at)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .to_list()
-    )
+    orders = await Order.find(query_filter).sort(-Order.created_at).skip((page - 1) * limit).limit(limit).to_list()
 
     items = [
         OrderListItem(
@@ -269,9 +270,7 @@ async def get_my_orders(
                 "total": o.total,
                 "delivery_date": str(o.delivery_date) if o.delivery_date else None,
                 "delivery_slot": o.delivery_slot,
-                "payment_status": o.payment_status.value
-                if hasattr(o.payment_status, "value")
-                else o.payment_status,
+                "payment_status": o.payment_status.value if hasattr(o.payment_status, "value") else o.payment_status,
                 "items_count": len(o.items),
                 "created_at": o.created_at.isoformat(),
             }
@@ -367,9 +366,8 @@ async def repeat_order(
 
     # Клиент может повторять только свои заказы
     client_id_str = (
-        str(source_order.client_id.id)
-        if hasattr(source_order.client_id, "id")
-        else str(source_order.client_id)
+        str(source_order.client_id.id) if hasattr(
+            source_order.client_id, "id") else str(source_order.client_id)
     )
     if client_id_str != str(current_user.id):
         raise HTTPException(
@@ -409,19 +407,30 @@ async def repeat_order(
             existing.qty = item.ordered_qty
         else:
             from app.models.cart import CartItem
+            import uuid as _uuid
+
             cart.items.append(
                 CartItem(
+                    item_id=str(_uuid.uuid4()),
                     product_id=item.product_id,
                     product_name=product.name,
+                    product_slug=product.slug or "",
                     qty=item.ordered_qty,
                     unit=item.unit,
                     price=product.get_price_for_client(
                         current_user.client_type == "b2b"),
+                    cost_price=product.cost_price,
+                    total=round(
+                        item.ordered_qty * product.get_price_for_client(current_user.client_type == "b2b"), 2),
+                    min_order_qty=product.min_order_qty,
+                    order_step=product.order_step,
+                    stock_qty=product.stock_qty,
                 )
             )
         added_count += 1
 
     from datetime import datetime, timezone
+
     cart.updated_at = datetime.now(timezone.utc)
     await cart.save()
 
@@ -491,11 +500,8 @@ async def track_order(
 
     # Проверяем принадлежность
     if current_user.role != "admin":
-        client_id_str = (
-            str(order.client_id.id)
-            if hasattr(order.client_id, "id")
-            else str(order.client_id)
-        )
+        client_id_str = str(order.client_id.id) if hasattr(
+            order.client_id, "id") else str(order.client_id)
         if client_id_str != str(current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -503,15 +509,11 @@ async def track_order(
             )
 
     # Все возможные статусы в правильном порядке
-    status_order = [
-        "new", "confirmed", "assembling", "assembled", "delivering", "delivered"
-    ]
+    status_order = ["new", "confirmed", "assembling",
+                    "assembled", "delivering", "delivered"]
 
-    current_idx = (
-        status_order.index(order.status.value)
-        if order.status.value in status_order
-        else -1
-    )
+    current_idx = status_order.index(
+        order.status.value) if order.status.value in status_order else -1
 
     # Строим таймлайн
     timeline = [
@@ -521,9 +523,8 @@ async def track_order(
             "by": entry.by,
             "comment": entry.comment,
             "is_current": (
-                (entry.status.value if hasattr(
-                    entry.status, "value") else entry.status)
-                == order.status.value
+                (entry.status.value if hasattr(entry.status, "value")
+                 else entry.status) == order.status.value
             ),
         }
         for entry in order.status_history
@@ -541,79 +542,6 @@ async def track_order(
         "current_step": current_idx + 1 if current_idx >= 0 else 0,
         "total_steps": len(status_order),
     }
-
-
-@router.post(
-    "/{order_id}/cancel",
-    response_model=OrderResponse,
-    summary="Отмена заказа клиентом",
-)
-async def cancel_order(
-    order_id: str,
-    data: dict = None,
-    current_user=Depends(get_current_user),
-):
-    """
-    Отмена заказа клиентом.
-    Возможна только для статусов: new, confirmed.
-    """
-    from datetime import datetime, timezone
-    from app.models.order import StatusHistoryEntry
-
-    try:
-        order = await Order.get(PydanticObjectId(order_id))
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
-
-    if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
-
-    # Проверяем принадлежность
-    client_id_str = (
-        str(order.client_id.id)
-        if hasattr(order.client_id, "id")
-        else str(order.client_id)
-    )
-    if current_user.role != "admin" and client_id_str != str(current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
-
-    # Отмена возможна только на ранних этапах
-    cancellable = {OrderStatus.NEW, OrderStatus.CONFIRMED}
-    if order.status not in cancellable:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Нельзя отменить заказ в статусе «{order.status.value}». Допустимо: new, confirmed",
-        )
-
-    reason = (data or {}).get("reason", "Отменён клиентом")
-
-    now = datetime.now(timezone.utc)
-    order.status = OrderStatus.CANCELLED
-    order.updated_at = now
-    order.status_history.append(
-        StatusHistoryEntry(
-            status=OrderStatus.CANCELLED,
-            timestamp=now,
-            by=str(current_user.id),
-            comment=reason,
-        )
-    )
-    await order.save()
-
-    # Возвращаем зарезервированные остатки
-    try:
-        from app.services.stock_service import release_stock
-        await release_stock(order.items)
-    except Exception as e:
-        logger.warning("Не удалось вернуть остатки при отмене", error=str(e))
-
-    logger.info("Заказ отменён клиентом",
-                order_number=order.order_number, reason=reason)
-
-    return _order_to_response(order)
 
 
 @router.post(
@@ -681,6 +609,7 @@ async def create_retail_order(data: RetailOrderCreate):
                 product_id=item_data.product_id,
                 product_name=product.name,
                 ordered_qty=item_data.qty,
+                actual_qty=None,
                 unit=product.unit,
                 price=unit_price,
                 cost_price=product.cost_price,
@@ -706,6 +635,7 @@ async def create_retail_order(data: RetailOrderCreate):
     guest_user = await User.find_one({"phone": data.phone})
     if not guest_user:
         from app.utils.security import get_password_hash
+
         guest_user = User(
             phone=data.phone,
             name=data.name,
@@ -718,7 +648,7 @@ async def create_retail_order(data: RetailOrderCreate):
 
     order = Order(
         order_number=order_number,
-        client_id=guest_user,  # type: ignore[arg-type]
+        client_id=guest_user,
         client_name=data.name,
         client_phone=data.phone,
         items=order_items,
@@ -735,7 +665,7 @@ async def create_retail_order(data: RetailOrderCreate):
         admin_note="Розничный заказ без регистрации (предоплата на карту)",
         status_history=[
             StatusHistoryEntry(
-                status="new",
+                status=OrderStatus.NEW,
                 timestamp=now,
                 by="system",
                 comment="Розничный заказ",
@@ -767,6 +697,7 @@ async def create_retail_order(data: RetailOrderCreate):
     # ── UC-47: Уведомление администратору о розничном заказе ──
     try:
         from app.services.notification_service import notify_admin_new_order
+
         await notify_admin_new_order(order)
     except Exception as e:
         logger.warning(
@@ -775,6 +706,7 @@ async def create_retail_order(data: RetailOrderCreate):
     # Прямая отправка в Telegram как fallback (Celery может быть недоступен)
     try:
         from app.utils.telegram_bot import send_admin_notification
+
         tg_text = (
             f"🛒 <b>Розничный заказ {order.order_number}</b>\n"
             f"Покупатель: {order.client_name}\n"

@@ -8,6 +8,7 @@ UC-227: Генерация комплекта документов для тен
 3. Справка о ресурсах и опыте (PDF)
 4. Список сертификатов (PDF)
 """
+
 import io
 import zipfile
 from datetime import datetime, timezone
@@ -163,7 +164,7 @@ def _generate_commercial_offer(tender: dict, company: dict) -> bytes:
     <div class="footer">Коммерческое предложение действительно 30 календарных дней</div>
     </body></html>"""
 
-    return HTML(string=html).write_pdf()
+    return bytes(HTML(string=html).write_pdf())
 
 
 def _generate_declaration(tender: dict, company: dict) -> bytes:
@@ -217,7 +218,7 @@ def _generate_declaration(tender: dict, company: dict) -> bytes:
     </div>
     </body></html>"""
 
-    return HTML(string=html).write_pdf()
+    return bytes(HTML(string=html).write_pdf())
 
 
 def _generate_resource_reference(tender: dict, company: dict) -> bytes:
@@ -273,7 +274,7 @@ def _generate_resource_reference(tender: dict, company: dict) -> bytes:
     </div>
     </body></html>"""
 
-    return HTML(string=html).write_pdf()
+    return bytes(HTML(string=html).write_pdf())
 
 
 async def _generate_certificates_list(tender: dict, company: dict) -> bytes:
@@ -283,9 +284,7 @@ async def _generate_certificates_list(tender: dict, company: dict) -> bytes:
     now = datetime.now(timezone.utc)
 
     # Получаем активные сертификаты
-    certs = await Certificate.find(
-        {"status": {"$in": ["active", "expiring_soon"]}}
-    ).sort("expiry_date").to_list()
+    certs = await Certificate.find({"status": {"$in": ["active", "expiring_soon"]}}).sort("expiry_date").to_list()
 
     certs_html = ""
     if certs:
@@ -352,7 +351,7 @@ async def _generate_certificates_list(tender: dict, company: dict) -> bytes:
     </div>
     </body></html>"""
 
-    return HTML(string=html).write_pdf()
+    return bytes(HTML(string=html).write_pdf())
 
 
 async def generate_tender_documents_zip(tender_id: str) -> io.BytesIO:

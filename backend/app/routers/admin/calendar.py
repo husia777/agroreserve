@@ -4,6 +4,7 @@
 
 UC-50: Единый календарь — агрегирует все события из разных источников.
 """
+
 from datetime import date as DateType
 from typing import Optional
 
@@ -67,6 +68,7 @@ async def get_calendar_events(
         month_num = today.month
 
     from app.services.calendar_service import get_events
+
     all_events = await get_events(year, month_num)
 
     # Фильтрация по типам событий

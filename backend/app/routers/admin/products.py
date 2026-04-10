@@ -2,11 +2,12 @@
 Роутер управления каталогом (для администратора).
 Эндпоинты: /api/v1/admin/catalog/products, /api/v1/admin/catalog/categories
 """
+
 import math
 import os
 import uuid
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
+from typing import Optional
 
 import structlog
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
@@ -24,8 +25,7 @@ from app.schemas.product import (
 )
 from app.utils.security import require_admin
 
-router = APIRouter(prefix="/api/v1/admin",
-                   tags=["Администрирование — Каталог"])
+router = APIRouter(prefix="/api/v1/admin", tags=["Администрирование — Каталог"])
 logger = structlog.get_logger(__name__)
 
 # Директория для хранения фото товаров
@@ -38,8 +38,7 @@ MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 МБ
 
 def _product_to_response(product, category_name: str = "") -> dict:
     """Конвертирует Product модель в словарь для ProductResponse."""
-    cat_id = str(product.category_id.ref.id) if hasattr(
-        product.category_id, "ref") else str(product.category_id)
+    cat_id = str(product.category_id.ref.id) if hasattr(product.category_id, "ref") else str(product.category_id)
     return {
         "id": str(product.id),
         "name": product.name,
@@ -73,14 +72,14 @@ def _product_to_response(product, category_name: str = "") -> dict:
 
 # ── Загрузка фото товара ─────────────────────────────────────
 
+
 @router.post(
     "/catalog/products/upload-image",
     summary="Загрузить фото товара",
     status_code=201,
 )
 async def upload_product_image(
-    file: UploadFile = File(...,
-                            description="Фото товара (JPG/PNG/WebP, до 5 МБ)"),
+    file: UploadFile = File(..., description="Фото товара (JPG/PNG/WebP, до 5 МБ)"),
     admin=Depends(require_admin),
 ):
     """Загружает фото товара, возвращает URL."""
@@ -89,13 +88,11 @@ async def upload_product_image(
 
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400, detail=f"Допустимые форматы: {', '.join(ALLOWED_EXTENSIONS)}")
+        raise HTTPException(status_code=400, detail=f"Допустимые форматы: {', '.join(ALLOWED_EXTENSIONS)}")
 
     contents = await file.read()
     if len(contents) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=400, detail="Файл слишком большой (макс. 5 МБ)")
+        raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 5 МБ)")
 
     filename = f"{uuid.uuid4().hex}{ext}"
     filepath = os.path.join(PRODUCT_IMAGES_DIR, filename)
@@ -104,16 +101,16 @@ async def upload_product_image(
         f.write(contents)
 
     url = f"/media/products/{filename}"
-    logger.info("Фото товара загружено", filename=filename,
-                size=len(contents), admin_id=str(admin.id))
+    logger.info("Фото товара загружено", filename=filename, size=len(contents), admin_id=str(admin.id))
     return {"url": url, "filename": filename, "size": len(contents)}
 
 
 # ── Категории ─────────────────────────────────────────────────
 
+
 @router.get(
     "/catalog/categories",
-    response_model=List[CategoryResponse],
+    response_model=list[CategoryResponse],
     summary="Список всех категорий (для админа)",
 )
 async def get_admin_categories(admin=Depends(require_admin)):
@@ -168,8 +165,7 @@ async def create_category(data: CategoryCreate, admin=Depends(require_admin)):
     )
     await category.insert()
 
-    logger.info("Категория создана", category_id=str(
-        category.id), name=data.name)
+    logger.info("Категория создана", category_id=str(category.id), name=data.name)
 
     return CategoryResponse(
         id=str(category.id),
@@ -218,9 +214,7 @@ async def update_category(
     await category.save()
     logger.info("Категория обновлена", category_id=category_id)
 
-    product_count = await Product.find(
-        {"category_id.$id": category.id, "is_active": True}
-    ).count()
+    product_count = await Product.find({"category_id.$id": category.id, "is_active": True}).count()
 
     return CategoryResponse(
         id=str(category.id),
@@ -236,6 +230,7 @@ async def update_category(
 
 
 # ── Товары ────────────────────────────────────────────────────
+
 
 @router.get(
     "/catalog/products",
@@ -279,6 +274,7 @@ async def admin_get_products(
 async def create_product(data: ProductCreate, admin=Depends(require_admin)):
     """Создание нового товара каталога."""
     from beanie import PydanticObjectId
+
     from app.models.product import ProductUnit
 
     category = await Category.get(PydanticObjectId(data.category_id))
@@ -292,6 +288,7 @@ async def create_product(data: ProductCreate, admin=Depends(require_admin)):
     existing = await Product.find_one({"slug": slug})
     if existing:
         import time
+
         slug = f"{slug}-{int(time.time()) % 10000}"
 
     product = Product(
@@ -332,6 +329,7 @@ async def update_product(
 ):
     """Частичное обновление товара."""
     from beanie import PydanticObjectId
+
     from app.models.product import ProductUnit
 
     product = await Product.get(PydanticObjectId(product_id))
@@ -372,7 +370,7 @@ async def update_product(
     if data.is_active is not None:
         product.is_active = data.is_active
 
-    product.updated_at = datetime.now(timezone.utc)
+    product.updated_at = datetime.now(UTC)
     await product.save()
 
     logger.info("Товар обновлён", product_id=product_id)
@@ -397,7 +395,7 @@ async def deactivate_product(product_id: str, admin=Depends(require_admin)):
         )
 
     product.is_active = False
-    product.updated_at = datetime.now(timezone.utc)
+    product.updated_at = datetime.now(UTC)
     await product.save()
 
     logger.info("Товар деактивирован", product_id=product_id)
@@ -417,8 +415,7 @@ async def bulk_update_prices(
     """
     updates = data.get("updates", [])
     if not updates:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Список обновлений пуст")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Список обновлений пуст")
 
     updated_count = 0
     errors = []
@@ -429,6 +426,7 @@ async def bulk_update_prices(
             continue
         try:
             from beanie import PydanticObjectId
+
             product = await Product.get(PydanticObjectId(product_id))
             if not product:
                 errors.append(f"Товар {product_id} не найден")
@@ -439,10 +437,10 @@ async def bulk_update_prices(
             if "price_wholesale" in item:
                 product.price_wholesale = float(item["price_wholesale"])
 
-            product.updated_at = datetime.now(timezone.utc)
+            product.updated_at = datetime.now(UTC)
             await product.save()
             updated_count += 1
         except Exception as e:
-            errors.append(f"Ошибка для {product_id}: {str(e)}")
+            errors.append(f"Ошибка для {product_id}: {e!s}")
 
     return {"updated": updated_count, "errors": errors}

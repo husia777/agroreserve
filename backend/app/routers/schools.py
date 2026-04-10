@@ -3,18 +3,20 @@
 UC-109/136/141/145/146: Школьное питание
 Эндпоинты: /api/v1/schools/
 """
+
 import math
 from datetime import datetime, timezone
 from typing import Optional
 
+from app.schemas.order import OrderDocumentResponse
 import structlog
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.models.dish import Dish
 from app.models.menu import Menu, MenuDay, MenuItem
-from app.schemas.dish import DishListResponse, DishResponse
-from app.schemas.menu import KbzhuReport, MenuCreate, MenuListResponse, MenuResponse
+from app.schemas.dish import DishIngredientSchema, DishListResponse, DishResponse
+from app.schemas.menu import KbzhuReport, MenuCreate, MenuDaySchema, MenuItemSchema, MenuListResponse, MenuResponse
 from app.utils.security import require_approved_client
 
 logger = structlog.get_logger(__name__)
@@ -25,65 +27,62 @@ router = APIRouter(prefix="/api/v1/schools", tags=["Школы: Меню"])
 def _dish_to_response(dish: Dish) -> DishResponse:
     """Конвертирует объект Dish в ответ API."""
     return DishResponse(
-        **{
-            "_id": str(dish.id),
-            "name": dish.name,
-            "category": dish.category,
-            "description": dish.description,
-            "ingredients": [
-                {
-                    "product_id": str(i.product_id) if i.product_id else None,
-                    "name": i.name,
-                    "qty_per_portion_g": i.qty_per_portion_g,
-                    "unit": i.unit,
-                }
-                for i in dish.ingredients
-            ],
-            "portion_weight_g": dish.portion_weight_g,
-            "calories": dish.calories,
-            "protein": dish.protein,
-            "fat": dish.fat,
-            "carbs": dish.carbs,
-            "sanpin_compliant": dish.sanpin_compliant,
-            "age_groups": dish.age_groups,
-            "is_active": dish.is_active,
-            "created_at": dish.created_at.isoformat(),
-        }
+        id=str(dish.id),
+        name=dish.name,
+        category=dish.category,
+        description=dish.description,
+        ingredients=[
+            DishIngredientSchema(
+                product_id=str(i.product_id) if i.product_id else None,
+                name=i.name,
+                qty_per_portion_g=i.qty_per_portion_g,
+                unit=i.unit,
+            )
+            for i in dish.ingredients
+        ],
+        portion_weight_g=dish.portion_weight_g,
+        calories=dish.calories,
+        protein=dish.protein,
+        fat=dish.fat,
+        carbs=dish.carbs,
+        sanpin_compliant=dish.sanpin_compliant,
+        age_groups=dish.age_groups,
+        is_active=dish.is_active,
+        created_at=dish.created_at.isoformat(),
     )
 
 
 def _menu_to_response(menu: Menu) -> MenuResponse:
     """Конвертирует объект Menu в ответ API."""
     return MenuResponse(
-        **{
-            "_id": str(menu.id),
-            "client_id": str(menu.client_id),
-            "week_start": str(menu.week_start),
-            "week_end": str(menu.week_end),
-            "days": [
-                {
-                    "date": day.date,
-                    "items": [
-                        {
-                            "dish_id": str(item.dish_id),
-                            "dish_name": item.dish_name,
-                            "portions": item.portions,
-                            "meal_type": item.meal_type,
-                        }
-                        for item in day.items
-                    ],
-                }
-                for day in menu.days
-            ],
-            "total_portions": menu.total_portions,
-            "total_calories": menu.total_calories,
-            "total_protein": menu.total_protein,
-            "total_fat": menu.total_fat,
-            "total_carbs": menu.total_carbs,
-            "generated_order_id": str(menu.generated_order_id) if menu.generated_order_id else None,
-            "status": menu.status,
-            "created_at": menu.created_at.isoformat(),
-        }
+        id=str(menu.id),
+        client_id=str(menu.client_id),
+        week_start=str(menu.week_start),
+        week_end=str(menu.week_end),
+        days=[
+            MenuDaySchema(
+                date=day.date,
+                items=[
+                    MenuItemSchema(
+                        dish_id=str(item.dish_id),
+                        dish_name=item.dish_name,
+                        portions=item.portions,
+                        meal_type=item.meal_type,
+                    )
+                    for item in day.items
+                ],
+            )
+            for day in menu.days
+        ],
+        total_portions=menu.total_portions,
+        total_calories=menu.total_calories,
+        total_protein=menu.total_protein,
+        total_fat=menu.total_fat,
+        total_carbs=menu.total_carbs,
+        generated_order_id=str(
+            menu.generated_order_id) if menu.generated_order_id else None,
+        status=menu.status,
+        created_at=menu.created_at.isoformat(),
     )
 
 
@@ -94,9 +93,11 @@ def _menu_to_response(menu: Menu) -> MenuResponse:
 )
 async def get_dishes(
     category: Optional[str] = Query(None, description="Фильтр по категории"),
-    age_group: Optional[str] = Query(None, description="Возрастная группа: 7-11, 12-18"),
+    age_group: Optional[str] = Query(
+        None, description="Возрастная группа: 7-11, 12-18"),
     search: Optional[str] = Query(None, description="Поиск по названию"),
-    sanpin_only: bool = Query(False, description="Только блюда, соответствующие СанПиН"),
+    sanpin_only: bool = Query(
+        False, description="Только блюда, соответствующие СанПиН"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=200),
     current_user=Depends(require_approved_client),
@@ -121,13 +122,7 @@ async def get_dishes(
         query["$text"] = {"$search": search}
 
     total = await Dish.find(query).count()
-    dishes = (
-        await Dish.find(query)
-        .sort(Dish.name)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .to_list()
-    )
+    dishes = await Dish.find(query).sort(Dish.name).skip((page - 1) * limit).limit(limit).to_list()
 
     return DishListResponse(
         items=[_dish_to_response(d) for d in dishes],
@@ -194,6 +189,11 @@ async def create_menu(
                     detail=f"Блюдо с ID {item_data.dish_id} не найдено в справочнике",
                 )
 
+            if dish.id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Блюдо с ID {item_data.dish_id} не имеет идентификатора",
+                )
             day_items.append(
                 MenuItem(
                     dish_id=dish.id,
@@ -249,13 +249,7 @@ async def get_my_menus(
         query["status"] = status_filter
 
     total = await Menu.find(query).count()
-    menus = (
-        await Menu.find(query)
-        .sort(-Menu.week_start)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .to_list()
-    )
+    menus = await Menu.find(query).sort(-Menu.week_start).skip((page - 1) * limit).limit(limit).to_list()
 
     return MenuListResponse(
         items=[_menu_to_response(m) for m in menus],
@@ -281,14 +275,17 @@ async def get_menu_detail(
     try:
         menu = await Menu.get(PydanticObjectId(menu_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
 
     if not menu:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
 
     # Проверяем принадлежность
     if current_user.role != "admin" and str(menu.client_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
 
     from app.services.menu_service import calculate_ingredients
 
@@ -311,7 +308,8 @@ async def get_menu_detail(
 )
 async def repeat_menu(
     menu_id: str,
-    week_start: str = Query(..., description="Начало новой недели (YYYY-MM-DD)"),
+    week_start: str = Query(...,
+                            description="Начало новой недели (YYYY-MM-DD)"),
     week_end: str = Query(..., description="Конец новой недели (YYYY-MM-DD)"),
     current_user=Depends(require_approved_client),
 ):
@@ -328,14 +326,17 @@ async def repeat_menu(
     try:
         source_menu = await Menu.get(PydanticObjectId(menu_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
 
     if not source_menu:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
 
     # Проверяем принадлежность
     if str(source_menu.client_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
 
     # Парсим новые даты
     try:
@@ -423,14 +424,17 @@ async def create_order_from_menu(
     try:
         menu = await Menu.get(PydanticObjectId(menu_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
 
     if not menu:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
 
     # Проверяем принадлежность
     if str(menu.client_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
 
     if menu.status == "ordered":
         raise HTTPException(
@@ -443,7 +447,8 @@ async def create_order_from_menu(
     try:
         order = await generate_order_from_menu(menu, current_user)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     logger.info(
         "Заказ из меню сформирован через API",
@@ -468,7 +473,8 @@ async def create_order_from_menu(
 )
 async def get_kbzhu_report(
     menu_id: str,
-    age_group: str = Query("school_7_11", description="Возрастная группа для проверки СанПиН"),
+    age_group: str = Query(
+        "school_7_11", description="Возрастная группа для проверки СанПиН"),
     current_user=Depends(require_approved_client),
 ):
     """
@@ -480,14 +486,17 @@ async def get_kbzhu_report(
     try:
         menu = await Menu.get(PydanticObjectId(menu_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
 
     if not menu:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
 
     # Проверяем принадлежность
     if current_user.role != "admin" and str(menu.client_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
 
     from app.services.menu_service import generate_kbzhu_pdf
 
@@ -500,6 +509,7 @@ async def get_kbzhu_report(
 # UC-105: Нормы СанПиН
 # ══════════════════════════════════════════════════════════════
 
+
 @router.get(
     "/sanpin-norms",
     summary="UC-105: Справочник норм питания СанПиН",
@@ -511,12 +521,14 @@ async def get_sanpin_norms(
     Возвращает все нормы питания по возрастным группам (СанПиН 2.3/2.4.3590-20).
     """
     from app.services.sanpin_norms import get_all_norms
+
     return {"norms": get_all_norms()}
 
 
 # ══════════════════════════════════════════════════════════════
 # UC-136: Авто-генерация меню на неделю
 # ══════════════════════════════════════════════════════════════
+
 
 @router.post(
     "/menu/auto-generate",
@@ -538,7 +550,8 @@ async def auto_generate_menu(
     try:
         parsed_date = date_type.fromisoformat(week_start)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Неверный формат даты. Используйте YYYY-MM-DD")
+        raise HTTPException(
+            status_code=422, detail="Неверный формат даты. Используйте YYYY-MM-DD")
 
     try:
         result = await auto_generate_weekly_menu(
@@ -555,6 +568,7 @@ async def auto_generate_menu(
 # ══════════════════════════════════════════════════════════════
 # UC-141: Расчёт стоимости меню
 # ══════════════════════════════════════════════════════════════
+
 
 @router.get(
     "/menu/{menu_id}/cost",
@@ -589,6 +603,7 @@ async def get_menu_cost(
 # ══════════════════════════════════════════════════════════════
 # UC-145: Ежедневный отчёт повара
 # ══════════════════════════════════════════════════════════════
+
 
 @router.post(
     "/menu/{menu_id}/daily-report",
@@ -631,6 +646,7 @@ async def create_daily_report(
 # ══════════════════════════════════════════════════════════════
 # UC-146: Бюджетный контроль 44-ФЗ
 # ══════════════════════════════════════════════════════════════
+
 
 @router.get(
     "/menu/{menu_id}/budget-check",

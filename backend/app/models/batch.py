@@ -2,7 +2,9 @@
 Модель партии товара (для партионного учёта FIFO).
 Коллекция: batches
 """
-from datetime import date as DateType, datetime, timezone
+
+from datetime import UTC, datetime
+from datetime import date as DateType
 from typing import Optional
 
 from beanie import Document, PydanticObjectId
@@ -50,9 +52,7 @@ class Batch(Document):
     is_exhausted: bool = Field(False, description="Партия исчерпана (qty_remaining = 0)")
 
     # ── Метаданные ────────────────────────────────────────────
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "batches"

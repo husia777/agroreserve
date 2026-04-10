@@ -2,8 +2,9 @@
 Модель блюда для конструктора школьного меню.
 Коллекция: dishes
 """
-from datetime import datetime, timezone
-from typing import List, Optional
+
+from datetime import UTC, datetime
+from typing import Optional
 
 from beanie import Document, PydanticObjectId
 from pydantic import BaseModel, Field
@@ -11,6 +12,7 @@ from pydantic import BaseModel, Field
 
 class DishIngredient(BaseModel):
     """Ингредиент блюда с привязкой к каталогу товаров."""
+
     # Необязательная привязка к товару в каталоге (для автоматического заказа)
     product_id: Optional[PydanticObjectId] = Field(None, description="ID товара в каталоге")
     name: str = Field(..., description="Название ингредиента (например, Картофель)")
@@ -33,9 +35,7 @@ class Dish(Document):
     description: Optional[str] = Field(None, description="Описание блюда")
 
     # ── Состав ────────────────────────────────────────────────
-    ingredients: List[DishIngredient] = Field(
-        default_factory=list, description="Ингредиенты блюда"
-    )
+    ingredients: list[DishIngredient] = Field(default_factory=list, description="Ингредиенты блюда")
 
     # ── Выход и пищевая ценность ──────────────────────────────
     portion_weight_g: float = Field(..., ge=0, description="Вес одной порции в граммах")
@@ -49,7 +49,7 @@ class Dish(Document):
 
     # ── Возрастные группы ─────────────────────────────────────
     # Форматы: "7-11" (начальная школа), "12-18" (средняя/старшая)
-    age_groups: List[str] = Field(
+    age_groups: list[str] = Field(
         default_factory=lambda: ["7-11", "12-18"],
         description="Возрастные группы учеников",
     )
@@ -58,9 +58,7 @@ class Dish(Document):
     is_active: bool = Field(True, description="Активно ли блюдо в справочнике")
 
     # ── Метаданные ────────────────────────────────────────────
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "dishes"

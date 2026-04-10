@@ -5,8 +5,10 @@ UC-26: Ежедневная проверка сроков сертификато
 - Уведомление администратора об истекающих (< 30 дней)
 - Автоблокировка товаров с просроченными сертификатами (is_active = False)
 """
+
 import asyncio
 from datetime import date, timedelta
+from typing import Any
 
 import structlog
 
@@ -43,8 +45,10 @@ def check_expiring_certificates(self) -> dict:
 
     Возвращает статистику выполнения.
     """
+
     async def _execute() -> dict:
         from app.database import connect_to_mongo
+
         await connect_to_mongo()
 
         from app.models.certificate import Certificate, CertificateStatus
@@ -53,18 +57,19 @@ def check_expiring_certificates(self) -> dict:
         today = date.today()
         warning_threshold = today + timedelta(days=30)
 
-        result = {
+        result: dict[str, Any] = {
             "status": "ok",
             "expiring_soon": [],
             "expired": [],
             "blocked_products": [],
             "notifications_sent": 0,
         }
+        blocked_products: list[dict] = []
 
         # ── 1. Находим истекающие и просроченные сертификаты ──────────────────
         # Все сертификаты с датой истечения <= threshold (включая просроченные)
         certs = await Certificate.find(
-            Certificate.expiry_date <= warning_threshold,  # type: ignore
+            Certificate.expiry_date <= warning_threshold,
         ).to_list()
 
         expired_certs = []
@@ -77,6 +82,7 @@ def check_expiring_certificates(self) -> dict:
                 if cert.status != CertificateStatus.EXPIRED:
                     cert.status = CertificateStatus.EXPIRED
                     from datetime import datetime, timezone
+
                     cert.updated_at = datetime.now(timezone.utc)
                     await cert.save()
                     logger.info(
@@ -91,6 +97,7 @@ def check_expiring_certificates(self) -> dict:
                 if cert.status != CertificateStatus.EXPIRING_SOON:
                     cert.status = CertificateStatus.EXPIRING_SOON
                     from datetime import datetime, timezone
+
                     cert.updated_at = datetime.now(timezone.utc)
                     await cert.save()
 
@@ -126,17 +133,21 @@ def check_expiring_certificates(self) -> dict:
         for pid in blocked_product_ids:
             try:
                 from beanie import PydanticObjectId
+
                 product = await Product.get(PydanticObjectId(pid))
                 if product and product.is_active:
                     product.is_active = False
                     from datetime import datetime, timezone
+
                     product.updated_at = datetime.now(timezone.utc)
                     await product.save()
                     blocked_count += 1
-                    result["blocked_products"].append({
-                        "product_id": pid,
-                        "product_name": product.name,
-                    })
+                    blocked_products.append(
+                        {
+                            "product_id": pid,
+                            "product_name": product.name,
+                        }
+                    )
                     logger.warning(
                         "Товар заблокирован из-за просроченного сертификата",
                         product_id=pid,
@@ -157,6 +168,7 @@ def check_expiring_certificates(self) -> dict:
                 blocked_count=blocked_count,
             )
             result["notifications_sent"] = 1
+        result["blocked_products"] = blocked_products
 
         logger.info(
             "Проверка сертификатов завершена",
@@ -165,10 +177,10 @@ def check_expiring_certificates(self) -> dict:
             blocked_products=blocked_count,
         )
 
-        return result
+        return dict(result)
 
     try:
-        return _run_async(_execute())
+        return dict(_run_async(_execute()))
     except Exception as exc:
         logger.error("Ошибка задачи check_expiring_certificates",
                      error=str(exc))

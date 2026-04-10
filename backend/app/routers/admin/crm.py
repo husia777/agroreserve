@@ -4,6 +4,7 @@
 
 UC-54: Карточка клиента — полная информация, заметки, история взаимодействий.
 """
+
 import math
 from datetime import datetime, timezone
 from typing import Optional
@@ -24,13 +25,16 @@ router = APIRouter(prefix="/api/v1/admin/crm", tags=["Админ: CRM"])
 
 # ── Pydantic схемы ─────────────────────────────────────────────────────────────
 
+
 class NoteCreate(BaseModel):
     """Создание заметки к клиенту."""
+
     text: str = Field(..., min_length=1, max_length=2000, description="Текст заметки")
 
 
 class InteractionCreate(BaseModel):
     """Создание записи о взаимодействии."""
+
     # Фронтенд шлёт { type, description }, бэкенд принимает оба варианта
     interaction_type: Optional[str] = Field(
         None,
@@ -53,6 +57,7 @@ class InteractionCreate(BaseModel):
 
 
 # ── Утилиты ────────────────────────────────────────────────────────────────────
+
 
 def _note_to_dict(note: ClientNote) -> dict:
     """Конвертирует ClientNote в словарь."""
@@ -78,6 +83,7 @@ def _interaction_to_dict(interaction: ClientInteraction) -> dict:
 
 
 # ── Эндпоинты ──────────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/clients/{client_id}/card",
@@ -105,9 +111,13 @@ async def get_client_card(
     # ── Заказы клиента ────────────────────────────────────────
     from app.models.order import Order, OrderStatus, PaymentStatus
 
-    all_orders = await Order.find(
-        {"client_id.$id": PydanticObjectId(client_id)},
-    ).sort(-Order.created_at).to_list()
+    all_orders = (
+        await Order.find(
+            {"client_id.$id": PydanticObjectId(client_id)},
+        )
+        .sort(-Order.created_at)
+        .to_list()
+    )
 
     delivered_orders = [o for o in all_orders if o.status == OrderStatus.DELIVERED]
 
@@ -139,19 +149,34 @@ async def get_client_card(
 
     # ── Договоры клиента ──────────────────────────────────────
     from app.models.contract import Contract
-    contracts = await Contract.find(
-        Contract.client_id == PydanticObjectId(client_id),  # type: ignore
-    ).sort(-Contract.created_at).to_list()
+
+    contracts = (
+        await Contract.find(
+            Contract.client_id == PydanticObjectId(client_id),
+        )
+        .sort(-Contract.created_at)
+        .to_list()
+    )
 
     # ── Заметки ───────────────────────────────────────────────
-    notes = await ClientNote.find(
-        ClientNote.client_id == client_id,
-    ).sort(-ClientNote.created_at).limit(20).to_list()
+    notes = (
+        await ClientNote.find(
+            ClientNote.client_id == client_id,
+        )
+        .sort(-ClientNote.created_at)
+        .limit(20)
+        .to_list()
+    )
 
     # ── Последние взаимодействия ──────────────────────────────
-    interactions = await ClientInteraction.find(
-        ClientInteraction.client_id == client_id,
-    ).sort(-ClientInteraction.created_at).limit(10).to_list()
+    interactions = (
+        await ClientInteraction.find(
+            ClientInteraction.client_id == client_id,
+        )
+        .sort(-ClientInteraction.created_at)
+        .limit(10)
+        .to_list()
+    )
 
     logger.info(
         "Карточка клиента запрошена",
@@ -177,19 +202,18 @@ async def get_client_card(
                 "inn": getattr(client.organization, "inn", None),
                 "kpp": getattr(client.organization, "kpp", None),
                 "legal_address": getattr(client.organization, "legal_address", None),
-            } if client.organization else None,
+            }
+            if client.organization
+            else None,
         },
-
         # Плоские поля статистики
         "orders_count": total_orders,
         "total_revenue": total_spent,
         "avg_check": avg_check,
         "top_products": top_products,
-
         # Финансы
         "debt": client.current_debt,
         "credit_limit": client.credit_limit,
-
         # Договоры, заметки, взаимодействия
         "contracts": [
             {

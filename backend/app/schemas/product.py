@@ -1,15 +1,17 @@
 """
 Схемы для товаров и категорий каталога.
 """
-from typing import List, Optional
+
+from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-
 # ── Категории ─────────────────────────────────────────────────
+
 
 class CategoryCreate(BaseModel):
     """Запрос на создание категории (только для администратора)."""
+
     name: str = Field(..., min_length=2, max_length=100, description="Название категории")
     slug: Optional[str] = Field(None, description="Slug (авто из имени если не указан)")
     icon_url: Optional[str] = Field(None, description="URL иконки")
@@ -21,6 +23,7 @@ class CategoryCreate(BaseModel):
 
 class CategoryUpdate(BaseModel):
     """Запрос на обновление категории."""
+
     name: Optional[str] = Field(None, min_length=2, max_length=100)
     icon_url: Optional[str] = None
     description: Optional[str] = Field(None, max_length=500)
@@ -30,6 +33,7 @@ class CategoryUpdate(BaseModel):
 
 class CategoryResponse(BaseModel):
     """Категория в ответе API."""
+
     id: str
     name: str
     slug: str
@@ -45,8 +49,10 @@ class CategoryResponse(BaseModel):
 
 # ── Товары ────────────────────────────────────────────────────
 
+
 class ProductCreate(BaseModel):
     """Запрос на создание товара (только для администратора)."""
+
     name: str = Field(..., min_length=2, max_length=200, description="Название товара")
     slug: Optional[str] = Field(None, description="Slug (авто из имени если не указан)")
     category_id: str = Field(..., description="ID категории")
@@ -61,7 +67,7 @@ class ProductCreate(BaseModel):
     order_step: float = Field(0.5, ge=0, description="Шаг изменения кол-ва")
     stock_qty: float = Field(0.0, ge=0, description="Остаток на складе")
     min_stock_qty: float = Field(0.0, ge=0, description="Мин. остаток (алерт)")
-    images: List[str] = Field(default_factory=list, description="URL изображений")
+    images: list[str] = Field(default_factory=list, description="URL изображений")
     storage_conditions: Optional[str] = Field(None, description="Условия хранения")
     shelf_life_days: Optional[int] = Field(None, ge=0, description="Срок годности в днях")
     is_active: bool = Field(True)
@@ -85,6 +91,7 @@ class ProductCreate(BaseModel):
 
 class ProductUpdate(BaseModel):
     """Запрос на обновление товара (частичное обновление)."""
+
     name: Optional[str] = Field(None, min_length=2, max_length=200)
     category_id: Optional[str] = None
     description: Optional[str] = None
@@ -97,7 +104,7 @@ class ProductUpdate(BaseModel):
     min_order_qty: Optional[float] = Field(None, ge=0)
     order_step: Optional[float] = Field(None, ge=0)
     min_stock_qty: Optional[float] = Field(None, ge=0)
-    images: Optional[List[str]] = None
+    images: Optional[list[str]] = None
     storage_conditions: Optional[str] = None
     shelf_life_days: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
@@ -108,6 +115,7 @@ class ProductResponse(BaseModel):
     Товар в ответе API.
     Имена полей совпадают с фронтендом (Product interface).
     """
+
     id: str
     name: str
     slug: str
@@ -125,14 +133,14 @@ class ProductResponse(BaseModel):
     order_step: float = 0.5
     stock_quantity: float = 0.0
     min_stock_quantity: float = 0.0
-    images: List[str] = Field(default_factory=list)
+    images: list[str] = Field(default_factory=list)
     storage_conditions: Optional[str] = None
     shelf_life_days: Optional[int] = None
     is_active: bool = True
     is_available: bool = Field(True, description="Доступен для заказа")
     is_low_stock: bool = Field(False, description="Мало на складе")
     popularity: int = 0
-    certificate_ids: List[str] = Field(default_factory=list)
+    certificate_ids: list[str] = Field(default_factory=list)
     created_at: str
     updated_at: str
 
@@ -141,7 +149,8 @@ class ProductResponse(BaseModel):
 
 class ProductListResponse(BaseModel):
     """Список товаров с пагинацией."""
-    items: List[ProductResponse]
+
+    items: list[ProductResponse]
     total: int = Field(..., description="Всего товаров по фильтру")
     page: int = Field(..., description="Текущая страница (с 1)")
     limit: int = Field(..., description="Товаров на странице")
@@ -150,6 +159,7 @@ class ProductListResponse(BaseModel):
 
 class ProductFilters(BaseModel):
     """Параметры фильтрации и поиска товаров."""
+
     category: Optional[str] = Field(None, description="Slug или ID категории")
     search: Optional[str] = Field(None, description="Поисковый запрос")
     sort: str = Field("name", description="Сортировка: name, price_asc, price_desc, stock")

@@ -4,6 +4,7 @@
 Использует WeasyPrint для генерации PDF из HTML-шаблонов.
 Если WeasyPrint не установлен — создаёт заглушку в виде HTML файла.
 """
+
 import os
 from datetime import datetime, timezone
 from typing import Optional
@@ -35,10 +36,14 @@ async def get_next_doc_number(doc_type: DocumentType) -> str:
     year = datetime.now(timezone.utc).year
     prefix = DocumentRecord.get_document_prefix(doc_type)
 
-    last_doc = await DocumentRecord.find(
-        DocumentRecord.doc_type == doc_type,
-        DocumentRecord.year == year,
-    ).sort(-DocumentRecord.number).first_or_none()
+    last_doc = (
+        await DocumentRecord.find(
+            DocumentRecord.doc_type == doc_type,
+            DocumentRecord.year == year,
+        )
+        .sort(-DocumentRecord.number)
+        .first_or_none()
+    )
 
     if last_doc:
         try:
@@ -76,9 +81,8 @@ async def _get_seller_info_from_db() -> dict:
     """
     try:
         from app.models.settings import SystemSettings
-        settings_doc = await SystemSettings.find_one(
-            SystemSettings.singleton_key == "main"
-        )
+
+        settings_doc = await SystemSettings.find_one(SystemSettings.singleton_key == "main")
         if settings_doc:
             bd = settings_doc.bank_details
             return {
@@ -94,8 +98,7 @@ async def _get_seller_info_from_db() -> dict:
                 "correspondent_account": bd.correspondent_account,
             }
     except Exception as e:
-        logger.warning(
-            "Не удалось получить реквизиты из SystemSettings", error=str(e))
+        logger.warning("Не удалось получить реквизиты из SystemSettings", error=str(e))
     return _get_seller_info()
 
 
@@ -331,7 +334,8 @@ async def _save_pdf(html: str, filename: str) -> Optional[str]:
     filepath = os.path.join(DOCUMENTS_DIR, filename)
 
     try:
-        import weasyprint  # type: ignore
+        import weasyprint
+
         weasyprint.HTML(string=html).write_pdf(filepath)
         logger.info("PDF сгенерирован через WeasyPrint", filename=filename)
         return filepath
@@ -360,10 +364,7 @@ async def generate_invoice(order) -> Optional[DocumentRecord]:
     Returns:
         DocumentRecord или None при ошибке
     """
-    client_id = (
-        str(order.client_id.id) if hasattr(
-            order.client_id, "id") else str(order.client_id)
-    )
+    client_id = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
 
     doc_number = await get_next_doc_number(DocumentType.INVOICE)
     year = datetime.now(timezone.utc).year
@@ -374,8 +375,7 @@ async def generate_invoice(order) -> Optional[DocumentRecord]:
 
     # URL для скачивания
     file_url = f"/api/v1/documents/files/{filename}" if filepath else None
-    file_size = os.path.getsize(
-        filepath) if filepath and os.path.exists(filepath) else None
+    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
 
     doc = DocumentRecord(
         doc_type=DocumentType.INVOICE,
@@ -409,10 +409,7 @@ async def generate_torg12(order) -> Optional[DocumentRecord]:
     Returns:
         DocumentRecord или None при ошибке
     """
-    client_id = (
-        str(order.client_id.id) if hasattr(
-            order.client_id, "id") else str(order.client_id)
-    )
+    client_id = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
 
     doc_number = await get_next_doc_number(DocumentType.TORG12)
     year = datetime.now(timezone.utc).year
@@ -422,8 +419,7 @@ async def generate_torg12(order) -> Optional[DocumentRecord]:
     filepath = await _save_pdf(html, filename)
 
     file_url = f"/api/v1/documents/files/{filename}" if filepath else None
-    file_size = os.path.getsize(
-        filepath) if filepath and os.path.exists(filepath) else None
+    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
 
     doc = DocumentRecord(
         doc_type=DocumentType.TORG12,
@@ -505,8 +501,7 @@ async def generate_labels(products: list, order_id: Optional[str] = None) -> Opt
     filepath = await _save_pdf(label_html, filename)
 
     file_url = f"/api/v1/documents/files/{filename}" if filepath else None
-    file_size = os.path.getsize(
-        filepath) if filepath and os.path.exists(filepath) else None
+    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
 
     doc = DocumentRecord(
         doc_type=DocumentType.LABEL,
@@ -735,23 +730,24 @@ async def generate_reconciliation_act(
     date_to_str = date_to.strftime("%d.%m.%Y")
 
     # Конвертируем даты в datetime для MongoDB
-    start_dt = dt(date_from.year, date_from.month,
-                  date_from.day, 0, 0, 0, tzinfo=timezone.utc)
-    end_dt = dt(date_to.year, date_to.month, date_to.day,
-                23, 59, 59, tzinfo=timezone.utc)
+    start_dt = dt(date_from.year, date_from.month, date_from.day, 0, 0, 0, tzinfo=timezone.utc)
+    end_dt = dt(date_to.year, date_to.month, date_to.day, 23, 59, 59, tzinfo=timezone.utc)
 
     # Заказы клиента за период (только доставленные или подтверждённые)
-    orders = await Order.find(
-        {"client_id.$id": PydanticObjectId(client_id)},
-        Order.created_at >= start_dt,  # type: ignore
-        Order.created_at <= end_dt,   # type: ignore
-    ).sort(Order.created_at).to_list()
+    orders = (
+        await Order.find(
+            {"client_id.$id": PydanticObjectId(client_id)},
+            Order.created_at >= start_dt,
+            Order.created_at <= end_dt,
+        )
+        .sort(Order.created_at)
+        .to_list()
+    )
 
     # Начальное сальдо — задолженность до начала периода
     orders_before = await Order.find(
         {"client_id.$id": PydanticObjectId(client_id)},
-        Order.created_at < start_dt,  # type: ignore
-        # type: ignore
+        Order.created_at < start_dt,
         Order.status.in_([OrderStatus.DELIVERED, OrderStatus.CONFIRMED]),
     ).to_list()
 
@@ -763,22 +759,33 @@ async def generate_reconciliation_act(
     transactions = []
 
     for order in orders:
-        if order.status in [OrderStatus.DELIVERED, OrderStatus.CONFIRMED, OrderStatus.ASSEMBLING, OrderStatus.ASSEMBLED, OrderStatus.DELIVERING]:
-            transactions.append({
-                "date": order.created_at.strftime("%d.%m.%Y"),
-                "description": f"Заказ № {order.order_number} (поставка)",
-                "debit": order.total,
-                "credit": None,
-            })
+        if order.status in [
+            OrderStatus.DELIVERED,
+            OrderStatus.CONFIRMED,
+            OrderStatus.ASSEMBLING,
+            OrderStatus.ASSEMBLED,
+            OrderStatus.DELIVERING,
+        ]:
+            transactions.append(
+                {
+                    "date": order.created_at.strftime("%d.%m.%Y"),
+                    "description": f"Заказ № {order.order_number} (поставка)",
+                    "debit": order.total,
+                    "credit": None,
+                }
+            )
             if order.paid_amount > 0:
-                paid_date = order.paid_at.strftime(
-                    "%d.%m.%Y") if order.paid_at else order.created_at.strftime("%d.%m.%Y")
-                transactions.append({
-                    "date": paid_date,
-                    "description": f"Оплата по заказу № {order.order_number}",
-                    "debit": None,
-                    "credit": order.paid_amount,
-                })
+                paid_date = (
+                    order.paid_at.strftime("%d.%m.%Y") if order.paid_at else order.created_at.strftime("%d.%m.%Y")
+                )
+                transactions.append(
+                    {
+                        "date": paid_date,
+                        "description": f"Оплата по заказу № {order.order_number}",
+                        "debit": None,
+                        "credit": order.paid_amount,
+                    }
+                )
 
     # Сортируем по дате
     transactions.sort(key=lambda x: x["date"])
@@ -816,8 +823,7 @@ async def generate_reconciliation_act(
     doc_number = await get_next_doc_number(DocumentType.ACT_SVERKI)
     year = datetime.now(timezone.utc).year
     file_url = f"/admin/documents/files/{filename}" if filepath else None
-    file_size = os.path.getsize(
-        filepath) if filepath and os.path.exists(filepath) else None
+    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
 
     doc_record = DocumentRecord(
         doc_type=DocumentType.ACT_SVERKI,
@@ -855,9 +861,9 @@ def _build_contract_number(contract_type: str, counter: int) -> str:
     """Генерирует номер договора в формате ДГ-YYYY-NNNNN."""
     year = datetime.now(timezone.utc).year
     prefix_map = {
-        "supply": "ДП",       # Договор поставки
+        "supply": "ДП",  # Договор поставки
         "supply_44fz": "ГК",  # Госконтракт 44-ФЗ
-        "agency": "ДА",       # Агентский договор
+        "agency": "ДА",  # Агентский договор
     }
     prefix = prefix_map.get(contract_type, "ДГ")
     return f"{prefix}-{year}-{counter:05d}"
@@ -1168,8 +1174,7 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
     """
     valid_types = ["supply", "supply_44fz", "agency"]
     if contract_type not in valid_types:
-        raise ValueError(
-            f"Допустимые типы договоров: {', '.join(valid_types)}")
+        raise ValueError(f"Допустимые типы договоров: {', '.join(valid_types)}")
 
     from beanie import PydanticObjectId
     from app.models.user import User
@@ -1241,8 +1246,7 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
 
     # Сохраняем запись в БД
     file_url = f"/admin/documents/files/{filename}" if filepath else None
-    file_size = os.path.getsize(
-        filepath) if filepath and os.path.exists(filepath) else None
+    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
 
     doc_record = DocumentRecord(
         doc_type=DocumentType.CONTRACT,

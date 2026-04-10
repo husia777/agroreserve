@@ -2,11 +2,13 @@
 Роутер управления документами (администратор).
 Эндпоинты: /api/v1/admin/documents/
 """
+
 import math
 import os
-from urllib.parse import quote
+from datetime import UTC
 from datetime import date as DateType
-from typing import List, Optional
+from typing import Optional
+from urllib.parse import quote
 
 import structlog
 from beanie import PydanticObjectId
@@ -14,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
-from app.models.document import DocumentRecord, DocumentType
+from app.models.document import DocumentRecord
 from app.utils.security import require_admin
 
 logger = structlog.get_logger(__name__)
@@ -26,8 +28,10 @@ DOCUMENTS_DIR = "/app/media/documents"
 
 # ── Pydantic схемы ─────────────────────────────────────────────────────────────
 
+
 class ReconciliationActRequest(BaseModel):
     """Запрос на генерацию акта сверки."""
+
     client_id: str
     date_from: DateType
     date_to: DateType
@@ -35,11 +39,13 @@ class ReconciliationActRequest(BaseModel):
 
 class ContractRequest(BaseModel):
     """Запрос на генерацию договора."""
+
     contract_type: str  # supply, supply_44fz, agency
     client_id: str
 
 
 # ── Эндпоинты ──────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/generate/{order_id}",
@@ -48,7 +54,7 @@ class ContractRequest(BaseModel):
 )
 async def generate_documents(
     order_id: str,
-    doc_types: Optional[List[str]] = Query(
+    doc_types: Optional[list[str]] = Query(
         None,
         description="Типы документов: invoice, torg12, label. По умолчанию — invoice и torg12",
     ),
@@ -78,7 +84,7 @@ async def generate_documents(
     generated = []
 
     from app.models.order import OrderDocument
-    from app.services.document_service import generate_invoice, generate_torg12, generate_labels
+    from app.services.document_service import generate_invoice, generate_labels, generate_torg12
 
     if "invoice" in types_to_generate:
         try:
@@ -150,8 +156,7 @@ async def generate_documents(
                             }
                         )
                 except Exception:
-                    products_data.append(
-                        {"name": item.product_name, "origin_country": "Россия"})
+                    products_data.append({"name": item.product_name, "origin_country": "Россия"})
 
             doc = await generate_labels(products_data, order_id)
             if doc:
@@ -168,8 +173,9 @@ async def generate_documents(
             generated.append({"type": "label", "error": str(e)})
 
     # Сохраняем обновлённые документы в заказе
-    from datetime import datetime, timezone
-    order.updated_at = datetime.now(timezone.utc)
+    from datetime import datetime
+
+    order.updated_at = datetime.now(UTC)
     await order.save()
 
     logger.info(
@@ -215,6 +221,7 @@ async def generate_reconciliation_act(
 
     try:
         from app.services.document_service import generate_reconciliation_act as gen_act
+
         pdf_bytes = await gen_act(
             client_id=data.client_id,
             date_from=data.date_from,
@@ -283,6 +290,7 @@ async def generate_contract(
 
     try:
         from app.services.document_service import generate_contract_pdf
+
         pdf_bytes = await generate_contract_pdf(
             contract_type=data.contract_type,
             client_id=data.client_id,

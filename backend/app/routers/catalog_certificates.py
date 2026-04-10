@@ -4,19 +4,19 @@ UC-23: Просмотр сертификатов клиентом.
 
 Эндпоинты: /api/v1/catalog/products/{product_id}/certificates
 """
+
 import io
 import os
 import zipfile
-from urllib.parse import quote
 from datetime import date as DateType
-from typing import List, Optional
+from urllib.parse import quote
 
 import structlog
 from beanie import PydanticObjectId
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 
-from app.models.certificate import Certificate, CertificateType
+from app.models.certificate import Certificate
 from app.models.product import Product
 
 logger = structlog.get_logger(__name__)
@@ -81,13 +81,13 @@ async def get_product_certificates(product_id: str):
     if not product.certificate_ids:
         return {"certificates": [], "count": 0}
 
-    certs: List[dict] = []
+    certs: list[dict] = []
     for cert_ref in product.certificate_ids:
         try:
             # Link-объект Beanie — извлекаем ref.id; строка — используем как есть
-            if hasattr(cert_ref, 'ref'):
+            if hasattr(cert_ref, "ref"):
                 cert_id = cert_ref.ref.id
-            elif hasattr(cert_ref, 'id'):
+            elif hasattr(cert_ref, "id"):
                 cert_id = cert_ref.id
             else:
                 cert_id = PydanticObjectId(str(cert_ref))
@@ -176,7 +176,7 @@ async def download_order_certificates_zip(order_id: str):
     if not product_ids:
         raise HTTPException(status_code=404, detail="В заказе нет товаров")
 
-    cert_files: List[tuple] = []
+    cert_files: list[tuple] = []
     seen_cert_ids = set()
 
     for pid in product_ids:

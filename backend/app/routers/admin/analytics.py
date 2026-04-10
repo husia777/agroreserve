@@ -4,6 +4,7 @@
 
 UC-12: Аналитика продаж — выручка, прибыль, топ товаров/клиентов, тренды.
 """
+
 from datetime import date as DateType
 from datetime import timedelta
 from typing import Optional
@@ -84,6 +85,7 @@ async def get_overview(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     from app.services.analytics_service import get_overview
+
     data = await get_overview(start, end)
 
     # Расчёт предыдущего периода для сравнения
@@ -166,6 +168,7 @@ async def get_revenue_chart(
         )
 
     from app.services.analytics_service import get_revenue_chart
+
     data = await get_revenue_chart(start, end, granularity)
 
     return {
@@ -199,6 +202,7 @@ async def get_top_products(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     from app.services.analytics_service import get_top_products
+
     data = await get_top_products(start, end, limit)
 
     return {
@@ -230,6 +234,7 @@ async def get_top_clients(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     from app.services.analytics_service import get_top_clients
+
     data = await get_top_clients(start, end, limit)
 
     return {
@@ -261,6 +266,7 @@ async def get_margins(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     from app.services.analytics_service import get_margin_by_products
+
     data = await get_margin_by_products(start, end)
 
     total_revenue = round(sum(d["revenue"] for d in data), 2)
@@ -298,13 +304,16 @@ async def get_trends(
     - Количество заказов
     """
     from app.services.analytics_service import get_trends
+
     data = await get_trends(months)
 
     # Рассчитываем тренд
     if len(data) >= 2:
         first_revenue = data[0]["revenue"]
         last_revenue = data[-1]["revenue"]
-        overall_trend = round((last_revenue - first_revenue) / max(first_revenue, 1) * 100, 1) if first_revenue > 0 else 0.0
+        overall_trend = (
+            round((last_revenue - first_revenue) / max(first_revenue, 1) * 100, 1) if first_revenue > 0 else 0.0
+        )
     else:
         overall_trend = 0.0
 

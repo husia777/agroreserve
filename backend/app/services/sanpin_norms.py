@@ -6,6 +6,7 @@ UC-105 / UC-131 / UC-136: Справочник норм питания по Са
 «Санитарно-эпидемиологические требования к организации общественного питания населения»
 Приложения 7, 8, 10.
 """
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -13,14 +14,15 @@ from typing import Optional
 @dataclass
 class NutritionNorm:
     """Суточная норма питания на 1 человека."""
-    age_group: str           # Возрастная группа
-    age_range: str           # Диапазон возраста
-    calories: float          # Энергетическая ценность, ккал
-    protein: float           # Белки, г
-    fat: float               # Жиры, г
-    carbs: float             # Углеводы, г
-    meals_per_day: int       # Количество приёмов пищи
-    description: str         # Описание
+
+    age_group: str  # Возрастная группа
+    age_range: str  # Диапазон возраста
+    calories: float  # Энергетическая ценность, ккал
+    protein: float  # Белки, г
+    fat: float  # Жиры, г
+    carbs: float  # Углеводы, г
+    meals_per_day: int  # Количество приёмов пищи
+    description: str  # Описание
 
     @property
     def calories_per_meal(self) -> float:
@@ -39,7 +41,7 @@ class NutritionNorm:
         Проверяет соответствие фактического рациона нормам СанПиН.
         Возвращает словарь с результатами по каждому показателю.
         """
-        results = {}
+        results: dict = {}
 
         for name, norm, actual in [
             ("calories", self.calories, actual_calories),
@@ -90,7 +92,6 @@ SANPIN_NORMS: dict[str, NutritionNorm] = {
         meals_per_day=4,
         description="Детский сад (дошкольная группа)",
     ),
-
     # Школы
     "school_7_11": NutritionNorm(
         age_group="school_7_11",
@@ -112,7 +113,6 @@ SANPIN_NORMS: dict[str, NutritionNorm] = {
         meals_per_day=2,  # Завтрак + обед в школе
         description="Средняя и старшая школа (5-11 класс)",
     ),
-
     # Школы-интернаты и продлёнка (5-разовое питание)
     "boarding_7_11": NutritionNorm(
         age_group="boarding_7_11",
@@ -134,7 +134,6 @@ SANPIN_NORMS: dict[str, NutritionNorm] = {
         meals_per_day=5,
         description="Школа-интернат / продлёнка (5-11 класс)",
     ),
-
     # Оздоровительные лагеря
     "camp_7_11": NutritionNorm(
         age_group="camp_7_11",
@@ -277,11 +276,11 @@ def calculate_products_for_children(
     if not norms:
         return {}
 
-    result = {}
+    result: dict[str, float] = {}
     for product, grams_per_day in norms.items():
         total_grams = grams_per_day * children_count * days
         if "шт" in product:
-            result[product] = total_grams  # Штуки
+            result[product] = float(total_grams)  # Штуки
         else:
             result[product] = round(total_grams / 1000, 2)  # В кг
 

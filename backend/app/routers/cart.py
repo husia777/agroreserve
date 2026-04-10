@@ -5,14 +5,14 @@
 Корзина хранится в MongoDB (коллекция carts).
 Одна корзина на одного авторизованного пользователя.
 """
+
 import uuid
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
 
 import structlog
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from app.models.cart import Cart, CartItem
 from app.models.product import Product
@@ -26,19 +26,23 @@ router = APIRouter(prefix="/api/v1/cart", tags=["Корзина"])
 
 # ── Схемы запросов/ответов ────────────────────────────────────
 
+
 class CartItemAdd(BaseModel):
     """Запрос на добавление товара в корзину."""
+
     product_id: str = Field(..., description="ID товара")
     qty: float = Field(..., gt=0, description="Количество")
 
 
 class CartItemUpdate(BaseModel):
     """Запрос на обновление количества."""
+
     qty: float = Field(..., gt=0, description="Новое количество")
 
 
 class CartItemResponse(BaseModel):
     """Позиция корзины в ответе."""
+
     item_id: str
     product_id: str
     product_name: str
@@ -56,9 +60,10 @@ class CartItemResponse(BaseModel):
 
 class CartResponse(BaseModel):
     """Корзина в ответе API."""
+
     id: str
     user_id: str
-    items: List[CartItemResponse]
+    items: list[CartItemResponse]
     total: float
     items_count: int
     updated_at: str
@@ -101,6 +106,7 @@ def _cart_to_response(cart: Cart) -> CartResponse:
 
 
 # ── Эндпоинты ────────────────────────────────────────────────
+
 
 @router.get(
     "/",
@@ -175,19 +181,13 @@ async def add_to_cart(
     if data.qty < product.min_order_qty:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Минимальный заказ для «{product.name}»: "
-                f"{product.min_order_qty:.1f} {product.unit}"
-            ),
+            detail=(f"Минимальный заказ для «{product.name}»: " f"{product.min_order_qty:.1f} {product.unit}"),
         )
 
     if product.stock_qty < data.qty:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Недостаточный остаток «{product.name}»: "
-                f"доступно {product.stock_qty:.1f} {product.unit}"
-            ),
+            detail=(f"Недостаточный остаток «{product.name}»: " f"доступно {product.stock_qty:.1f} {product.unit}"),
         )
 
     # Проверяем кратность шагу (с допуском на погрешность float)
@@ -213,9 +213,7 @@ async def add_to_cart(
     cart = await _get_or_create_cart(str(current_user.id))
 
     # Проверяем, есть ли уже этот товар в корзине
-    existing_item = next(
-        (item for item in cart.items if item.product_id == data.product_id), None
-    )
+    existing_item = next((item for item in cart.items if item.product_id == data.product_id), None)
 
     if existing_item:
         # Обновляем количество
@@ -372,7 +370,7 @@ async def clear_cart(
     cart.items = []
     cart.total = 0.0
     cart.items_count = 0
-    cart.updated_at = datetime.now(timezone.utc)
+    cart.updated_at = datetime.now(UTC)
     await cart.save()
 
     logger.info("Корзина очищена", user_id=str(current_user.id))

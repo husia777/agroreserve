@@ -8,6 +8,7 @@
 - Автонумерация заказов
 - Интеграция со складом и финансами
 """
+
 from datetime import datetime, timezone
 from typing import List, Optional
 
@@ -41,9 +42,7 @@ async def get_next_order_number() -> str:
     year = datetime.now(timezone.utc).year
     prefix = f"ORD-{year}-"
 
-    last_order = await Order.find(
-        {"order_number": {"$regex": f"^{prefix}"}}
-    ).sort(-Order.order_number).first_or_none()
+    last_order = await Order.find({"order_number": {"$regex": f"^{prefix}"}}).sort(-Order.order_number).first_or_none()
 
     if last_order:
         try:
@@ -116,15 +115,11 @@ async def create_order(user, cart_items: list, delivery_info: dict) -> Order:
 
         if product.stock_qty < qty:
             raise ValueError(
-                f"Недостаточный остаток товара «{product.name}»: "
-                f"доступно {product.stock_qty:.1f} {product.unit}"
+                f"Недостаточный остаток товара «{product.name}»: " f"доступно {product.stock_qty:.1f} {product.unit}"
             )
 
         if qty < product.min_order_qty:
-            raise ValueError(
-                f"Минимальный заказ для «{product.name}»: "
-                f"{product.min_order_qty:.1f} {product.unit}"
-            )
+            raise ValueError(f"Минимальный заказ для «{product.name}»: " f"{product.min_order_qty:.1f} {product.unit}")
 
         # Определяем цену: B2B — оптовая, остальные — розничная
         if user.client_type == ClientType.B2B:
@@ -166,7 +161,7 @@ async def create_order(user, cart_items: list, delivery_info: dict) -> Order:
 
     order = Order(
         order_number=order_number,
-        client_id=user,  # type: ignore  # Beanie Link
+        client_id=user,  # Beanie Link
         client_name=user.name,
         client_phone=user.phone,
         status=OrderStatus.NEW,
@@ -213,10 +208,12 @@ async def create_order(user, cart_items: list, delivery_info: dict) -> Order:
         # Уведомление о достижении лимита
         if user.credit_limit > 0 and user.current_debt >= user.credit_limit * 0.9:
             from app.services.notification_service import notify_admin_credit_limit
+
             await notify_admin_credit_limit(user)
 
     # ── Шаг 6: Очищаем корзину ────────────────────────────────
     from app.models.cart import Cart
+
     cart = await Cart.find_one(Cart.user_id == str(user.id))
     if cart:
         cart.items = []
@@ -227,6 +224,7 @@ async def create_order(user, cart_items: list, delivery_info: dict) -> Order:
 
     # ── Шаг 7: Уведомление администратору ─────────────────────
     from app.services.notification_service import notify_admin_new_order
+
     try:
         await notify_admin_new_order(order)
     except Exception as e:
@@ -284,11 +282,13 @@ async def update_order_status(
         # Автогенерация ТОРГ-12 и счёта
         try:
             from app.services.document_service import generate_invoice, generate_torg12
+
             invoice_doc = await generate_invoice(order)
             torg12_doc = await generate_torg12(order)
 
             # Привязываем документы к заказу
             from app.models.order import OrderDocument
+
             existing_types = {d.doc_type for d in order.documents}
             if "invoice" not in existing_types and invoice_doc:
                 order.documents.append(
@@ -332,11 +332,8 @@ async def update_order_status(
         # Уменьшаем задолженность клиента (B2B)
         try:
             from app.models.user import ClientType, User
-            client_id = (
-                str(order.client_id.id)
-                if hasattr(order.client_id, "id")
-                else str(order.client_id)
-            )
+
+            client_id = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
             client = await User.get(PydanticObjectId(client_id))
             if client and client.client_type == ClientType.B2B:
                 client.current_debt = max(0.0, round(client.current_debt - order.total, 2))
@@ -366,6 +363,7 @@ async def update_order_status(
 
     # Уведомление клиенту
     from app.services.notification_service import notify_client_status_change
+
     try:
         await notify_client_status_change(order, new_status)
     except Exception as e:
@@ -393,10 +391,7 @@ async def update_actual_quantities(order_id: str, items_update: list) -> Order:
         raise ValueError(f"Заказ {order_id} не найден")
 
     # Карта обновлений
-    updates_map = {
-        u["product_id"]: float(u["actual_qty"])
-        for u in items_update
-    }
+    updates_map = {u["product_id"]: float(u["actual_qty"]) for u in items_update}
 
     for item in order.items:
         if item.product_id in updates_map:

@@ -4,6 +4,7 @@
 
 UC-53: Управление напоминаниями — создание, просмотр, выполнение.
 """
+
 import math
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -23,8 +24,10 @@ router = APIRouter(prefix="/api/v1/admin/reminders", tags=["Админ: Напо
 
 # ── Pydantic схемы ─────────────────────────────────────────────────────────────
 
+
 class ReminderCreate(BaseModel):
     """Создание напоминания."""
+
     title: str = Field(..., min_length=2, max_length=200, description="Заголовок")
     description: Optional[str] = Field(None, max_length=1000, description="Описание")
     remind_at: str = Field(..., description="Дата и время (ISO 8601 или YYYY-MM-DDTHH:MM)")
@@ -56,6 +59,7 @@ class ReminderCreate(BaseModel):
 
 class ReminderUpdate(BaseModel):
     """Обновление напоминания."""
+
     title: Optional[str] = Field(None, min_length=2, max_length=200)
     description: Optional[str] = Field(None, max_length=1000)
     remind_at: Optional[str] = None
@@ -75,6 +79,7 @@ class ReminderUpdate(BaseModel):
 
 # ── Утилиты ────────────────────────────────────────────────────────────────────
 
+
 def _reminder_to_dict(reminder: Reminder) -> dict:
     """Конвертирует Reminder в словарь (поля фронтенда)."""
     now = datetime.now(timezone.utc)
@@ -85,7 +90,7 @@ def _reminder_to_dict(reminder: Reminder) -> dict:
     is_overdue = not reminder.is_completed and remind_at < now
 
     return {
-        "_id": str(reminder.id),               # Фронтенд: _id
+        "_id": str(reminder.id),  # Фронтенд: _id
         "title": reminder.title,
         "description": reminder.description,
         "remind_at": remind_at.isoformat(),
@@ -100,6 +105,7 @@ def _reminder_to_dict(reminder: Reminder) -> dict:
 
 # ── Эндпоинты ──────────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/upcoming",
     summary="Ближайшие напоминания (для дашборда) (UC-53)",
@@ -112,11 +118,15 @@ async def get_upcoming_reminders(
     now = datetime.now(timezone.utc)
     threshold = now + timedelta(hours=hours)
 
-    upcoming = await Reminder.find(
-        Reminder.is_completed == False,  # noqa: E712
-        Reminder.remind_at >= now,       # type: ignore
-        Reminder.remind_at <= threshold,  # type: ignore
-    ).sort(Reminder.remind_at).to_list()
+    upcoming = (
+        await Reminder.find(
+            Reminder.is_completed == False,  # noqa: E712
+            Reminder.remind_at >= now,
+            Reminder.remind_at <= threshold,
+        )
+        .sort(Reminder.remind_at)
+        .to_list()
+    )
 
     # Фронтенд getUpcomingReminders ожидает ReminderV2[] (массив)
     return [_reminder_to_dict(r) for r in upcoming]
@@ -148,11 +158,7 @@ async def get_reminders(
 
     total = await Reminder.find(query_filter).count()
     reminders = (
-        await Reminder.find(query_filter)
-        .sort(Reminder.remind_at)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .to_list()
+        await Reminder.find(query_filter).sort(Reminder.remind_at).skip((page - 1) * limit).limit(limit).to_list()
     )
 
     return {

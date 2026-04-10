@@ -2,8 +2,10 @@
 Модель школьного меню.
 Коллекция: menus
 """
-from datetime import date as DateType, datetime, timezone
-from typing import List, Optional
+
+from datetime import UTC, datetime
+from datetime import date as DateType
+from typing import Optional
 
 from beanie import Document, PydanticObjectId
 from pydantic import BaseModel, Field
@@ -11,6 +13,7 @@ from pydantic import BaseModel, Field
 
 class MenuItem(BaseModel):
     """Позиция меню — блюдо с количеством порций."""
+
     dish_id: PydanticObjectId = Field(..., description="ID блюда")
     dish_name: str = Field(..., description="Название блюда (кэш)")
     portions: int = Field(..., ge=1, description="Количество порций")
@@ -20,8 +23,9 @@ class MenuItem(BaseModel):
 
 class MenuDay(BaseModel):
     """Один день меню с перечнем блюд по приёмам пищи."""
+
     date: DateType = Field(..., description="Дата")
-    items: List[MenuItem] = Field(default_factory=list, description="Блюда на этот день")
+    items: list[MenuItem] = Field(default_factory=list, description="Блюда на этот день")
 
 
 class Menu(Document):
@@ -41,7 +45,7 @@ class Menu(Document):
     week_end: DateType = Field(..., description="Конец недели меню")
 
     # ── Дни меню ──────────────────────────────────────────────
-    days: List[MenuDay] = Field(default_factory=list, description="Меню по дням")
+    days: list[MenuDay] = Field(default_factory=list, description="Меню по дням")
 
     # ── Агрегированные показатели ─────────────────────────────
     total_portions: int = Field(0, description="Всего порций за неделю")
@@ -52,18 +56,14 @@ class Menu(Document):
 
     # ── Связанный заказ ───────────────────────────────────────
     # Заполняется после генерации заказа из меню
-    generated_order_id: Optional[PydanticObjectId] = Field(
-        None, description="ID сгенерированного заказа"
-    )
+    generated_order_id: Optional[PydanticObjectId] = Field(None, description="ID сгенерированного заказа")
 
     # ── Статус ────────────────────────────────────────────────
     # "draft" — черновик, "confirmed" — подтверждено, "ordered" — заказ сформирован
     status: str = Field("draft", description="Статус: draft, confirmed, ordered")
 
     # ── Метаданные ────────────────────────────────────────────
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "menus"

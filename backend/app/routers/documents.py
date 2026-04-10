@@ -2,17 +2,18 @@
 Роутер документов для клиентов (личный кабинет).
 Эндпоинты: /api/v1/documents/
 """
+
 import math
 import os
-from datetime import date
+from datetime import UTC, date
 from typing import Optional
 
 import structlog
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse
 
-from app.models.document import DocumentRecord, DocumentType
+from app.models.document import DocumentRecord
 from app.utils.security import get_current_user
 
 logger = structlog.get_logger(__name__)
@@ -27,8 +28,7 @@ DOCUMENTS_DIR = "/app/media/documents"
     summary="Мои документы",
 )
 async def get_my_documents(
-    doc_type: Optional[str] = Query(
-        None, description="Фильтр по типу: invoice, torg12, label"),
+    doc_type: Optional[str] = Query(None, description="Фильтр по типу: invoice, torg12, label"),
     date_from: Optional[date] = Query(None, description="С даты (YYYY-MM-DD)"),
     date_to: Optional[date] = Query(None, description="По дату (YYYY-MM-DD)"),
     page: int = Query(1, ge=1),
@@ -49,15 +49,15 @@ async def get_my_documents(
         query_filter["doc_type"] = doc_type
 
     if date_from:
-        from datetime import datetime, timezone
-        dt_from = datetime(date_from.year, date_from.month,
-                           date_from.day, tzinfo=timezone.utc)
+        from datetime import datetime
+
+        dt_from = datetime(date_from.year, date_from.month, date_from.day, tzinfo=UTC)
         query_filter.setdefault("created_at", {})["$gte"] = dt_from
 
     if date_to:
-        from datetime import datetime, timezone
-        dt_to = datetime(date_to.year, date_to.month,
-                         date_to.day, 23, 59, 59, tzinfo=timezone.utc)
+        from datetime import datetime
+
+        dt_to = datetime(date_to.year, date_to.month, date_to.day, 23, 59, 59, tzinfo=UTC)
         query_filter.setdefault("created_at", {})["$lte"] = dt_to
 
     total = await DocumentRecord.find(query_filter).count()
@@ -101,8 +101,7 @@ async def download_file_by_name(filename: str):
     """Внутренний эндпоинт для отдачи PDF файлов."""
     filepath = os.path.join(DOCUMENTS_DIR, filename)
     if not os.path.exists(filepath):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
 
     # Определяем content-type
     if filename.endswith(".pdf"):
@@ -134,12 +133,10 @@ async def download_document(
     try:
         doc = await DocumentRecord.get(PydanticObjectId(document_id))
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
 
     if not doc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
 
     # Проверяем принадлежность (не для администратора)
     if current_user.role != "admin" and doc.client_id != str(current_user.id):
@@ -168,8 +165,7 @@ async def download_document(
                 detail="Файл документа не найден на сервере",
             )
 
-    media_type = "application/pdf" if filepath.endswith(
-        ".pdf") else "text/html"
+    media_type = "application/pdf" if filepath.endswith(".pdf") else "text/html"
 
     logger.info(
         "Документ скачан",
@@ -197,6 +193,7 @@ async def download_documents_zip(
     """Скачивает архив документов за указанный период."""
     import io
     import zipfile
+
     from fastapi.responses import StreamingResponse
 
     date_from = data.get("date_from")
@@ -207,12 +204,14 @@ async def download_documents_zip(
     query_filter: dict = {"client_id": user_id}
 
     if date_from:
-        from datetime import datetime as dt, timezone
+        from datetime import datetime as dt
+
         d = dt.fromisoformat(date_from)
         query_filter.setdefault("created_at", {})["$gte"] = d
 
     if date_to:
-        from datetime import datetime as dt, timezone
+        from datetime import datetime as dt
+
         d = dt.fromisoformat(date_to).replace(hour=23, minute=59, second=59)
         query_filter.setdefault("created_at", {})["$lte"] = d
 
@@ -239,8 +238,7 @@ async def download_documents_zip(
 
     zip_buffer.seek(0)
 
-    logger.info("ZIP архив документов сформирован",
-                user_id=user_id, count=len(documents))
+    logger.info("ZIP архив документов сформирован", user_id=user_id, count=len(documents))
 
     return StreamingResponse(
         zip_buffer,

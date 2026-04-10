@@ -1,14 +1,15 @@
 """
 Схемы для регулярных заказов.
 """
-from datetime import datetime
-from typing import List, Optional
+
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
 
 class StandingOrderItemSchema(BaseModel):
     """Позиция регулярного заказа."""
+
     product_id: str = Field(..., description="ID товара")
     product_name: str = Field(..., description="Название товара")
     qty: float = Field(..., gt=0, description="Количество")
@@ -17,19 +18,23 @@ class StandingOrderItemSchema(BaseModel):
 
 class StandingOrderCreate(BaseModel):
     """Создание регулярного заказа."""
-    items: List[StandingOrderItemSchema] = Field(..., min_length=1, description="Позиции заказа")
+
+    items: list[StandingOrderItemSchema] = Field(
+        ..., min_length=1, description="Позиции заказа")
     schedule: str = Field(
         ...,
         description="Расписание: weekly_mon..weekly_sun, biweekly, monthly_1, monthly_15",
     )
     delivery_slot: str = Field(..., description="Временной слот: 08:00-11:00")
-    delivery_address: str = Field(..., min_length=5, description="Адрес доставки")
+    delivery_address: str = Field(..., min_length=5,
+                                  description="Адрес доставки")
     note: Optional[str] = Field(None, description="Примечание")
 
 
 class StandingOrderUpdate(BaseModel):
     """Обновление регулярного заказа."""
-    items: Optional[List[StandingOrderItemSchema]] = None
+
+    items: Optional[list[StandingOrderItemSchema]] = None
     schedule: Optional[str] = None
     delivery_slot: Optional[str] = None
     delivery_address: Optional[str] = None
@@ -39,10 +44,11 @@ class StandingOrderUpdate(BaseModel):
 
 class StandingOrderResponse(BaseModel):
     """Ответ с данными регулярного заказа."""
-    id: str = Field(..., alias="_id")
+
+    id: str = Field(...)
     client_id: str
     client_name: str
-    items: List[StandingOrderItemSchema]
+    items: list[StandingOrderItemSchema]
     schedule: str
     delivery_slot: str
     delivery_address: str
@@ -57,5 +63,6 @@ class StandingOrderResponse(BaseModel):
 
 class StandingOrderListResponse(BaseModel):
     """Список регулярных заказов."""
-    items: List[StandingOrderResponse]
+
+    items: list[StandingOrderResponse]
     total: int

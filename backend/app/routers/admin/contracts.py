@@ -2,6 +2,7 @@
 Роутер управления госконтрактами (администратор).
 Эндпоинты: /api/v1/admin/contracts/
 """
+
 import math
 from datetime import datetime, timezone
 from typing import Optional
@@ -13,10 +14,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.models.contract import Contract, ContractItem, DeliverySchedule
 from app.schemas.contract import (
     ContractCreate,
+    ContractItemSchema,
     ContractListResponse,
     ContractResponse,
     ContractUpdate,
     DeliveryMarkRequest,
+    DeliveryScheduleSchema,
 )
 from app.utils.security import require_admin
 
@@ -28,52 +31,51 @@ router = APIRouter(prefix="/api/v1/admin/contracts", tags=["Админ: Конт
 def _to_response(contract: Contract) -> ContractResponse:
     """Конвертирует Contract в ответ API."""
     return ContractResponse(
-        **{
-            "_id": str(contract.id),
-            "contract_number": contract.contract_number,
-            "client_id": str(contract.client_id),
-            "client_name": contract.client_name,
-            "contract_type": contract.contract_type,
-            "start_date": str(contract.start_date),
-            "end_date": str(contract.end_date),
-            "total_amount": contract.total_amount,
-            "items": [
-                {
-                    "product_id": str(item.product_id),
-                    "product_name": item.product_name,
-                    "qty": item.qty,
-                    "delivered_qty": item.delivered_qty,
-                    "unit": item.unit,
-                    "price": item.price,
-                }
-                for item in contract.items
-            ],
-            "delivery_schedule": [
-                {
-                    "date": str(ds.date),
-                    "items": [
-                        {
-                            "product_id": str(i.product_id),
-                            "product_name": i.product_name,
-                            "qty": i.qty,
-                            "delivered_qty": i.delivered_qty,
-                            "unit": i.unit,
-                            "price": i.price,
-                        }
-                        for i in ds.items
-                    ],
-                    "is_completed": ds.is_completed,
-                    "order_id": str(ds.order_id) if ds.order_id else None,
-                }
-                for ds in contract.delivery_schedule
-            ],
-            "completion_percent": contract.completion_percent,
-            "status": contract.status,
-            "documents": contract.documents,
-            "notes": contract.notes,
-            "created_at": contract.created_at.isoformat(),
-            "updated_at": contract.updated_at.isoformat(),
-        }
+        id=str(contract.id),
+        contract_number=contract.contract_number,
+        client_id=str(contract.client_id),
+        client_name=contract.client_name,
+        contract_type=contract.contract_type,
+        start_date=str(contract.start_date),
+        end_date=str(contract.end_date),
+        total_amount=contract.total_amount,
+        items=[
+            ContractItemSchema(
+                product_id=str(item.product_id),
+                product_name=item.product_name,
+                qty=item.qty,
+                delivered_qty=item.delivered_qty,
+                unit=item.unit,
+                price=item.price,
+            )
+            for item in contract.items
+        ],
+        delivery_schedule=[
+            DeliveryScheduleSchema(
+                date=ds.date,
+                items=[
+                    ContractItemSchema(
+                        product_id=str(i.product_id),
+                        product_name=i.product_name,
+                        qty=i.qty,
+                        delivered_qty=i.delivered_qty,
+                        unit=i.unit,
+                        price=i.price,
+                    )
+                    for i in ds.items
+                ],
+                is_completed=ds.is_completed,
+                order_id=str(ds.order_id) if ds.order_id else None,
+            )
+            for ds in contract.delivery_schedule
+        ],
+        completion_percent=contract.completion_percent,
+        status=contract.status,
+        documents=contract.documents,
+        notes=contract.notes,
+        created_at=contract.created_at.isoformat(),
+        updated_at=contract.updated_at.isoformat(),
+
     )
 
 
@@ -112,13 +114,7 @@ async def get_contracts(
         query["contract_type"] = contract_type
 
     total = await Contract.find(query).count()
-    contracts = (
-        await Contract.find(query)
-        .sort(-Contract.created_at)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .to_list()
-    )
+    contracts = await Contract.find(query).sort(-Contract.created_at).skip((page - 1) * limit).limit(limit).to_list()
 
     return ContractListResponse(
         items=[_to_response(c) for c in contracts],
@@ -194,6 +190,7 @@ async def create_contract(
                     for i in ds.items
                 ],
                 is_completed=ds.is_completed,
+                order_id=None,
             )
             for ds in data.delivery_schedule
         ],
@@ -266,9 +263,7 @@ async def update_contract(
     # Обновляем поля
     if data.contract_number is not None:
         # Проверяем уникальность нового номера
-        existing = await Contract.find_one(
-            {"contract_number": data.contract_number, "_id": {"$ne": contract.id}}
-        )
+        existing = await Contract.find_one({"contract_number": data.contract_number, "_id": {"$ne": contract.id}})
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -317,6 +312,7 @@ async def update_contract(
                     for i in ds.items
                 ],
                 is_completed=ds.is_completed,
+                order_id=None,
             )
             for ds in data.delivery_schedule
         ]
@@ -339,8 +335,11 @@ async def update_contract(
     # Пересчитываем % после обновления позиций
     if data.items is not None:
         from app.services.contract_service import update_completion
+
         await update_completion(contract_id)
-        contract = await Contract.get(PydanticObjectId(contract_id))
+        refreshed = await Contract.get(PydanticObjectId(contract_id))
+        if refreshed is not None:
+            contract = refreshed
 
     logger.info(
         "Контракт обновлён",
@@ -414,33 +413,3 @@ async def get_delivery_act(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return act_data
-
-
-@router.post(
-    "/{contract_id}/act",
-    summary="Генерация акта выполненных работ",
-)
-async def generate_contract_act(
-    contract_id: str,
-    admin=Depends(require_admin),
-):
-    """Генерирует акт выполненных работ по контракту."""
-    try:
-        contract = await Contract.get(PydanticObjectId(contract_id))
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
-
-    if not contract:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
-
-    filename = f"act_{contract.contract_number}_{datetime.now(timezone.utc).strftime('%Y%m%d')}.pdf"
-
-    # TODO: генерация PDF через ReportLab / WeasyPrint
-
-    file_url = f"/api/v1/documents/files/{filename}"
-
-    logger.info("Акт сгенерирован", contract_id=contract_id, filename=filename)
-
-    return {"file_url": file_url, "filename": filename}

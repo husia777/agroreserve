@@ -1,6 +1,7 @@
 """
 Утилиты безопасности — JWT токены, хэширование паролей, зависимости FastAPI.
 """
+
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -19,6 +20,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 
 # ── Работа с паролями ─────────────────────────────────────────
+
 
 def get_password_hash(password: str) -> str:
     """Хэширует пароль с использованием bcrypt."""
@@ -40,6 +42,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 # ── JWT токены ────────────────────────────────────────────────
 
+
 def create_access_token(
     subject: str,
     role: str = "client",
@@ -56,9 +59,7 @@ def create_access_token(
     Returns:
         Подписанный JWT токен
     """
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
-    )
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
 
     payload = {
         "sub": subject,
@@ -71,7 +72,7 @@ def create_access_token(
     if extra_data:
         payload.update(extra_data)
 
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return str(jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM))
 
 
 def create_refresh_token(subject: str) -> str:
@@ -84,9 +85,7 @@ def create_refresh_token(subject: str) -> str:
     Returns:
         Подписанный JWT refresh токен
     """
-    expire = datetime.now(timezone.utc) + timedelta(
-        days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
-    )
+    expire = datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
 
     payload = {
         "sub": subject,
@@ -95,7 +94,7 @@ def create_refresh_token(subject: str) -> str:
         "exp": expire,
     }
 
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return str(jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM))
 
 
 def verify_token(token: str, expected_type: str = "access") -> dict:
@@ -140,7 +139,7 @@ def verify_token(token: str, expected_type: str = "access") -> dict:
         if user_id is None:
             raise credentials_exception
 
-        return payload
+        return dict(payload)
 
     except JWTError as e:
         logger.warning("Ошибка валидации JWT", error=str(e))
@@ -148,6 +147,7 @@ def verify_token(token: str, expected_type: str = "access") -> dict:
 
 
 # ── FastAPI Dependencies ──────────────────────────────────────
+
 
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),

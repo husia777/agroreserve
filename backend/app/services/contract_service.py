@@ -6,6 +6,7 @@
 - Проверку просроченных контрактов
 - Генерацию актов приёмки
 """
+
 from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -46,10 +47,7 @@ async def update_completion(contract_id: str) -> float:
         return 0.0
 
     # Рассчитываем выполненную сумму по позициям
-    delivered_amount = sum(
-        item.delivered_qty * item.price
-        for item in contract.items
-    )
+    delivered_amount = sum(item.delivered_qty * item.price for item in contract.items)
 
     new_percent = round(min(100.0, delivered_amount / contract.total_amount * 100), 1)
     contract.completion_percent = new_percent
@@ -73,7 +71,7 @@ async def update_completion(contract_id: str) -> float:
         completion_percent=new_percent,
     )
 
-    return new_percent
+    return float(new_percent)
 
 
 async def check_overdue_contracts() -> List[Contract]:
@@ -154,9 +152,7 @@ async def generate_delivery_act(contract_id: str, delivery_index: int) -> Dict[s
         company_inn = ""
 
     # Формируем данные акта
-    total_delivery_amount = sum(
-        item.delivered_qty * item.price for item in delivery.items
-    )
+    total_delivery_amount = sum(item.delivered_qty * item.price for item in delivery.items)
 
     act_data = {
         "act_number": f"АКТ-{contract.contract_number}-{delivery_index + 1:02d}",
@@ -246,9 +242,7 @@ async def mark_delivery_completed(
     for delivery_item in delivery.items:
         for contract_item in contract.items:
             if contract_item.product_id == delivery_item.product_id:
-                contract_item.delivered_qty = round(
-                    contract_item.delivered_qty + delivery_item.qty, 3
-                )
+                contract_item.delivered_qty = round(contract_item.delivered_qty + delivery_item.qty, 3)
                 break
 
     contract.updated_at = datetime.now(timezone.utc)
@@ -259,6 +253,9 @@ async def mark_delivery_completed(
 
     # Перезагружаем после пересчёта
     contract = await Contract.get(PydanticObjectId(contract_id))
+
+    if not contract:
+        raise ValueError(f"Контракт с ID {contract_id} не найден")
 
     logger.info(
         "Поставка по контракту отмечена выполненной",

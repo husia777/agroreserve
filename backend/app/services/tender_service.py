@@ -4,6 +4,7 @@
 UC-13: Парсер ЕИС — поиск и хранение тендеров.
 UC-42: Калькулятор тендера — расчёт нашей ставки.
 """
+
 import random
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
@@ -89,7 +90,8 @@ def _generate_mock_tender(
         all_items = _SAMPLE_CATEGORIES["Овощи"]
 
     # Берём случайные 3-6 позиций
-    selected = random.sample(all_items, min(random.randint(3, 6), len(all_items)))
+    selected = random.sample(all_items, min(
+        random.randint(3, 6), len(all_items)))
     total_max_price = 0.0
 
     for name, unit in selected:
@@ -97,21 +99,24 @@ def _generate_mock_tender(
         unit_price = round(random.uniform(30, 200), 2)
         item_max_price = round(qty * unit_price, 2)
         total_max_price += item_max_price
-        items.append({
-            "name": name,
-            "qty": qty,
-            "unit": unit,
-            "max_price": item_max_price,
-        })
+        items.append(
+            {
+                "name": name,
+                "qty": qty,
+                "unit": unit,
+                "max_price": item_max_price,
+            }
+        )
 
     # Масштабируем под max_price
     if total_max_price > 0:
         scale = min(max_price, total_max_price) / total_max_price
         for item in items:
-            item["max_price"] = round(item["max_price"] * scale, 2)
+            cur_price: float = item["max_price"]  # type: ignore[assignment]
+            item["max_price"] = round(cur_price * scale, 2)
         actual_price = round(total_max_price * scale, 2)
     else:
-        actual_price = max_price * 0.8
+        actual_price = float(max_price) * 0.8
 
     eis_number = f"0167200{random.randint(1000000, 9999999)}"
 
@@ -158,10 +163,8 @@ async def search_eis_tenders(
 
     # Генерируем 3-7 тестовых тендеров
     count = random.randint(3, 7)
-    mock_tenders = [
-        _generate_mock_tender(keywords, region, max_price, i)
-        for i in range(count)
-    ]
+    mock_tenders = [_generate_mock_tender(
+        keywords, region, max_price, i) for i in range(count)]
 
     # Сохраняем в БД (пропускаем дубликаты по eis_number)
     saved = []
@@ -179,6 +182,7 @@ async def search_eis_tenders(
         dd = tender_data.pop("delivery_deadline", None)
         if dd:
             from datetime import date
+
             delivery_deadline = date.fromisoformat(dd)
 
         tender = Tender(
@@ -189,15 +193,17 @@ async def search_eis_tenders(
         )
         await tender.insert()
 
-        saved.append({
-            "id": str(tender.id),
-            "eis_number": tender.eis_number,
-            "title": tender.title,
-            "customer": tender.customer,
-            "max_price": tender.max_price,
-            "deadline": tender.deadline.isoformat(),
-            "status": tender.status,
-        })
+        saved.append(
+            {
+                "id": str(tender.id),
+                "eis_number": tender.eis_number,
+                "title": tender.title,
+                "customer": tender.customer,
+                "max_price": tender.max_price,
+                "deadline": tender.deadline.isoformat(),
+                "status": tender.status,
+            }
+        )
 
         logger.info(
             "Тендер сохранён",
@@ -266,9 +272,13 @@ async def calculate_tender_bid(
         matched_product_name = "не найден"
 
         # Поиск по частичному совпадению названия
-        products = await Product.find(
-            {"name": {"$regex": item.name[:10], "$options": "i"}},
-        ).limit(1).to_list()
+        products = (
+            await Product.find(
+                {"name": {"$regex": item.name[:10], "$options": "i"}},
+            )
+            .limit(1)
+            .to_list()
+        )
 
         if products:
             cost_price = products[0].cost_price
@@ -281,18 +291,21 @@ async def calculate_tender_bid(
                 cost_price = 50.0  # ₽/кг по умолчанию
 
         # Стоимость логистики на единицу
-        logistics_per_unit = round(total_logistics / max(sum(i.qty for i in tender.items), 1), 4)
+        logistics_per_unit = round(
+            total_logistics / max(sum(i.qty for i in tender.items), 1), 4)
 
         # Себестоимость с логистикой
         cost_with_logistics = round(cost_price + logistics_per_unit, 2)
 
         # Наша цена = себестоимость × (1 + наценка%)
-        our_unit_price = round(cost_with_logistics * (1 + margin_percent / 100), 2)
+        our_unit_price = round(cost_with_logistics *
+                               (1 + margin_percent / 100), 2)
         our_total = round(our_unit_price * item.qty, 2)
         item_cost = round(cost_with_logistics * item.qty, 2)
 
         item_margin = round(our_total - item_cost, 2)
-        item_margin_pct = round(item_margin / our_total * 100, 1) if our_total > 0 else 0.0
+        item_margin_pct = round(
+            item_margin / our_total * 100, 1) if our_total > 0 else 0.0
 
         total_cost += item_cost
         total_our_price += our_total
@@ -300,27 +313,32 @@ async def calculate_tender_bid(
         # Сравнение с НМЦК позиции
         reduction_from_nmck = 0.0
         if item.max_price and item.max_price > 0:
-            reduction_from_nmck = round((1 - our_total / item.max_price) * 100, 1)
+            reduction_from_nmck = round(
+                (1 - our_total / item.max_price) * 100, 1)
 
-        bid_items.append({
-            "name": item.name,
-            "qty": item.qty,
-            "unit": item.unit,
-            "cost_price": cost_price,
-            "logistics_per_unit": logistics_per_unit,
-            "cost_with_logistics": cost_with_logistics,
-            "our_unit_price": our_unit_price,
-            "our_total": our_total,
-            "nmck": item.max_price,
-            "margin_rub": item_margin,
-            "margin_pct": item_margin_pct,
-            "reduction_from_nmck_pct": reduction_from_nmck,
-            "matched_product": matched_product_name,
-        })
+        bid_items.append(
+            {
+                "name": item.name,
+                "qty": item.qty,
+                "unit": item.unit,
+                "cost_price": cost_price,
+                "logistics_per_unit": logistics_per_unit,
+                "cost_with_logistics": cost_with_logistics,
+                "our_unit_price": our_unit_price,
+                "our_total": our_total,
+                "nmck": item.max_price,
+                "margin_rub": item_margin,
+                "margin_pct": item_margin_pct,
+                "reduction_from_nmck_pct": reduction_from_nmck,
+                "matched_product": matched_product_name,
+            }
+        )
 
     total_margin = round(total_our_price - total_cost, 2)
-    total_margin_pct = round(total_margin / total_our_price * 100, 1) if total_our_price > 0 else 0.0
-    reduction_from_nmck = round((1 - total_our_price / tender.max_price) * 100, 1) if tender.max_price > 0 else 0.0
+    total_margin_pct = round(
+        total_margin / total_our_price * 100, 1) if total_our_price > 0 else 0.0
+    reduction_from_nmck = round(
+        (1 - total_our_price / tender.max_price) * 100, 1) if tender.max_price > 0 else 0.0
 
     # Проверяем рентабельность
     is_profitable = total_margin_pct >= 10.0  # Минимум 10% маржи
@@ -393,7 +411,8 @@ async def get_tender_analytics() -> dict:
     won_amount = sum(t.our_price or t.max_price for t in won)
     won_margin = sum(t.margin_estimate or 0 for t in won)
 
-    win_rate = round(len(won) / max(len(won) + len([t for t in all_tenders if t.status == "lost"]), 1) * 100, 1)
+    win_rate = round(len(won) / max(len(won) +
+                     len([t for t in all_tenders if t.status == "lost"]), 1) * 100, 1)
 
     today = date.today()
     upcoming_deadlines = [

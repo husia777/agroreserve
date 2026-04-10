@@ -2,10 +2,9 @@
 Конфигурация приложения Агрорезерв.
 Все настройки загружаются из переменных окружения через Pydantic Settings.
 """
-from functools import lru_cache
-from typing import List
 
-from pydantic import AnyHttpUrl, field_validator
+from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -45,7 +44,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "https://agroreserve.ru,https://agroreserve.ru,http://localhost:3000,http://localhost:5173"
 
     @property
-    def cors_origins_list(self) -> List[str]:
+    def cors_origins_list(self) -> list[str]:
         """Возвращает список разрешённых CORS-источников."""
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
 
@@ -87,11 +86,11 @@ class Settings(BaseSettings):
     ALLOWED_DOC_TYPES: str = "application/pdf,image/jpeg,image/png"
 
     @property
-    def allowed_image_types_list(self) -> List[str]:
+    def allowed_image_types_list(self) -> list[str]:
         return [t.strip() for t in self.ALLOWED_IMAGE_TYPES.split(",")]
 
     @property
-    def allowed_doc_types_list(self) -> List[str]:
+    def allowed_doc_types_list(self) -> list[str]:
         return [t.strip() for t in self.ALLOWED_DOC_TYPES.split(",")]
 
     # ── Бизнес настройки ─────────────────────────────────────
@@ -104,7 +103,7 @@ class Settings(BaseSettings):
     SYNC_1C_API_KEY: str = ""  # Установить случайный ключ в production
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """
     Возвращает синглтон настроек.

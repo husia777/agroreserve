@@ -4,9 +4,10 @@
 
 Реализует модерацию B2B клиентов и управление кредитными лимитами.
 """
+
 import math
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
+from typing import Any, Optional
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -21,18 +22,20 @@ logger = structlog.get_logger(__name__)
 
 class CreditLimitUpdate(BaseModel):
     """Запрос на обновление кредитного лимита клиента."""
+
     credit_limit: float
     reason: Optional[str] = None
 
 
 class RejectRequest(BaseModel):
     """Запрос на отклонение клиента."""
+
     reason: Optional[str] = None
 
 
-def _client_to_response(client: User) -> dict:
+def _client_to_response(client: User) -> dict[str, Any]:
     """Конвертирует User в ответ с именами полей фронтенда."""
-    result = {
+    result: dict[str, Any] = {
         "id": str(client.id),
         "full_name": client.name,
         "email": str(client.email) if client.email else None,
@@ -45,7 +48,9 @@ def _client_to_response(client: User) -> dict:
         "delivery_address": client.delivery_address,
         "telegram_chat_id": client.telegram_chat_id,
         "created_at": client.created_at.isoformat(),
-        "updated_at": client.updated_at.isoformat() if hasattr(client, "updated_at") and client.updated_at else client.created_at.isoformat(),
+        "updated_at": client.updated_at.isoformat()
+        if hasattr(client, "updated_at") and client.updated_at
+        else client.created_at.isoformat(),
     }
 
     if client.organization:
@@ -155,7 +160,7 @@ async def approve_client(client_id: str, admin=Depends(require_admin)):
         )
 
     client.status = UserStatus.APPROVED
-    client.updated_at = datetime.now(timezone.utc)
+    client.updated_at = datetime.now(UTC)
     await client.save()
 
     logger.info("Клиент одобрен", client_id=client_id, name=client.name)
@@ -186,7 +191,7 @@ async def reject_client(
     reason = data.reason if data else None
     if reason:
         client.rejection_reason = reason
-    client.updated_at = datetime.now(timezone.utc)
+    client.updated_at = datetime.now(UTC)
     await client.save()
 
     logger.info("Клиент отклонён", client_id=client_id, reason=reason)
@@ -215,7 +220,7 @@ async def update_credit_limit(
 
     old_limit = client.credit_limit
     client.credit_limit = data.credit_limit
-    client.updated_at = datetime.now(timezone.utc)
+    client.updated_at = datetime.now(UTC)
     await client.save()
 
     logger.info(

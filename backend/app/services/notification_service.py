@@ -4,7 +4,7 @@
 Уведомления сохраняются в MongoDB коллекцию notifications.
 Реальная отправка (Telegram, Email) происходит через Celery задачи.
 """
-from datetime import datetime, timezone
+
 from typing import Optional
 
 import structlog
@@ -67,6 +67,7 @@ async def send_notification(
     if channel in (NotificationChannel.TELEGRAM, NotificationChannel.EMAIL):
         try:
             from app.tasks.notification_tasks import send_notification_task
+
             send_notification_task.delay(str(notification.id))
         except Exception as e:
             logger.warning(
@@ -135,7 +136,7 @@ async def notify_client_status_change(order, new_status: str) -> None:
     Уведомление клиенту об изменении статуса заказа.
     """
     # Получаем ID клиента (может быть Link или строка)
-    if hasattr(order.client_id, 'id'):
+    if hasattr(order.client_id, "id"):
         client_id = str(order.client_id.id)
     else:
         client_id = str(order.client_id)
@@ -153,10 +154,7 @@ async def notify_client_status_change(order, new_status: str) -> None:
     status_display = status_names.get(new_status, new_status)
 
     title = f"Заказ {order.order_number}: {status_display}"
-    message = (
-        f"Статус вашего заказа {order.order_number} изменён: {status_display}\n"
-        f"Сумма: {order.total:,.0f} ₽"
-    )
+    message = f"Статус вашего заказа {order.order_number} изменён: {status_display}\n" f"Сумма: {order.total:,.0f} ₽"
 
     if new_status == "delivering":
         message += f"\nОжидаемое время доставки: {order.delivery_slot}"
@@ -180,6 +178,7 @@ async def notify_client_status_change(order, new_status: str) -> None:
     # Telegram клиенту (если привязан)
     try:
         from app.models.user import User
+
         client = await User.get(client_id)
         if client and client.telegram_chat_id and client.notification_channels.telegram:
             await send_notification(
@@ -207,8 +206,7 @@ async def notify_admin_low_stock(products: list) -> None:
     admins = await User.find(User.role == UserRole.ADMIN).to_list()
 
     products_text = "\n".join(
-        f"• {p['name']}: {p['stock_qty']:.1f} {p['unit']} (мин: {p['min_stock_qty']:.1f})"
-        for p in products[:10]
+        f"• {p['name']}: {p['stock_qty']:.1f} {p['unit']} (мин: {p['min_stock_qty']:.1f})" for p in products[:10]
     )
 
     title = f"⚠️ Низкие остатки: {len(products)} товаров"

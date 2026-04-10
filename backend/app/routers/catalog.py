@@ -6,6 +6,7 @@
 - Авторизованный B2B → оптовые цены
 - Остальные → розничные цены
 """
+
 import math
 from typing import List, Optional
 
@@ -25,8 +26,7 @@ from app.utils.security import get_current_user_optional
 
 def _product_to_response(product, category_name: str = "", is_b2b: bool = False, category_slug: str = "") -> dict:
     """Конвертирует Product в словарь для ProductResponse."""
-    cat_id = str(product.category_id.ref.id) if hasattr(
-        product.category_id, "ref") else str(product.category_id)
+    cat_id = str(product.category_id.ref.id) if hasattr(product.category_id, "ref") else str(product.category_id)
     return {
         "id": str(product.id),
         "name": product.name,
@@ -52,7 +52,10 @@ def _product_to_response(product, category_name: str = "", is_b2b: bool = False,
         "is_available": product.is_in_stock(),
         "is_low_stock": product.is_low_stock(),
         "popularity": 0,
-        "certificate_ids": [str(ref.ref.id) if hasattr(ref, "ref") else str(ref.id) if hasattr(ref, "id") else str(ref) for ref in (product.certificate_ids or [])],
+        "certificate_ids": [
+            str(ref.ref.id) if hasattr(ref, "ref") else str(ref.id) if hasattr(ref, "id") else str(ref)
+            for ref in (product.certificate_ids or [])
+        ],
         "created_at": product.created_at.isoformat(),
         "updated_at": product.updated_at.isoformat(),
     }
@@ -69,11 +72,10 @@ logger = structlog.get_logger(__name__)
     description="Возвращает активные категории, отсортированные по sort_order.",
 )
 async def get_categories(
-    parent_id: Optional[str] = Query(
-        None, description="ID родителя (None = корневые категории)"),
+    parent_id: Optional[str] = Query(None, description="ID родителя (None = корневые категории)"),
 ):
     """Список категорий каталога."""
-    query_filter = {"is_active": True}
+    query_filter: dict[str, object] = {"is_active": True}
 
     if parent_id is None:
         query_filter["parent_id"] = None
@@ -87,9 +89,7 @@ async def get_categories(
 
     result = []
     for cat in categories:
-        product_count = await Product.find(
-            {"category_id.$id": cat.id, "is_active": True}
-        ).count()
+        product_count = await Product.find({"category_id.$id": cat.id, "is_active": True}).count()
 
         result.append(
             CategoryResponse(
@@ -117,18 +117,14 @@ async def get_categories(
 async def get_products(
     category: Optional[str] = Query(None, description="Slug или ID категории"),
     search: Optional[str] = Query(None, description="Поисковый запрос"),
-    sort: str = Query(
-        "name", description="Сортировка: name, price_asc, price_desc, stock"),
+    sort: str = Query("name", description="Сортировка: name, price_asc, price_desc, stock"),
     page: int = Query(1, ge=1, description="Номер страницы"),
     limit: int = Query(20, ge=1, le=100, description="Товаров на странице"),
     in_stock_only: bool = Query(False, description="Только товары в наличии"),
     current_user=Depends(get_current_user_optional),
 ):
     """Список товаров каталога с фильтрами, поиском и пагинацией."""
-    is_b2b = (
-        current_user is not None
-        and current_user.is_b2b_approved()
-    )
+    is_b2b = current_user is not None and current_user.is_b2b_approved()
 
     query_conditions: dict = {"is_active": True}
 
@@ -138,6 +134,7 @@ async def get_products(
         if not cat:
             try:
                 from beanie import PydanticObjectId
+
                 cat = await Category.get(PydanticObjectId(category))
             except Exception:
                 pass
@@ -152,9 +149,7 @@ async def get_products(
 
     search_query = Product.find(query_conditions)
     if search and len(search.strip()) >= 2:
-        search_query = Product.find(
-            {**query_conditions, "name": {"$regex": search.strip(), "$options": "i"}}
-        )
+        search_query = Product.find({**query_conditions, "name": {"$regex": search.strip(), "$options": "i"}})
 
     sort_map = {
         "name": "+name",
@@ -172,14 +167,14 @@ async def get_products(
     category_info: dict = {}
     for product in products:
         if product.category_id:
-            cat_id = str(product.category_id.ref.id) if hasattr(
-                product.category_id, "ref") else str(product.category_id)
+            cat_id = (
+                str(product.category_id.ref.id) if hasattr(product.category_id, "ref") else str(product.category_id)
+            )
             if cat_id not in category_info:
                 try:
                     fetched_cat = await product.category_id.fetch()
                     if fetched_cat:
-                        category_info[cat_id] = {
-                            "name": fetched_cat.name, "slug": fetched_cat.slug or ""}
+                        category_info[cat_id] = {"name": fetched_cat.name, "slug": fetched_cat.slug or ""}
                     else:
                         category_info[cat_id] = {"name": "", "slug": ""}
                 except Exception:
@@ -187,13 +182,13 @@ async def get_products(
 
     items = []
     for product in products:
-        cat_id_str = str(product.category_id.ref.id) if hasattr(
-            product.category_id, "ref") else str(product.category_id)
+        cat_id_str = (
+            str(product.category_id.ref.id) if hasattr(product.category_id, "ref") else str(product.category_id)
+        )
         cat_data = category_info.get(cat_id_str, {"name": "", "slug": ""})
         cat_name = cat_data["name"]
 
-        items.append(ProductResponse(**_product_to_response(product,
-                     cat_name, is_b2b, category_slug=cat_data["slug"])))
+        items.append(ProductResponse(**_product_to_response(product, cat_name, is_b2b, category_slug=cat_data["slug"])))
 
     pages = math.ceil(total / limit) if total > 0 else 0
 
@@ -204,44 +199,6 @@ async def get_products(
         limit=limit,
         pages=pages,
     )
-
-
-@router.get(
-    "/products/id/{product_id}",
-    response_model=ProductResponse,
-    summary="Товар по ID",
-)
-async def get_product_by_id(
-    product_id: str,
-    current_user=Depends(get_current_user_optional),
-):
-    """Получение товара по MongoDB ObjectId."""
-    from beanie import PydanticObjectId
-
-    try:
-        product = await Product.get(PydanticObjectId(product_id))
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Товар не найден")
-
-    if not product or not product.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Товар не найден")
-
-    is_b2b = current_user is not None and current_user.is_b2b_approved()
-
-    cat_name = ""
-    cat_slug = ""
-    if product.category_id:
-        try:
-            cat = await product.category_id.fetch()
-            if cat:
-                cat_name = cat.name
-                cat_slug = cat.slug or ""
-        except Exception:
-            pass
-
-    return ProductResponse(**_product_to_response(product, cat_name, is_b2b, category_slug=cat_slug))
 
 
 @router.get(
@@ -262,10 +219,7 @@ async def get_product_by_slug(
             detail=f"Товар '{slug}' не найден",
         )
 
-    is_b2b = (
-        current_user is not None
-        and current_user.is_b2b_approved()
-    )
+    is_b2b = current_user is not None and current_user.is_b2b_approved()
 
     cat_name = ""
     cat_slug = ""

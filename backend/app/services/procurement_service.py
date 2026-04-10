@@ -6,6 +6,7 @@
 - Расчёт среднего расхода товара
 - Генерацию заявки поставщику (PDF)
 """
+
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -85,9 +86,7 @@ async def get_purchase_recommendations() -> List[Dict[str, Any]]:
     from app.models.order import Order
 
     active_statuses = ["new", "confirmed", "assembling", "assembled"]
-    active_orders = await Order.find(
-        {"status": {"$in": active_statuses}}
-    ).to_list()
+    active_orders = await Order.find({"status": {"$in": active_statuses}}).to_list()
 
     # Агрегируем зарезервированное количество по product_id
     reserved_by_product: Dict[str, float] = {}
@@ -111,10 +110,7 @@ async def get_purchase_recommendations() -> List[Dict[str, Any]]:
 
         # Рекомендуемое количество к закупке
         # Формула: max(0, min_stock + avg_weekly * 2 - current_stock + reserved)
-        recommended_qty = max(
-            0.0,
-            min_stock + avg_weekly * 2 - current_stock + reserved
-        )
+        recommended_qty = max(0.0, min_stock + avg_weekly * 2 - current_stock + reserved)
         recommended_qty = round(recommended_qty, 2)
 
         # Уровень срочности
@@ -127,21 +123,23 @@ async def get_purchase_recommendations() -> List[Dict[str, Any]]:
         else:
             urgency = "ok"  # Запасов достаточно
 
-        recommendations.append({
-            "product_id": product_id_str,
-            "product_name": product.name,
-            "unit": product.unit,
-            "current_stock": round(current_stock, 3),
-            "min_stock": min_stock,
-            "reserved_qty": round(reserved, 3),
-            "avg_daily_7d": avg_daily_7d,
-            "avg_daily_30d": avg_daily_30d,
-            "avg_weekly": round(avg_weekly, 3),
-            "recommended_qty": recommended_qty,
-            "urgency": urgency,
-            "cost_price": product.cost_price,
-            "estimated_purchase_cost": round(recommended_qty * product.cost_price, 2),
-        })
+        recommendations.append(
+            {
+                "product_id": product_id_str,
+                "product_name": product.name,
+                "unit": product.unit,
+                "current_stock": round(current_stock, 3),
+                "min_stock": min_stock,
+                "reserved_qty": round(reserved, 3),
+                "avg_daily_7d": avg_daily_7d,
+                "avg_daily_30d": avg_daily_30d,
+                "avg_weekly": round(avg_weekly, 3),
+                "recommended_qty": recommended_qty,
+                "urgency": urgency,
+                "cost_price": product.cost_price,
+                "estimated_purchase_cost": round(recommended_qty * product.cost_price, 2),
+            }
+        )
 
     # Сортируем: сначала критические и высокие, потом по рекомендуемому количеству
     urgency_order = {"critical": 0, "high": 1, "medium": 2, "ok": 3}
@@ -179,10 +177,7 @@ async def generate_purchase_order_pdf(supplier_id: str, items: List[Dict[str, An
         raise ValueError(f"Поставщик с ID {supplier_id} не найден")
 
     # Рассчитываем итоги
-    total_amount = sum(
-        item.get("qty", 0) * item.get("price", 0)
-        for item in items
-    )
+    total_amount = sum(item.get("qty", 0) * item.get("price", 0) for item in items)
 
     # Получаем реквизиты компании
     try:
@@ -286,7 +281,7 @@ async def generate_purchase_order_pdf(supplier_id: str, items: List[Dict[str, An
     try:
         import weasyprint
 
-        pdf_bytes = weasyprint.HTML(string=html_content).write_pdf()
+        pdf_bytes = bytes(weasyprint.HTML(string=html_content).write_pdf())
         logger.info(
             "PDF заявки поставщику сгенерирован",
             supplier_id=supplier_id,

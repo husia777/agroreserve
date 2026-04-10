@@ -2,8 +2,8 @@
 Роутер управления поставщиками (администратор).
 Эндпоинты: /api/v1/admin/suppliers/
 """
-import math
-from datetime import datetime, timezone
+
+from datetime import UTC, datetime
 from typing import Optional
 
 import structlog
@@ -14,7 +14,6 @@ from app.models.price_log import PriceLog
 from app.models.supplier import Supplier
 from app.schemas.supplier import (
     SupplierCreate,
-    SupplierListResponse,
     SupplierResponse,
     SupplierUpdate,
 )
@@ -28,27 +27,24 @@ router = APIRouter(prefix="/api/v1/admin/suppliers", tags=["Админ: Пост
 def _to_response(supplier: Supplier) -> SupplierResponse:
     """Конвертирует Supplier в ответ API."""
     return SupplierResponse(
-        **{
-            "_id": str(supplier.id),
-            "name": supplier.name,
-            "contact_person": supplier.contact_person,
-            "phone": supplier.phone,
-            "email": supplier.email,
-            "address": supplier.address,
-            "inn": supplier.inn,
-            "product_ids": [str(pid) for pid in supplier.product_ids],
-            "rating": supplier.rating,
-            "notes": supplier.notes,
-            "is_active": supplier.is_active,
-            "created_at": supplier.created_at.isoformat(),
-            "updated_at": supplier.updated_at.isoformat(),
-        }
+        id=str(supplier.id),
+        name=supplier.name,
+        contact_person=supplier.contact_person,
+        phone=supplier.phone,
+        email=supplier.email,
+        address=supplier.address,
+        inn=supplier.inn,
+        product_ids=[str(pid) for pid in supplier.product_ids],
+        rating=supplier.rating,
+        notes=supplier.notes,
+        is_active=supplier.is_active,
+        created_at=supplier.created_at.isoformat(),
+        updated_at=supplier.updated_at.isoformat(),
     )
 
 
 @router.get(
     "/",
-
     summary="Список поставщиков",
 )
 async def get_suppliers(
@@ -76,13 +72,7 @@ async def get_suppliers(
         ]
 
     total = await Supplier.find(query).count()
-    suppliers = (
-        await Supplier.find(query)
-        .sort(-Supplier.rating)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .to_list()
-    )
+    suppliers = await Supplier.find(query).sort(-Supplier.rating).skip((page - 1) * limit).limit(limit).to_list()
 
     return [_to_response(s) for s in suppliers]
 
@@ -100,7 +90,7 @@ async def create_supplier(
     """
     Добавить нового поставщика в справочник.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     supplier = Supplier(
         name=data.name,
@@ -190,7 +180,7 @@ async def update_supplier(
     if data.is_active is not None:
         supplier.is_active = data.is_active
 
-    supplier.updated_at = datetime.now(timezone.utc)
+    supplier.updated_at = datetime.now(UTC)
     await supplier.save()
 
     logger.info(
@@ -223,7 +213,7 @@ async def delete_supplier(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден")
 
     supplier.is_active = False
-    supplier.updated_at = datetime.now(timezone.utc)
+    supplier.updated_at = datetime.now(UTC)
     await supplier.save()
 
     logger.info(
@@ -265,12 +255,7 @@ async def get_supplier_price_history(
                 detail="Неверный формат product_id",
             )
 
-    price_logs = (
-        await PriceLog.find(query)
-        .sort(-PriceLog.logged_at)
-        .limit(limit)
-        .to_list()
-    )
+    price_logs = await PriceLog.find(query).sort(-PriceLog.logged_at).limit(limit).to_list()
 
     return {
         "supplier_id": supplier_id,
@@ -316,9 +301,7 @@ async def get_supplier_products(
 
     from app.models.product import Product
 
-    products = await Product.find(
-        {"_id": {"$in": supplier.product_ids}, "is_active": True}
-    ).to_list()
+    products = await Product.find({"_id": {"$in": supplier.product_ids}, "is_active": True}).to_list()
 
     return {
         "supplier_id": supplier_id,

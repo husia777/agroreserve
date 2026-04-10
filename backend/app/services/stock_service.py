@@ -8,11 +8,13 @@
 - Резервирование / возврат остатков при заказах
 - Автонумерация приходов
 """
+
 from datetime import datetime, timezone
 from typing import List, Optional
 
 import structlog
 
+from app.models.batch import Batch
 from app.models.product import Product
 from app.models.stock import StockReceipt, StockReceiptItem
 
@@ -29,9 +31,11 @@ async def get_next_receipt_number() -> str:
     prefix = f"REC-{year}-"
 
     # Ищем последний приход этого года
-    last_receipt = await StockReceipt.find(
-        {"receipt_number": {"$regex": f"^{prefix}"}}
-    ).sort(-StockReceipt.receipt_number).first_or_none()
+    last_receipt = (
+        await StockReceipt.find({"receipt_number": {"$regex": f"^{prefix}"}})
+        .sort(-StockReceipt.receipt_number)
+        .first_or_none()
+    )
 
     if last_receipt:
         try:
@@ -168,7 +172,6 @@ async def create_stock_receipt(data: dict, created_by: Optional[str] = None) -> 
     except Exception as e:
         logger.warning("Ошибка уведомления waitlist", error=str(e))
 
-
     logger.info(
         "Приходной документ создан",
         receipt_number=receipt_number,
@@ -205,8 +208,8 @@ async def reserve_stock(items: list) -> None:
     from beanie import PydanticObjectId
 
     for item in items:
-        product_id = item.product_id if hasattr(item, 'product_id') else item["product_id"]
-        qty = item.ordered_qty if hasattr(item, 'ordered_qty') else item["ordered_qty"]
+        product_id = item.product_id if hasattr(item, "product_id") else item["product_id"]
+        qty = item.ordered_qty if hasattr(item, "ordered_qty") else item["ordered_qty"]
 
         try:
             product = await Product.get(PydanticObjectId(product_id))
@@ -246,11 +249,11 @@ async def release_stock(items: list) -> None:
     from beanie import PydanticObjectId
 
     for item in items:
-        product_id = item.product_id if hasattr(item, 'product_id') else item["product_id"]
+        product_id = item.product_id if hasattr(item, "product_id") else item["product_id"]
         # При отмене возвращаем фактическое количество (или заказанное если факт не установлен)
-        if hasattr(item, 'actual_qty') and item.actual_qty is not None:
+        if hasattr(item, "actual_qty") and item.actual_qty is not None:
             qty = item.actual_qty
-        elif hasattr(item, 'ordered_qty'):
+        elif hasattr(item, "ordered_qty"):
             qty = item.ordered_qty
         else:
             qty = item.get("actual_qty") or item.get("ordered_qty", 0)
@@ -289,7 +292,7 @@ async def get_low_stock_products() -> list:
     """
     products = await Product.find(
         Product.is_active == True,  # noqa: E712
-        Product.stock_qty < Product.min_stock_qty,  # type: ignore
+        Product.stock_qty < Product.min_stock_qty,
     ).to_list()
 
     return [
@@ -309,7 +312,8 @@ async def get_low_stock_products() -> list:
 # v2: Партионный учёт (FIFO) — методы добавлены в рамках Группы 3
 # ────────────────────────────────────────────────────────────────────────────
 
-async def create_batch(receipt_item: StockReceiptItem, receipt: StockReceipt) -> "Batch":
+
+async def create_batch(receipt_item: StockReceiptItem, receipt: StockReceipt) -> Batch:
     """
     Создаёт партию товара при поступлении на склад.
 
@@ -378,19 +382,22 @@ async def consume_batches_fifo(product_id: str, qty: float) -> list:
     from app.models.batch import Batch
 
     # Загружаем не исчерпанные партии, сортируем по дате прихода (FIFO: старые первые)
-    batches = await Batch.find(
-        {
-            "product_id": PO_ID(product_id),
-            "is_exhausted": False,
-            "qty_remaining": {"$gt": 0},
-        }
-    ).sort(+Batch.received_date).to_list()
+    batches = (
+        await Batch.find(
+            {
+                "product_id": PO_ID(product_id),
+                "is_exhausted": False,
+                "qty_remaining": {"$gt": 0},
+            }
+        )
+        .sort(+Batch.received_date)
+        .to_list()
+    )
 
     total_available = sum(b.qty_remaining for b in batches)
     if total_available < qty:
         raise ValueError(
-            f"Недостаточно товара в партиях для FIFO-списания: "
-            f"доступно {total_available:.3f}, запрошено {qty:.3f}"
+            f"Недостаточно товара в партиях для FIFO-списания: " f"доступно {total_available:.3f}, запрошено {qty:.3f}"
         )
 
     remaining_to_consume = qty
@@ -408,11 +415,13 @@ async def consume_batches_fifo(product_id: str, qty: float) -> list:
 
         await batch.save()
 
-        consumed_batches.append({
-            "batch_id": str(batch.id),
-            "consumed_qty": round(consume_from_batch, 3),
-            "cost_price": batch.cost_price,
-        })
+        consumed_batches.append(
+            {
+                "batch_id": str(batch.id),
+                "consumed_qty": round(consume_from_batch, 3),
+                "cost_price": batch.cost_price,
+            }
+        )
 
         remaining_to_consume = round(remaining_to_consume - consume_from_batch, 3)
 
@@ -444,13 +453,17 @@ async def get_expiring_batches(days: int = 7) -> list:
     threshold = today + timedelta(days=days)
 
     # Ищем партии, у которых expiry_date <= threshold и партия не исчерпана
-    batches = await Batch.find(
-        {
-            "expiry_date": {"$lte": threshold.isoformat(), "$ne": None},
-            "is_exhausted": False,
-            "qty_remaining": {"$gt": 0},
-        }
-    ).sort(+Batch.expiry_date).to_list()
+    batches = (
+        await Batch.find(
+            {
+                "expiry_date": {"$lte": threshold.isoformat(), "$ne": None},
+                "is_exhausted": False,
+                "qty_remaining": {"$gt": 0},
+            }
+        )
+        .sort(+Batch.expiry_date)
+        .to_list()
+    )
 
     result = []
     for batch in batches:
@@ -459,19 +472,21 @@ async def get_expiring_batches(days: int = 7) -> list:
             delta = batch.expiry_date - today
             days_until_expiry = delta.days
 
-        result.append({
-            "batch_id": str(batch.id),
-            "product_id": str(batch.product_id),
-            "product_name": batch.product_name,
-            "qty_remaining": batch.qty_remaining,
-            "unit": batch.unit,
-            "expiry_date": str(batch.expiry_date) if batch.expiry_date else None,
-            "days_until_expiry": days_until_expiry,
-            "supplier_name": batch.supplier_name,
-            "cost_price": batch.cost_price,
-            "total_value": round(batch.qty_remaining * batch.cost_price, 2),
-            "is_expired": days_until_expiry is not None and days_until_expiry < 0,
-        })
+        result.append(
+            {
+                "batch_id": str(batch.id),
+                "product_id": str(batch.product_id),
+                "product_name": batch.product_name,
+                "qty_remaining": batch.qty_remaining,
+                "unit": batch.unit,
+                "expiry_date": str(batch.expiry_date) if batch.expiry_date else None,
+                "days_until_expiry": days_until_expiry,
+                "supplier_name": batch.supplier_name,
+                "cost_price": batch.cost_price,
+                "total_value": round(batch.qty_remaining * batch.cost_price, 2),
+                "is_expired": days_until_expiry is not None and days_until_expiry < 0,
+            }
+        )
 
     logger.info(
         "Партии с истекающим сроком получены",
@@ -505,9 +520,7 @@ async def notify_stock_waitlist(receipt_items: list) -> None:
         return
 
     # Находим все неуведомлённые подписки на эти товары
-    waitlist_entries = await StockWaitlist.find(
-        {"product_id": {"$in": product_ids}, "is_notified": False}
-    ).to_list()
+    waitlist_entries = await StockWaitlist.find({"product_id": {"$in": product_ids}, "is_notified": False}).to_list()
 
     if not waitlist_entries:
         return
@@ -520,6 +533,7 @@ async def notify_stock_waitlist(receipt_items: list) -> None:
         try:
             from app.models.product import Product
             from beanie import PydanticObjectId
+
             product = await Product.get(PydanticObjectId(entry.product_id))
             product_slug = product.slug if product else "unknown"
         except Exception:
@@ -534,6 +548,7 @@ async def notify_stock_waitlist(receipt_items: list) -> None:
 
         if ok:
             from datetime import datetime, timezone
+
             entry.is_notified = True
             entry.notified_at = datetime.now(timezone.utc)
             await entry.save()
@@ -546,6 +561,4 @@ async def notify_stock_waitlist(receipt_items: list) -> None:
 
     # Telegram уведомление админу о рассылке
     if notified_count > 0:
-        await send_admin_notification(
-            f"📬 UC-01: Отправлено {notified_count} уведомлений о поступлении товара"
-        )
+        await send_admin_notification(f"📬 UC-01: Отправлено {notified_count} уведомлений о поступлении товара")

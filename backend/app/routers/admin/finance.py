@@ -2,10 +2,11 @@
 Роутер финансового учёта (администратор).
 Эндпоинты: /api/v1/admin/finance/
 """
+
 import math
 from datetime import date as DateType
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from datetime import timedelta
+from typing import Optional
 
 import structlog
 from beanie import PydanticObjectId
@@ -13,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
 from app.models.finance import Expense, ExpenseCategory
-from app.schemas.finance import ExpenseCreate, ExpenseResponse, PnLPeriod
+from app.schemas.finance import ExpenseCreate
 from app.utils.security import require_admin
 
 logger = structlog.get_logger(__name__)
@@ -23,8 +24,10 @@ router = APIRouter(prefix="/api/v1/admin/finance", tags=["Админ: Финан
 
 # ── Pydantic схемы ─────────────────────────────────────────────────────────────
 
+
 class ExpenseUpdate(BaseModel):
     """Запрос на обновление расхода."""
+
     date: Optional[DateType] = None
     category: Optional[str] = None
     description: Optional[str] = Field(None, min_length=2, max_length=500)
@@ -46,6 +49,7 @@ class ExpenseUpdate(BaseModel):
 
 class PaymentReconcileItem(BaseModel):
     """Одна запись оплаты для автосверки."""
+
     amount: float = Field(..., gt=0, description="Сумма оплаты (₽)")
     order_number: Optional[str] = Field(None, description="Номер заказа (ORD-YYYY-NNNNN)")
     client_id: Optional[str] = Field(None, description="ID клиента (если номер заказа неизвестен)")
@@ -55,12 +59,12 @@ class PaymentReconcileItem(BaseModel):
 
 class ReconcilePaymentsRequest(BaseModel):
     """Запрос на автосверку списка оплат."""
-    payments: List[PaymentReconcileItem] = Field(
-        ..., min_length=1, description="Список оплат для сверки"
-    )
+
+    payments: list[PaymentReconcileItem] = Field(..., min_length=1, description="Список оплат для сверки")
 
 
 # ── Утилиты ────────────────────────────────────────────────────────────────────
+
 
 def _expense_to_response(expense: Expense) -> dict:
     """Конвертирует Expense в ответ API."""
@@ -78,6 +82,7 @@ def _expense_to_response(expense: Expense) -> dict:
 
 
 # ── Эндпоинты ──────────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/pnl",
@@ -135,6 +140,7 @@ async def get_pnl(
         )
 
     from app.services.finance_service import calculate_pnl
+
     pnl_data = await calculate_pnl(start, end)
 
     # Фронтенд ожидает массив PnLReport[] с полями:
@@ -181,13 +187,7 @@ async def get_expenses(
         query_filter.setdefault("date", {})["$lte"] = date_to
 
     total = await Expense.find(query_filter).count()
-    expenses = (
-        await Expense.find(query_filter)
-        .sort(-Expense.date)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .to_list()
-    )
+    expenses = await Expense.find(query_filter).sort(-Expense.date).skip((page - 1) * limit).limit(limit).to_list()
 
     total_amount = sum(e.amount for e in expenses)
 

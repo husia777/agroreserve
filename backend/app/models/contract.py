@@ -2,8 +2,10 @@
 Модель государственного контракта (44-ФЗ и прямые договоры).
 Коллекция: contracts
 """
-from datetime import date as DateType, datetime, timezone
-from typing import List, Optional
+
+from datetime import UTC, datetime
+from datetime import date as DateType
+from typing import Optional
 
 from beanie import Document, PydanticObjectId
 from pydantic import BaseModel, Field
@@ -11,6 +13,7 @@ from pydantic import BaseModel, Field
 
 class ContractItem(BaseModel):
     """Позиция контракта — товар с объёмом и ценой."""
+
     product_id: PydanticObjectId = Field(..., description="ID товара")
     product_name: str = Field(..., description="Название товара (кэш)")
     qty: float = Field(..., ge=0, description="Общее количество по контракту")
@@ -21,8 +24,9 @@ class ContractItem(BaseModel):
 
 class DeliverySchedule(BaseModel):
     """График поставки — одна дата с перечнем позиций."""
+
     date: DateType = Field(..., description="Плановая дата поставки")
-    items: List[ContractItem] = Field(default_factory=list, description="Позиции поставки")
+    items: list[ContractItem] = Field(default_factory=list, description="Позиции поставки")
     is_completed: bool = Field(False, description="Выполнена ли поставка")
     # Привязка к реальному заказу после выполнения
     order_id: Optional[PydanticObjectId] = Field(None, description="ID связанного заказа")
@@ -53,12 +57,10 @@ class Contract(Document):
     total_amount: float = Field(..., ge=0, description="Общая сумма контракта (₽)")
 
     # ── Позиции ───────────────────────────────────────────────
-    items: List[ContractItem] = Field(default_factory=list, description="Товары по контракту")
+    items: list[ContractItem] = Field(default_factory=list, description="Товары по контракту")
 
     # ── График поставок ───────────────────────────────────────
-    delivery_schedule: List[DeliverySchedule] = Field(
-        default_factory=list, description="График плановых поставок"
-    )
+    delivery_schedule: list[DeliverySchedule] = Field(default_factory=list, description="График плановых поставок")
 
     # ── Исполнение ────────────────────────────────────────────
     # Процент фактически исполненного контракта (0-100)
@@ -70,18 +72,14 @@ class Contract(Document):
 
     # ── Документы ─────────────────────────────────────────────
     # Формат: [{"type": "contract", "url": "..."}, {"type": "act", "url": "..."}]
-    documents: List[dict] = Field(default_factory=list, description="Прикреплённые документы")
+    documents: list[dict] = Field(default_factory=list, description="Прикреплённые документы")
 
     # ── Заметки ───────────────────────────────────────────────
     notes: Optional[str] = Field(None, description="Внутренние заметки")
 
     # ── Метаданные ────────────────────────────────────────────
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "contracts"

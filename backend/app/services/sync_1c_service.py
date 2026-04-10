@@ -7,15 +7,16 @@
 Текущий статус: заглушки с логированием.
 Реальные вызовы 1С OData добавить при развёртывании на VPS.
 """
-from datetime import datetime, timezone
-from typing import List, Optional
+
+from datetime import UTC, datetime
+from typing import Optional
 
 import structlog
 
 logger = structlog.get_logger(__name__)
 
 
-async def sync_stock_from_1c(data: List[dict]) -> dict:
+async def sync_stock_from_1c(data: list[dict]) -> dict:
     """
     Обновление остатков товаров из 1С.
 
@@ -49,7 +50,7 @@ async def sync_stock_from_1c(data: List[dict]) -> dict:
                 continue
 
             product.stock_qty = max(0.0, float(qty))
-            product.updated_at = datetime.now(timezone.utc)
+            product.updated_at = datetime.now(UTC)
             await product.save()
             updated += 1
 
@@ -61,7 +62,7 @@ async def sync_stock_from_1c(data: List[dict]) -> dict:
             )
 
         except Exception as e:
-            errors.append(f"Ошибка обновления {product_id}: {str(e)}")
+            errors.append(f"Ошибка обновления {product_id}: {e!s}")
             logger.error("Ошибка синхронизации остатка из 1С", product_id=product_id, error=str(e))
 
     # Логируем синхронизацию
@@ -76,7 +77,7 @@ async def sync_stock_from_1c(data: List[dict]) -> dict:
     return {"updated": updated, "errors": errors}
 
 
-async def sync_payments_from_1c(data: List[dict]) -> dict:
+async def sync_payments_from_1c(data: list[dict]) -> dict:
     """
     Обновление оплат из 1С.
 
@@ -120,19 +121,15 @@ async def sync_payments_from_1c(data: List[dict]) -> dict:
             # Определяем статус оплаты
             if order.paid_amount >= order.total:
                 order.payment_status = PaymentStatus.PAID
-                order.paid_at = datetime.now(timezone.utc)
+                order.paid_at = datetime.now(UTC)
             elif order.paid_amount > 0:
                 order.payment_status = PaymentStatus.PARTIAL
 
-            order.updated_at = datetime.now(timezone.utc)
+            order.updated_at = datetime.now(UTC)
             await order.save()
 
             # Уменьшаем долг клиента
-            client_id = (
-                str(order.client_id.id)
-                if hasattr(order.client_id, "id")
-                else str(order.client_id)
-            )
+            client_id = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
             client = await User.get(PydanticObjectId(client_id))
             if client and client.client_type == ClientType.B2B:
                 debt_reduction = amount  # Уменьшаем долг на оплаченную сумму
@@ -151,6 +148,7 @@ async def sync_payments_from_1c(data: List[dict]) -> dict:
             try:
                 from app.models.notification import NotificationChannel, NotificationType
                 from app.services.notification_service import send_notification
+
                 await send_notification(
                     user_id=client_id,
                     channel=NotificationChannel.SYSTEM,
@@ -166,7 +164,7 @@ async def sync_payments_from_1c(data: List[dict]) -> dict:
             processed += 1
 
         except Exception as e:
-            errors.append(f"Ошибка обработки оплаты {order_id}: {str(e)}")
+            errors.append(f"Ошибка обработки оплаты {order_id}: {e!s}")
             logger.error("Ошибка синхронизации оплаты из 1С", order_id=order_id, error=str(e))
 
     await _log_sync_event("payments_update", {"processed": processed, "errors": len(errors)})
@@ -180,7 +178,7 @@ async def sync_payments_from_1c(data: List[dict]) -> dict:
     return {"processed": processed, "errors": errors}
 
 
-async def get_orders_for_1c() -> List[dict]:
+async def get_orders_for_1c() -> list[dict]:
     """
     Возвращает новые заказы для передачи в 1С.
     Фильтр: status = new|confirmed, synced_to_1c = False.
@@ -248,7 +246,7 @@ async def mark_order_synced(order_id: str, sync_1c_id: Optional[str] = None) -> 
     order.synced_to_1c = True
     if sync_1c_id:
         order.sync_1c_id = sync_1c_id
-    order.updated_at = datetime.now(timezone.utc)
+    order.updated_at = datetime.now(UTC)
     await order.save()
 
     logger.info(
@@ -266,12 +264,13 @@ async def _log_sync_event(event_type: str, data: dict) -> None:
     """
     try:
         from app.database import get_database
+
         db = get_database()
         await db.sync_log.insert_one(
             {
                 "event_type": event_type,
                 "data": data,
-                "timestamp": datetime.now(timezone.utc),
+                "timestamp": datetime.now(UTC),
             }
         )
     except Exception as e:
@@ -279,6 +278,7 @@ async def _log_sync_event(event_type: str, data: dict) -> None:
 
 
 # ── Заглушки для реальных вызовов 1С OData API ────────────────
+
 
 async def push_order_to_1c(order) -> Optional[str]:
     """

@@ -5,16 +5,16 @@
 Бэкап через pymongo — не требует mongodump/mongorestore.
 Каждый бэкап — JSON-файл с полным дампом всех коллекций.
 """
-import json
+
 import gzip
+import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 from bson import json_util
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
-from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel, Field
 
 from app.utils.security import require_admin
@@ -28,8 +28,10 @@ BACKUP_DIR = "/app/backups"
 
 # ── Схемы ────────────────────────────────────────────────────
 
+
 class BackupInfo(BaseModel):
     """Информация о бэкапе."""
+
     name: str = Field(..., description="Имя файла бэкапа")
     created_at: str = Field(..., description="Дата создания (ISO)")
     size_bytes: int = Field(..., description="Размер в байтах")
@@ -38,12 +40,14 @@ class BackupInfo(BaseModel):
 
 class BackupListResponse(BaseModel):
     """Список бэкапов."""
+
     items: list[BackupInfo] = Field(default_factory=list)
     total: int = Field(default=0)
 
 
 class BackupCreateResponse(BaseModel):
     """Ответ на создание бэкапа."""
+
     status_result: str = Field(..., alias="status")
     backup_name: str
     size_bytes: int
@@ -57,6 +61,7 @@ class BackupCreateResponse(BaseModel):
 
 class RestoreResponse(BaseModel):
     """Ответ на восстановление."""
+
     status_result: str = Field(..., alias="status")
     collections: int
     documents: int
@@ -66,6 +71,7 @@ class RestoreResponse(BaseModel):
 
 
 # ── Вспомогательные функции ──────────────────────────────────
+
 
 def _human_size(size_bytes: int) -> str:
     """Форматирует размер в читаемый вид."""
@@ -91,19 +97,19 @@ def _list_backups():
         size = entry.stat().st_size
         try:
             ts_part = entry.name.replace("backup_", "").replace(".json.gz", "")
-            dt = datetime.strptime(ts_part, "%Y%m%d_%H%M%S").replace(tzinfo=timezone.utc)
+            dt = datetime.strptime(ts_part, "%Y%m%d_%H%M%S").replace(tzinfo=UTC)
             created_str = dt.isoformat()
         except ValueError:
-            created_str = datetime.fromtimestamp(
-                entry.stat().st_mtime, tz=timezone.utc
-            ).isoformat()
+            created_str = datetime.fromtimestamp(entry.stat().st_mtime, tz=UTC).isoformat()
 
-        backups.append(BackupInfo(
-            name=entry.name,
-            created_at=created_str,
-            size_bytes=size,
-            size_human=_human_size(size),
-        ))
+        backups.append(
+            BackupInfo(
+                name=entry.name,
+                created_at=created_str,
+                size_bytes=size,
+                size_human=_human_size(size),
+            )
+        )
 
     backups.sort(key=lambda b: b.created_at, reverse=True)
     return backups
@@ -112,6 +118,7 @@ def _list_backups():
 async def _get_database():
     """Получает ссылку на базу данных MongoDB."""
     from app.models.user import User
+
     return User.get_motor_collection().database
 
 
@@ -122,10 +129,7 @@ async def _dump_database():
     total_docs = 0
 
     collection_names = await db.list_collection_names()
-    collection_names = [
-        name for name in collection_names
-        if not name.startswith("system.")
-    ]
+    collection_names = [name for name in collection_names if not name.startswith("system.")]
 
     for col_name in sorted(collection_names):
         collection = db[col_name]
@@ -137,7 +141,7 @@ async def _dump_database():
 
     return {
         "meta": {
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "collections": len(collection_names),
             "documents": total_docs,
             "version": "1.0",
@@ -150,10 +154,7 @@ def _rotate_backups(max_count=7):
     """Удаляет старые бэкапы, оставляя max_count последних."""
     try:
         entries = sorted(
-            [
-                e for e in os.scandir(BACKUP_DIR)
-                if e.name.startswith("backup_") and e.name.endswith(".json.gz")
-            ],
+            [e for e in os.scandir(BACKUP_DIR) if e.name.startswith("backup_") and e.name.endswith(".json.gz")],
             key=lambda x: x.stat().st_mtime,
             reverse=True,
         )
@@ -168,6 +169,7 @@ def _rotate_backups(max_count=7):
 
 
 # ── Эндпоинты ────────────────────────────────────────────────
+
 
 @router.get(
     "",
@@ -188,7 +190,7 @@ async def list_backups(admin=Depends(require_admin)):
 )
 async def create_backup(admin=Depends(require_admin)):
     """Создаёт полный бэкап базы данных MongoDB в сжатый JSON."""
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     backup_name = f"backup_{timestamp}.json.gz"
     backup_path = os.path.join(BACKUP_DIR, backup_name)
     os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -221,7 +223,7 @@ async def create_backup(admin=Depends(require_admin)):
         logger.error("Ошибка создания бэкапа", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка создания бэкапа: {str(e)}",
+            detail=f"Ошибка создания бэкапа: {e!s}",
         )
 
 
@@ -280,7 +282,7 @@ async def restore_backup(backup_name: str, admin=Depends(require_admin)):
 
     except Exception as e:
         logger.error("Ошибка восстановления", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Ошибка восстановления: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка восстановления: {e!s}")
 
 
 @router.delete(
@@ -298,4 +300,4 @@ async def delete_backup(backup_name: str, admin=Depends(require_admin)):
         os.remove(backup_path)
         logger.info("Бэкап удалён", backup_name=backup_name)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Не удалось удалить: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Не удалось удалить: {e!s}")

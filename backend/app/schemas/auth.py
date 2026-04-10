@@ -1,6 +1,7 @@
 """
 Схемы для аутентификации и авторизации.
 """
+
 import re
 from typing import Optional
 
@@ -9,6 +10,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 class DocumentPreferencesSchema(BaseModel):
     """UC-265: Настройка пакета документов клиента."""
+
     torg12: bool = True
     invoice: bool = True
     upd: bool = False
@@ -19,20 +21,14 @@ class DocumentPreferencesSchema(BaseModel):
 
 class OrganizationCreate(BaseModel):
     """Реквизиты организации при регистрации B2B клиента."""
-    name: str = Field(..., min_length=2, max_length=200,
-                      description="Название организации")
-    inn: str = Field(..., min_length=10, max_length=12,
-                     description="ИНН (10 или 12 цифр)")
-    kpp: Optional[str] = Field(
-        None, min_length=9, max_length=9, description="КПП (9 цифр, для ООО)")
-    legal_address: str = Field(..., min_length=5,
-                               max_length=500, description="Юридический адрес")
-    bank_name: Optional[str] = Field(
-        None, max_length=200, description="Название банка")
-    bik: Optional[str] = Field(
-        None, min_length=9, max_length=9, description="БИК (9 цифр)")
-    account: Optional[str] = Field(
-        None, min_length=20, max_length=20, description="Расчётный счёт (20 цифр)")
+
+    name: str = Field(..., min_length=2, max_length=200, description="Название организации")
+    inn: str = Field(..., min_length=10, max_length=12, description="ИНН (10 или 12 цифр)")
+    kpp: Optional[str] = Field(None, min_length=9, max_length=9, description="КПП (9 цифр, для ООО)")
+    legal_address: str = Field(..., min_length=5, max_length=500, description="Юридический адрес")
+    bank_name: Optional[str] = Field(None, max_length=200, description="Название банка")
+    bik: Optional[str] = Field(None, min_length=9, max_length=9, description="БИК (9 цифр)")
+    account: Optional[str] = Field(None, min_length=20, max_length=20, description="Расчётный счёт (20 цифр)")
 
     @field_validator("inn")
     @classmethod
@@ -40,8 +36,7 @@ class OrganizationCreate(BaseModel):
         if not v.isdigit():
             raise ValueError("ИНН должен содержать только цифры")
         if len(v) not in (10, 12):
-            raise ValueError(
-                "ИНН должен содержать 10 цифр (для ООО) или 12 цифр (для ИП)")
+            raise ValueError("ИНН должен содержать 10 цифр (для ООО) или 12 цифр (для ИП)")
         return v
 
     @field_validator("bik")
@@ -54,28 +49,19 @@ class OrganizationCreate(BaseModel):
 
 class UserRegister(BaseModel):
     """Запрос на регистрацию нового пользователя."""
-    phone: Optional[str] = Field(
-        None, description="Телефон в формате +7XXXXXXXXXX")
-    email: Optional[EmailStr] = Field(
-        None, description="Email (необязательно)")
-    full_name: str = Field(..., min_length=2,
-                           max_length=200, description="Полное имя")
-    password: str = Field(..., min_length=8, max_length=100,
-                          description="Пароль (мин. 8 символов)")
-    client_type: str = Field(
-        "individual", description="Тип клиента: b2b, b2c, individual, ip, ooo")
+
+    phone: Optional[str] = Field(None, description="Телефон в формате +7XXXXXXXXXX")
+    email: Optional[EmailStr] = Field(None, description="Email (необязательно)")
+    full_name: str = Field(..., min_length=2, max_length=200, description="Полное имя")
+    password: str = Field(..., min_length=8, max_length=100, description="Пароль (мин. 8 символов)")
+    client_type: str = Field("individual", description="Тип клиента: b2b, b2c, individual, ip, ooo")
     # Реквизиты организации — вложенный объект (альтернативный формат)
-    organization: Optional[OrganizationCreate] = Field(
-        None, description="Реквизиты организации (обязательно для B2B)"
-    )
+    organization: Optional[OrganizationCreate] = Field(None, description="Реквизиты организации (обязательно для B2B)")
     # Плоские поля от фронтенда (альтернативный формат)
-    organization_name: Optional[str] = Field(
-        None, description="Название организации (плоский формат)")
+    organization_name: Optional[str] = Field(None, description="Название организации (плоский формат)")
     inn: Optional[str] = Field(None, description="ИНН (плоский формат)")
-    legal_address: Optional[str] = Field(
-        None, description="Юр. адрес (плоский формат)")
-    delivery_address: Optional[str] = Field(
-        None, max_length=500, description="Адрес доставки")
+    legal_address: Optional[str] = Field(None, description="Юр. адрес (плоский формат)")
+    delivery_address: Optional[str] = Field(None, max_length=500, description="Адрес доставки")
 
     @field_validator("phone")
     @classmethod
@@ -125,14 +111,18 @@ class UserRegister(BaseModel):
                 name=self.organization_name,
                 inn=self.inn,
                 legal_address=self.legal_address,
+                kpp=None,
+                bank_name=None,
+                bik=None,
+                account=None,
             )
         return None
 
 
 class UserLogin(BaseModel):
     """Запрос на вход в систему."""
-    phone: Optional[str] = Field(
-        None, description="Телефон в формате +7XXXXXXXXXX")
+
+    phone: Optional[str] = Field(None, description="Телефон в формате +7XXXXXXXXXX")
     email: Optional[EmailStr] = Field(None, description="Email адрес")
     password: str = Field(..., description="Пароль")
 
@@ -151,20 +141,22 @@ class UserLogin(BaseModel):
 
 class TokenResponse(BaseModel):
     """Ответ с JWT токенами после успешного входа."""
+
     access_token: str = Field(..., description="Access токен (15 мин)")
     refresh_token: str = Field(..., description="Refresh токен (30 дней)")
     token_type: str = Field("bearer", description="Тип токена")
-    expires_in: int = Field(...,
-                            description="Время жизни access токена в секундах")
+    expires_in: int = Field(..., description="Время жизни access токена в секундах")
 
 
 class RefreshTokenRequest(BaseModel):
     """Запрос на обновление токена."""
+
     refresh_token: str = Field(..., description="Действующий refresh токен")
 
 
 class OrganizationResponse(BaseModel):
     """Реквизиты организации в ответе API."""
+
     name: str
     inn: str
     kpp: Optional[str] = None
@@ -178,6 +170,7 @@ class OrganizationResponse(BaseModel):
 
 class UserResponse(BaseModel):
     """Данные пользователя в ответе API."""
+
     id: str = Field(..., description="ID пользователя")
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -198,6 +191,7 @@ class UserResponse(BaseModel):
 
 class AuthLoginResponse(BaseModel):
     """Ответ на логин/регистрацию — токены + данные пользователя."""
+
     tokens: TokenResponse
     user: UserResponse
 
@@ -206,13 +200,9 @@ class AuthLoginResponse(BaseModel):
 
 class UserUpdateProfile(BaseModel):
     """Запрос на обновление профиля пользователя."""
+
     name: Optional[str] = Field(None, min_length=2, max_length=200)
     email: Optional[EmailStr] = None
     delivery_address: Optional[str] = Field(None, max_length=500)
     organization: Optional[OrganizationCreate] = None
     document_preferences: Optional[DocumentPreferencesSchema] = None
-
-
-class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str

@@ -1,6 +1,7 @@
 """
 SEO эндпоинты (UC-46): /sitemap.xml, /robots.txt
 """
+
 from datetime import datetime, timezone
 
 import structlog
@@ -53,22 +54,26 @@ async def sitemap_xml():
     ]
 
     for page in static_pages:
-        urls.append({
-            "loc": f"{SITE_URL}{page['loc']}",
-            "lastmod": now,
-            "changefreq": page["changefreq"],
-            "priority": page["priority"],
-        })
+        urls.append(
+            {
+                "loc": f"{SITE_URL}{page['loc']}",
+                "lastmod": now,
+                "changefreq": page["changefreq"],
+                "priority": page["priority"],
+            }
+        )
 
     try:
         categories = await Category.find(Category.is_active == True).to_list()
         for cat in categories:
-            urls.append({
-                "loc": f"{SITE_URL}/catalog/{cat.slug}",
-                "lastmod": now,
-                "changefreq": "daily",
-                "priority": "0.8",
-            })
+            urls.append(
+                {
+                    "loc": f"{SITE_URL}/catalog/{cat.slug}",
+                    "lastmod": now,
+                    "changefreq": "daily",
+                    "priority": "0.8",
+                }
+            )
     except Exception as e:
         logger.warning("Ошибка категорий для sitemap", error=str(e))
 
@@ -78,21 +83,23 @@ async def sitemap_xml():
             cat_slug = ""
             if prod.category_id:
                 try:
-                    cat = await Category.get(prod.category_id)
-                    if cat:
-                        cat_slug = cat.slug
+                    prod_cat = await Category.get(prod.category_id)
+                    if prod_cat is not None:
+                        cat_slug = prod_cat.slug
                 except Exception:
                     pass
             updated = now
             if hasattr(prod, "updated_at") and prod.updated_at:
                 updated = prod.updated_at.strftime("%Y-%m-%d")
             loc = f"{SITE_URL}/catalog/{cat_slug}/{prod.slug}" if cat_slug else f"{SITE_URL}/catalog/_/{prod.slug}"
-            urls.append({
-                "loc": loc,
-                "lastmod": updated,
-                "changefreq": "weekly",
-                "priority": "0.7",
-            })
+            urls.append(
+                {
+                    "loc": loc,
+                    "lastmod": updated,
+                    "changefreq": "weekly",
+                    "priority": "0.7",
+                }
+            )
     except Exception as e:
         logger.warning("Ошибка товаров для sitemap", error=str(e))
 

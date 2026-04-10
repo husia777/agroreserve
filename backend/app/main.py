@@ -8,6 +8,7 @@
 - Все роутеры
 - Structlog настройка
 """
+
 import os
 import time
 from collections import defaultdict
@@ -23,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import close_mongo_connection, connect_to_mongo
+from app.routers.admin.export import router as admin_export_router
 
 # ── Настройка структурированного логирования ──────────────────
 structlog.configure(
@@ -36,8 +38,9 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         # В production — JSON, в dev — красивый формат
-        structlog.processors.JSONRenderer() if not settings.DEBUG
-        else structlog.dev.ConsoleRenderer(),
+        structlog.processors.JSONRenderer(
+            # type: ignore[list-item]
+        ) if not settings.DEBUG else structlog.dev.ConsoleRenderer(),
     ],
     wrapper_class=structlog.stdlib.BoundLogger,
     context_class=dict,
@@ -71,6 +74,7 @@ async def lifespan(app: FastAPI):
 
     # Создаём директории для хранения файлов
     import os
+
     for directory in ["/app/media/documents", "/app/media/certificates", "/app/backups"]:
         os.makedirs(directory, exist_ok=True)
 
@@ -181,7 +185,7 @@ async def rate_limit_middleware(request: Request, call_next: Callable) -> Respon
     _rate_limit_store[key].append(now)
 
     # Обрабатываем запрос
-    response = await call_next(request)
+    response: Response = await call_next(request)
 
     # Добавляем заголовки с информацией о лимите
     response.headers["X-RateLimit-Limit"] = str(limit)
@@ -208,7 +212,7 @@ async def logging_middleware(request: Request, call_next: Callable) -> Response:
         client_ip=request.client.host if request.client else "unknown",
     )
 
-    response = await call_next(request)
+    response: Response = await call_next(request)
 
     # Вычисляем время обработки
     process_time = round((time.time() - start_time) * 1000, 2)
@@ -294,161 +298,200 @@ app.mount("/media", StaticFiles(directory="/app/media"), name="media")
 
 # Авторизация
 from app.routers.auth import router as auth_router  # noqa: E402
+
 app.include_router(auth_router)
 
 
 # Публичный каталог
 from app.routers.catalog import router as catalog_router  # noqa: E402
+
 app.include_router(catalog_router)
 
 # Публичные сертификаты товаров (UC-23)
 from app.routers.catalog_certificates import router as catalog_certificates_router  # noqa: E402
+
 app.include_router(catalog_certificates_router)
 
 # Профиль пользователя
 from app.routers.profile import router as profile_router  # noqa: E402
+
 app.include_router(profile_router)
 
+app.include_router(admin_export_router)
 
 # Корзина — РЕАЛИЗОВАНА в Phase 2
 from app.routers.cart import router as cart_router  # noqa: E402
+
 app.include_router(cart_router)
 
 # Заказы (клиент) — РЕАЛИЗОВАНЫ в Phase 2
 from app.routers.orders import router as orders_router  # noqa: E402
+
 app.include_router(orders_router)
 
 # Документы (клиент) — РЕАЛИЗОВАНЫ в Phase 2
 from app.routers.documents import router as documents_router  # noqa: E402
+
 app.include_router(documents_router)
 
 # Telegram webhook — РЕАЛИЗОВАН в Phase 4
 from app.routers.telegram import router as telegram_router  # noqa: E402
+
 app.include_router(telegram_router)
 
 # Синхронизация с 1С — РЕАЛИЗОВАНА в Phase 4
 from app.routers.sync import router as sync_router  # noqa: E402
+
 app.include_router(sync_router)
 
 # Админ: дашборд
 from app.routers.admin.dashboard import router as admin_dashboard_router  # noqa: E402
+
 app.include_router(admin_dashboard_router)
 
 # Админ: товары и категории
 from app.routers.admin.products import router as admin_products_router  # noqa: E402
+
 app.include_router(admin_products_router)
 
 # Админ: заказы — РЕАЛИЗОВАНЫ в Phase 2
 from app.routers.admin.orders import router as admin_orders_router  # noqa: E402
+
 app.include_router(admin_orders_router)
 
 # Админ: клиенты
 from app.routers.admin.clients import router as admin_clients_router  # noqa: E402
+
 app.include_router(admin_clients_router)
 
 # Админ: склад — РЕАЛИЗОВАН в Phase 3
 from app.routers.admin.stock import router as admin_stock_router  # noqa: E402
+
 app.include_router(admin_stock_router)
 
 # Админ: финансы — РЕАЛИЗОВАНЫ в Phase 3
 from app.routers.admin.finance import router as admin_finance_router  # noqa: E402
+
 app.include_router(admin_finance_router)
 
 # Админ: сертификаты — РЕАЛИЗОВАНЫ в Phase 3
 from app.routers.admin.certificates import router as admin_certificates_router  # noqa: E402
+
 app.include_router(admin_certificates_router)
 
 # Админ: документы — РЕАЛИЗОВАНЫ в Phase 2-3
 from app.routers.admin.documents import router as admin_documents_router  # noqa: E402
+
 app.include_router(admin_documents_router)
 
 # Админ: уведомления — РЕАЛИЗОВАНЫ в Phase 4
 from app.routers.admin.notifications import router as admin_notifications_router  # noqa: E402
+
 app.include_router(admin_notifications_router)
 
 # Админ: настройки
 from app.routers.admin.settings import router as admin_settings_router  # noqa: E402
+
 app.include_router(admin_settings_router)
 
 # ── v2 роутеры ────────────────────────────────────────────────
 
 # Регулярные заказы (клиент)
 from app.routers.standing_orders import router as standing_orders_router  # noqa: E402
+
 app.include_router(standing_orders_router)
 
 # Школьный блок (конструктор меню, КБЖУ)
 from app.routers.schools import router as schools_router  # noqa: E402
+
 app.include_router(schools_router)
 
 # ЛК клиента: аналитика
 from app.routers.account.analytics import router as account_analytics_router  # noqa: E402
+
 app.include_router(account_analytics_router)
 
 # Админ: поставщики
 from app.routers.admin.suppliers import router as admin_suppliers_router  # noqa: E402
+
 app.include_router(admin_suppliers_router)
 
 # Админ: закупки и рекомендации
 from app.routers.admin.procurement import router as admin_procurement_router  # noqa: E402
+
 app.include_router(admin_procurement_router)
 
 # Админ: госконтракты
 from app.routers.admin.contracts import router as admin_contracts_router  # noqa: E402
+
 app.include_router(admin_contracts_router)
 
 # Админ: справочник блюд
 from app.routers.admin.dishes import router as admin_dishes_router  # noqa: E402
+
 app.include_router(admin_dishes_router)
 
 # Админ: списания
 from app.routers.admin.write_offs import router as admin_write_offs_router  # noqa: E402
+
 app.include_router(admin_write_offs_router)
 
 # Админ: логистика (маршрутные листы)
 from app.routers.admin.logistics import router as admin_logistics_router  # noqa: E402
+
 app.include_router(admin_logistics_router)
 
 # Админ: тендеры
 from app.routers.admin.tenders import router as admin_tenders_router  # noqa: E402
+
 app.include_router(admin_tenders_router)
 
 # Админ: аналитика
 from app.routers.admin.analytics import router as admin_analytics_router  # noqa: E402
+
 app.include_router(admin_analytics_router)
 
 # Админ: CRM
 from app.routers.admin.crm import router as admin_crm_router  # noqa: E402
+
 app.include_router(admin_crm_router)
 
 # Админ: напоминания
 from app.routers.admin.reminders import router as admin_reminders_router  # noqa: E402
+
 app.include_router(admin_reminders_router)
 
 # UC-01: Подписка на уведомление о поступлении
 from app.routers.catalog_waitlist import router as catalog_waitlist_router  # noqa: E402
+
 app.include_router(catalog_waitlist_router)
 
 # Админ: календарь
 from app.routers.admin.calendar import router as admin_calendar_router  # noqa: E402
+
 app.include_router(admin_calendar_router)
 
 # Админ: ярлыки/этикетки (UC-22)
 from app.routers.admin.labels import router as admin_labels_router  # noqa: E402
+
 app.include_router(admin_labels_router)
 
 logger.info(
     "Все роутеры подключены",
-    router_count=38,
+    router_count=34,
 )
 
 # UC-51: Бэкапы MongoDB
 from app.routers.admin.backups import router as admin_backups_router  # noqa: E402
+
 app.include_router(admin_backups_router)
 
 # UC-46: SEO (sitemap.xml, robots.txt)
 from app.routers.seo import router as seo_router  # noqa: E402
+
 app.include_router(seo_router)
 
 
 from app.routers.admin.export import router as admin_export_router  # noqa: E402
+
 app.include_router(admin_export_router)

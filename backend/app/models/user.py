@@ -2,33 +2,37 @@
 Модель пользователя (клиент и администратор).
 Коллекция: users
 """
+
 from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
 
-from beanie import Document, Indexed
+from beanie import Document
 from pydantic import BaseModel, EmailStr, Field
-
+from pymongo import IndexModel
 
 class UserRole(str, Enum):
     """Роли пользователей в системе."""
+
     ADMIN = "admin"
     CLIENT = "client"
 
 
 class ClientType(str, Enum):
     """Типы клиентов."""
-    B2B = "b2b"          # Юридическое лицо / ИП
-    B2C = "b2c"          # Физическое лицо (розница)
+
+    B2B = "b2b"  # Юридическое лицо / ИП
+    B2C = "b2c"  # Физическое лицо (розница)
     INDIVIDUAL = "individual"  # Физическое лицо без регистрации
 
 
 class UserStatus(str, Enum):
     """Статусы аккаунта пользователя."""
-    PENDING = "pending"       # На модерации (B2B)
-    APPROVED = "approved"     # Одобрен
-    REJECTED = "rejected"     # Отклонён
-    BLOCKED = "blocked"       # Заблокирован
+
+    PENDING = "pending"  # На модерации (B2B)
+    APPROVED = "approved"  # Одобрен
+    REJECTED = "rejected"  # Отклонён
+    BLOCKED = "blocked"  # Заблокирован
 
 
 class OrganizationDetails(BaseModel):
@@ -36,6 +40,7 @@ class OrganizationDetails(BaseModel):
     Реквизиты организации для B2B клиентов.
     Встроенная структура (embedded document, не Document).
     """
+
     name: str = Field(..., description="Название организации")
     inn: str = Field(..., description="ИНН")
     kpp: Optional[str] = Field(None, description="КПП (для ООО)")
@@ -53,6 +58,7 @@ class DocumentPreferences(BaseModel):
     UC-265: Настройка пакета документов клиента.
     Клиент выбирает, какие документы получать при отгрузке.
     """
+
     torg12: bool = Field(True, description="ТОРГ-12")
     invoice: bool = Field(True, description="Счёт на оплату")
     upd: bool = Field(
@@ -82,10 +88,8 @@ class User(Document):
     """
 
     # ── Контактные данные ────────────────────────────────────
-    phone: Indexed(str, unique=True) = Field(...,
-                                             description="Телефон в формате +7XXXXXXXXXX")
-    email: Optional[Indexed(EmailStr, unique=True)] = Field(
-        None, description="Email адрес")
+    phone: str = Field(..., description="Телефон в формате +7XXXXXXXXXX")
+    email: Optional[EmailStr] = Field(None, description="Email адрес")
     name: str = Field(..., description="Полное имя / название организации")
     password_hash: str = Field(..., description="Хэш пароля (bcrypt)")
 
@@ -121,13 +125,16 @@ class User(Document):
 
     # ── Настройки уведомлений ─────────────────────────────────
     notification_channels: NotificationChannels = Field(
-        default_factory=NotificationChannels,
+        default_factory=lambda: NotificationChannels(),
         description="Каналы уведомлений",
     )
 
     # ── UC-265: Пакет документов клиента ──────────────────────
     document_preferences: DocumentPreferences = Field(
-        default_factory=DocumentPreferences,
+        default_factory=lambda: DocumentPreferences(
+            torg12=True, invoice=True, upd=False,
+            scheta_factura=False, act_sverki=False, realization=False,
+        ),
         description="Какие документы формировать при отгрузке",
     )
 
@@ -147,8 +154,8 @@ class User(Document):
         name = "users"
         # Индексы MongoDB
         indexes = [
-            [("phone", 1)],
-            [("email", 1)],
+            IndexModel([("phone", 1)], unique=True),
+            IndexModel([("email", 1)], unique=True, sparse=True),
             [("role", 1)],
             [("status", 1)],
             [("created_at", -1)],
@@ -156,7 +163,9 @@ class User(Document):
 
     def is_b2b_approved(self) -> bool:
         """Проверяет, является ли пользователь одобренным B2B-клиентом."""
-        return self.role == UserRole.CLIENT and self.client_type == ClientType.B2B and self.status == UserStatus.APPROVED
+        return (
+            self.role == UserRole.CLIENT and self.client_type == ClientType.B2B and self.status == UserStatus.APPROVED
+        )
 
     def can_place_order(self) -> bool:
         """Проверяет, может ли клиент оформить заказ (не заблокирован по кредиту)."""

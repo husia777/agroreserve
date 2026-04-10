@@ -2,8 +2,9 @@
 Модель поставщика.
 Коллекция: suppliers
 """
-from datetime import datetime, timezone
-from typing import List, Optional
+
+from datetime import UTC, datetime
+from typing import Optional
 
 from beanie import Document, PydanticObjectId
 from pydantic import Field
@@ -27,7 +28,7 @@ class Supplier(Document):
 
     # ── Ассортимент ───────────────────────────────────────────
     # Список ID товаров, которые поставляет данный поставщик
-    product_ids: List[PydanticObjectId] = Field(
+    product_ids: list[PydanticObjectId] = Field(
         default_factory=list,
         description="Список ID товаров из каталога",
     )
@@ -43,12 +44,8 @@ class Supplier(Document):
     is_active: bool = Field(True, description="Активен ли поставщик")
 
     # ── Метаданные ────────────────────────────────────────────
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "suppliers"

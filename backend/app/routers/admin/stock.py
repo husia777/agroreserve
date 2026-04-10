@@ -2,6 +2,7 @@
 Роутер управления складом (администратор).
 Эндпоинты: /api/v1/admin/stock/
 """
+
 import math
 from datetime import date, datetime, timezone
 from typing import List, Optional
@@ -15,6 +16,7 @@ from app.models.stock import StockReceipt
 from app.schemas.stock import (
     StockItemResponse,
     StockReceiptCreate,
+    StockReceiptItemResponse,
     StockReceiptResponse,
 )
 from app.utils.security import require_admin
@@ -27,29 +29,27 @@ router = APIRouter(prefix="/api/v1/admin/stock", tags=["Админ: Склад"]
 def _receipt_to_response(receipt: StockReceipt) -> StockReceiptResponse:
     """Конвертирует StockReceipt в ответ API."""
     return StockReceiptResponse(
-        **{
-            "_id": str(receipt.id),
-            "receipt_number": receipt.receipt_number,
-            "supplier_id": receipt.supplier_id,
-            "supplier_name": receipt.supplier_name,
-            "invoice_number": receipt.invoice_number,
-            "date": str(receipt.date),
-            "items": [
-                {
-                    "product_id": item.product_id,
-                    "product_name": item.product_name,
-                    "qty": item.qty,
-                    "unit": item.unit,
-                    "cost_price": item.cost_price,
-                    "total": item.total,
-                }
-                for item in receipt.items
-            ],
-            "total": receipt.total,
-            "synced_to_1c": receipt.synced_to_1c,
-            "notes": receipt.notes,
-            "created_at": receipt.created_at.isoformat(),
-        }
+        id=str(receipt.id),
+        receipt_number=receipt.receipt_number,
+        supplier_id=receipt.supplier_id,
+        supplier_name=receipt.supplier_name,
+        invoice_number=receipt.invoice_number,
+        date=str(receipt.date),
+        items=[
+            StockReceiptItemResponse(
+                product_id=item.product_id,
+                product_name=item.product_name,
+                qty=item.qty,
+                unit=item.unit,
+                cost_price=item.cost_price,
+                total=item.total,
+            )
+            for item in receipt.items
+        ],
+        total=receipt.total,
+        synced_to_1c=receipt.synced_to_1c,
+        notes=receipt.notes,
+        created_at=receipt.created_at.isoformat(),
     )
 
 
@@ -58,8 +58,10 @@ def _receipt_to_response(receipt: StockReceipt) -> StockReceiptResponse:
     summary="Текущие остатки товаров",
 )
 async def get_stock(
-    category_id: Optional[str] = Query(None, description="Фильтр по категории"),
-    low_stock_only: bool = Query(False, description="Только товары с низким остатком"),
+    category_id: Optional[str] = Query(
+        None, description="Фильтр по категории"),
+    low_stock_only: bool = Query(
+        False, description="Только товары с низким остатком"),
     admin=Depends(require_admin),
 ):
     """
@@ -77,14 +79,11 @@ async def get_stock(
     if low_stock_only:
         query_filter["$expr"] = {"$lt": ["$stock_qty", "$min_stock_qty"]}
 
-    products = (
-        await Product.find(query_filter)
-        .sort(Product.name)
-        .to_list()
-    )
+    products = await Product.find(query_filter).sort(Product.name).to_list()
 
     # Получаем категории для отображения
     from app.models.product import Category
+
     category_map: dict = {}
     all_cats = await Category.find_all().to_list()
     for cat in all_cats:
@@ -94,11 +93,8 @@ async def get_stock(
     # { product_id, quantity, min_quantity, is_critical, product: { name, unit, category: { name } }, updated_at }
     items = []
     for p in products:
-        cat_id = (
-            str(p.category_id.ref.id)
-            if hasattr(p.category_id, "ref")
-            else str(p.category_id)
-        )
+        cat_id = str(p.category_id.ref.id) if hasattr(
+            p.category_id, "ref") else str(p.category_id)
         cat_name = category_map.get(cat_id, "")
 
         is_critical = p.stock_qty < p.min_stock_qty
@@ -150,11 +146,7 @@ async def get_receipts(
 
     total = await StockReceipt.find(query_filter).count()
     receipts = (
-        await StockReceipt.find(query_filter)
-        .sort(-StockReceipt.date)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .to_list()
+        await StockReceipt.find(query_filter).sort(-StockReceipt.date).skip((page - 1) * limit).limit(limit).to_list()
     )
 
     items = [
@@ -221,13 +213,16 @@ async def create_receipt(
 
     # Проверяем низкие остатки после прихода
     from app.services.stock_service import get_low_stock_products
+
     low_products = await get_low_stock_products()
     if low_products:
         from app.services.notification_service import notify_admin_low_stock
+
         try:
             await notify_admin_low_stock(low_products)
         except Exception as e:
-            logger.warning("Ошибка отправки уведомления о низких остатках", error=str(e))
+            logger.warning(
+                "Ошибка отправки уведомления о низких остатках", error=str(e))
 
     return _receipt_to_response(receipt)
 
@@ -244,10 +239,12 @@ async def get_receipt(
     try:
         receipt = await StockReceipt.get(PydanticObjectId(receipt_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
 
     if not receipt:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
 
     return _receipt_to_response(receipt)
 
@@ -261,6 +258,7 @@ async def get_low_stock(
 ):
     """Список товаров, у которых остаток ниже минимального."""
     from app.services.stock_service import get_low_stock_products
+
     products = await get_low_stock_products()
 
     return {

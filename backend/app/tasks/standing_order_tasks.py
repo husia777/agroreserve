@@ -3,6 +3,7 @@ Celery задачи регулярных заказов.
 
 UC-29: Ежедневная генерация заказов по расписанию регулярных заказов.
 """
+
 import asyncio
 from datetime import datetime, timezone
 
@@ -51,12 +52,12 @@ def _should_generate_today(schedule: str, today) -> bool:
     }
 
     if schedule in schedule_map:
-        return schedule_map[schedule]
+        return bool(schedule_map[schedule])
 
     # biweekly — каждые 2 недели (упрощённая логика: чётные недели)
     if schedule == "biweekly":
         week_number = today.isocalendar()[1]
-        return weekday == 0 and week_number % 2 == 0
+        return bool(weekday == 0 and week_number % 2 == 0)
 
     return False
 
@@ -80,11 +81,14 @@ def generate_standing_orders(self) -> dict:
 
     Статус нового заказа: OrderStatus.NEW (в ожидании подтверждения)
     """
+
     async def _execute() -> dict:
         from app.database import connect_to_mongo
+
         await connect_to_mongo()
 
         from datetime import date
+
         today = date.today()
 
         from app.models.standing_order import StandingOrder
@@ -95,13 +99,16 @@ def generate_standing_orders(self) -> dict:
         from app.utils.telegram_bot import send_message
         from beanie import PydanticObjectId
 
-        result = {
+        result: dict[str, object] = {
             "status": "ok",
             "date": str(today),
             "generated_orders": [],
             "skipped": [],
             "errors": [],
         }
+        generated_orders: list[dict] = []
+        skipped: list[dict] = []
+        errors: list[dict] = []
 
         # Получаем все активные регулярные заказы
         standing_orders = await StandingOrder.find(
@@ -111,39 +118,48 @@ def generate_standing_orders(self) -> dict:
         for so in standing_orders:
             # Проверяем, нужно ли генерировать сегодня
             if not _should_generate_today(so.schedule, today):
-                result["skipped"].append({
-                    "standing_order_id": str(so.id),
-                    "client_name": so.client_name,
-                    "schedule": so.schedule,
-                    "reason": "не день генерации по расписанию",
-                })
+                skipped.append(
+                    {
+                        "standing_order_id": str(so.id),
+                        "client_name": so.client_name,
+                        "schedule": so.schedule,
+                        "reason": "не день генерации по расписанию",
+                    }
+                )
                 continue
 
             # Проверяем: не генерировали ли сегодня
             last_gen = so.last_generated_at
             if last_gen and last_gen.date() == today:
-                result["skipped"].append({
-                    "standing_order_id": str(so.id),
-                    "client_name": so.client_name,
-                    "reason": "уже сгенерирован сегодня",
-                })
+                skipped.append(
+                    {
+                        "standing_order_id": str(so.id),
+                        "client_name": so.client_name,
+                        "reason": "уже сгенерирован сегодня",
+                    }
+                )
                 continue
 
             try:
                 # Получаем клиента
                 client = await User.get(so.client_id)
                 if not client:
-                    result["errors"].append({
-                        "standing_order_id": str(so.id),
-                        "error": "Клиент не найден",
-                    })
+                    errors.append(
+                        {
+                            "standing_order_id": str(so.id),
+                            "error": "Клиент не найден",
+                        }
+                    )
                     continue
 
                 # Формируем позиции заказа
                 order_items = []
                 order_total = 0.0
-                is_b2b = client.client_type.value == "b2b" if hasattr(
-                    client.client_type, "value") else client.client_type == "b2b"
+                is_b2b = (
+                    client.client_type.value == "b2b"
+                    if hasattr(client.client_type, "value")
+                    else client.client_type == "b2b"
+                )
 
                 for so_item in so.items:
                     try:
@@ -160,15 +176,18 @@ def generate_standing_orders(self) -> dict:
                         total = round(price * so_item.qty, 2)
                         order_total += total
 
-                        order_items.append(OrderItem(
-                            product_id=str(so_item.product_id),
-                            product_name=product.name,
-                            ordered_qty=so_item.qty,
-                            unit=so_item.unit,
-                            price=price,
-                            cost_price=product.cost_price,
-                            total=total,
-                        ))
+                        order_items.append(
+                            OrderItem(
+                                product_id=str(so_item.product_id),
+                                product_name=product.name,
+                                ordered_qty=so_item.qty,
+                                actual_qty=None,
+                                unit=so_item.unit,
+                                price=price,
+                                cost_price=product.cost_price,
+                                total=total,
+                            )
+                        )
                     except Exception as e:
                         logger.error(
                             "Ошибка обработки позиции регулярного заказа",
@@ -177,18 +196,19 @@ def generate_standing_orders(self) -> dict:
                         )
 
                 if not order_items:
-                    result["errors"].append({
-                        "standing_order_id": str(so.id),
-                        "client_name": so.client_name,
-                        "error": "Нет доступных позиций для генерации заказа",
-                    })
+                    errors.append(
+                        {
+                            "standing_order_id": str(so.id),
+                            "client_name": so.client_name,
+                            "error": "Нет доступных позиций для генерации заказа",
+                        }
+                    )
                     continue
 
                 # Генерируем номер заказа
                 from app.models.settings import SystemSettings
-                sys_settings = await SystemSettings.find_one(
-                    SystemSettings.singleton_key == "main"
-                )
+
+                sys_settings = await SystemSettings.find_one(SystemSettings.singleton_key == "main")
 
                 year = today.year
                 if sys_settings:
@@ -203,6 +223,7 @@ def generate_standing_orders(self) -> dict:
 
                 # Определяем дату доставки (следующий рабочий день)
                 from datetime import timedelta
+
                 delivery_date = today + timedelta(days=1)
                 if delivery_date.weekday() >= 5:  # Суббота или воскресенье
                     delivery_date = today + \
@@ -232,15 +253,17 @@ def generate_standing_orders(self) -> dict:
                 so.last_generated_at = datetime.now(timezone.utc)
                 await so.save()
 
-                result["generated_orders"].append({
-                    "standing_order_id": str(so.id),
-                    "order_id": str(new_order.id),
-                    "order_number": order_number,
-                    "client_name": so.client_name,
-                    "total": round(order_total, 2),
-                    "items_count": len(order_items),
-                    "delivery_date": str(delivery_date),
-                })
+                generated_orders.append(
+                    {
+                        "standing_order_id": str(so.id),
+                        "order_id": str(new_order.id),
+                        "order_number": order_number,
+                        "client_name": so.client_name,
+                        "total": round(order_total, 2),
+                        "items_count": len(order_items),
+                        "delivery_date": str(delivery_date),
+                    }
+                )
 
                 logger.info(
                     "Регулярный заказ сгенерирован",
@@ -292,24 +315,30 @@ def generate_standing_orders(self) -> dict:
                     client_name=so.client_name,
                     error=str(e),
                 )
-                result["errors"].append({
-                    "standing_order_id": str(so.id),
-                    "client_name": so.client_name,
-                    "error": str(e),
-                })
+                errors.append(
+                    {
+                        "standing_order_id": str(so.id),
+                        "client_name": so.client_name,
+                        "error": str(e),
+                    }
+                )
+
+        result["generated_orders"] = generated_orders
+        result["skipped"] = skipped
+        result["errors"] = errors
 
         logger.info(
             "Генерация регулярных заказов завершена",
             date=str(today),
-            generated=len(result["generated_orders"]),
-            skipped=len(result["skipped"]),
-            errors=len(result["errors"]),
+            generated=len(generated_orders),
+            skipped=len(skipped),
+            errors=len(errors),
         )
 
-        return result
+        return dict(result)
 
     try:
-        return _run_async(_execute())
+        return dict(_run_async(_execute()))
     except Exception as exc:
         logger.error("Ошибка задачи generate_standing_orders", error=str(exc))
         raise self.retry(exc=exc)

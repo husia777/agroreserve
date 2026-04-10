@@ -4,7 +4,8 @@
 
 Аутентификация: API-ключ в заголовке X-API-Key.
 """
-from typing import List, Optional
+
+from typing import Optional
 
 import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -19,14 +20,17 @@ router = APIRouter(prefix="/api/v1/sync/1c", tags=["Синхронизация 1
 
 # ── Схемы данных ─────────────────────────────────────────────
 
+
 class StockUpdateItem(BaseModel):
     """Остаток товара из 1С."""
+
     product_id: str = Field(..., description="ID товара в системе")
     qty: float = Field(..., ge=0, description="Текущий остаток")
 
 
 class PaymentUpdateItem(BaseModel):
     """Оплата из 1С."""
+
     order_id: str = Field(..., description="ID заказа в системе")
     amount: float = Field(..., gt=0, description="Сумма оплаты (₽)")
     date: Optional[str] = Field(None, description="Дата оплаты (ISO)")
@@ -34,20 +38,24 @@ class PaymentUpdateItem(BaseModel):
 
 class StockUpdateRequest(BaseModel):
     """Запрос на обновление остатков из 1С."""
-    items: List[StockUpdateItem] = Field(..., min_length=1, description="Список остатков")
+
+    items: list[StockUpdateItem] = Field(..., min_length=1, description="Список остатков")
 
 
 class PaymentUpdateRequest(BaseModel):
     """Запрос на обновление оплат из 1С."""
-    payments: List[PaymentUpdateItem] = Field(..., min_length=1, description="Список оплат")
+
+    payments: list[PaymentUpdateItem] = Field(..., min_length=1, description="Список оплат")
 
 
 class SyncConfirmRequest(BaseModel):
     """Подтверждение синхронизации заказа."""
+
     sync_1c_id: Optional[str] = Field(None, description="ID документа в 1С")
 
 
 # ── Зависимость: проверка API-ключа ──────────────────────────
+
 
 async def verify_sync_api_key(
     x_api_key: Optional[str] = Header(None, description="API-ключ для синхронизации с 1С"),
@@ -79,6 +87,7 @@ async def verify_sync_api_key(
 
 
 # ── Эндпоинты ─────────────────────────────────────────────────
+
 
 @router.post(
     "/stock",
@@ -133,10 +142,7 @@ async def sync_payments(
     """
     from app.services.sync_1c_service import sync_payments_from_1c
 
-    payments_data = [
-        {"order_id": p.order_id, "amount": p.amount, "date": p.date}
-        for p in data.payments
-    ]
+    payments_data = [{"order_id": p.order_id, "amount": p.amount, "date": p.date} for p in data.payments]
     result = await sync_payments_from_1c(payments_data)
 
     logger.info(

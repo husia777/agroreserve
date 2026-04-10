@@ -2,6 +2,7 @@
 Роутер управления справочником блюд (администратор).
 Эндпоинты: /api/v1/admin/dishes/
 """
+
 import math
 from datetime import datetime, timezone
 from typing import Optional
@@ -13,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.models.dish import Dish, DishIngredient
 from app.schemas.dish import (
     DishCreate,
+    DishIngredientSchema,
     DishListResponse,
     DishResponse,
     DishUpdate,
@@ -27,30 +29,28 @@ router = APIRouter(prefix="/api/v1/admin/dishes", tags=["Админ: Блюда"
 def _to_response(dish: Dish) -> DishResponse:
     """Конвертирует Dish в ответ API."""
     return DishResponse(
-        **{
-            "_id": str(dish.id),
-            "name": dish.name,
-            "category": dish.category,
-            "description": dish.description,
-            "ingredients": [
-                {
-                    "product_id": str(i.product_id) if i.product_id else None,
-                    "name": i.name,
-                    "qty_per_portion_g": i.qty_per_portion_g,
-                    "unit": i.unit,
-                }
-                for i in dish.ingredients
-            ],
-            "portion_weight_g": dish.portion_weight_g,
-            "calories": dish.calories,
-            "protein": dish.protein,
-            "fat": dish.fat,
-            "carbs": dish.carbs,
-            "sanpin_compliant": dish.sanpin_compliant,
-            "age_groups": dish.age_groups,
-            "is_active": dish.is_active,
-            "created_at": dish.created_at.isoformat(),
-        }
+        id=str(dish.id),
+        name=dish.name,
+        category=dish.category,
+        description=dish.description,
+        ingredients=[
+            DishIngredientSchema(
+                product_id=str(i.product_id) if i.product_id else None,
+                name=i.name,
+                qty_per_portion_g=i.qty_per_portion_g,
+                unit=i.unit,
+            )
+            for i in dish.ingredients
+        ],
+        portion_weight_g=dish.portion_weight_g,
+        calories=dish.calories,
+        protein=dish.protein,
+        fat=dish.fat,
+        carbs=dish.carbs,
+        sanpin_compliant=dish.sanpin_compliant,
+        age_groups=dish.age_groups,
+        is_active=dish.is_active,
+        created_at=dish.created_at.isoformat(),
     )
 
 
@@ -63,8 +63,10 @@ async def get_dishes(
     category: Optional[str] = Query(None, description="Фильтр по категории"),
     age_group: Optional[str] = Query(None, description="Возрастная группа"),
     search: Optional[str] = Query(None, description="Поиск по названию"),
-    is_active: Optional[bool] = Query(None, description="Фильтр по активности"),
-    sanpin_only: bool = Query(False, description="Только соответствующие СанПиН"),
+    is_active: Optional[bool] = Query(
+        None, description="Фильтр по активности"),
+    sanpin_only: bool = Query(
+        False, description="Только соответствующие СанПиН"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=200),
     _=Depends(require_admin),
@@ -86,13 +88,7 @@ async def get_dishes(
         query["$text"] = {"$search": search}
 
     total = await Dish.find(query).count()
-    dishes = (
-        await Dish.find(query)
-        .sort(Dish.name)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .to_list()
-    )
+    dishes = await Dish.find(query).sort(Dish.name).skip((page - 1) * limit).limit(limit).to_list()
 
     return DishListResponse(
         items=[_to_response(d) for d in dishes],
@@ -133,7 +129,8 @@ async def create_dish(
         description=data.description,
         ingredients=[
             DishIngredient(
-                product_id=PydanticObjectId(i.product_id) if i.product_id else None,
+                product_id=PydanticObjectId(
+                    i.product_id) if i.product_id else None,
                 name=i.name,
                 qty_per_portion_g=i.qty_per_portion_g,
                 unit=i.unit,
@@ -175,10 +172,12 @@ async def get_dish(
     try:
         dish = await Dish.get(PydanticObjectId(dish_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     if not dish:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     return _to_response(dish)
 
@@ -199,10 +198,12 @@ async def update_dish(
     try:
         dish = await Dish.get(PydanticObjectId(dish_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     if not dish:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     # Проверяем уникальность нового имени
     if data.name is not None and data.name != dish.name:
@@ -221,7 +222,8 @@ async def update_dish(
     if data.ingredients is not None:
         dish.ingredients = [
             DishIngredient(
-                product_id=PydanticObjectId(i.product_id) if i.product_id else None,
+                product_id=PydanticObjectId(
+                    i.product_id) if i.product_id else None,
                 name=i.name,
                 qty_per_portion_g=i.qty_per_portion_g,
                 unit=i.unit,
@@ -272,10 +274,12 @@ async def delete_dish(
     try:
         dish = await Dish.get(PydanticObjectId(dish_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     if not dish:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     dish.is_active = False
     await dish.save()

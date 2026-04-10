@@ -3,6 +3,7 @@
 Хранится в MongoDB (коллекция carts).
 Одна корзина на пользователя.
 """
+
 from datetime import datetime, timezone
 from typing import List, Optional
 
@@ -12,14 +13,17 @@ from pydantic import BaseModel, Field
 
 class CartItem(BaseModel):
     """Позиция в корзине (встроенная структура)."""
-    item_id: str = Field(..., description="Уникальный ID позиции внутри корзины (UUID)")
+
+    item_id: str = Field(...,
+                         description="Уникальный ID позиции внутри корзины (UUID)")
     product_id: str = Field(..., description="ID товара (ObjectId)")
     product_name: str = Field(..., description="Название товара (кэш)")
     product_slug: str = Field(..., description="Slug товара (кэш)")
     unit: str = Field("kg", description="Единица измерения")
     qty: float = Field(..., gt=0, description="Количество")
     price: float = Field(..., ge=0, description="Цена за единицу (₽)")
-    cost_price: float = Field(0.0, ge=0, description="Себестоимость за единицу (для P&L)")
+    cost_price: float = Field(
+        0.0, ge=0, description="Себестоимость за единицу (для P&L)")
     total: float = Field(..., ge=0, description="Сумма по позиции (₽)")
     # Снапшот параметров товара на момент добавления в корзину
     min_order_qty: float = Field(0.0, description="Минимальный заказ")
@@ -36,12 +40,12 @@ class Cart(Document):
     """
 
     # ── Владелец ──────────────────────────────────────────────
-    user_id: Indexed(str, unique=True) = Field(
-        ..., description="ID пользователя — владельца корзины"
-    )
+    user_id: str = Field(...,
+                         description="ID пользователя — владельца корзины")
 
     # ── Позиции ───────────────────────────────────────────────
-    items: List[CartItem] = Field(default_factory=list, description="Позиции корзины")
+    items: List[CartItem] = Field(
+        default_factory=list, description="Позиции корзины")
 
     # ── Суммы (кэш) ───────────────────────────────────────────
     total: float = Field(0.0, ge=0, description="Итоговая сумма (₽)")
@@ -49,11 +53,9 @@ class Cart(Document):
 
     # ── Метаданные ────────────────────────────────────────────
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+        default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+        default_factory=lambda: datetime.now(timezone.utc))
 
     class Settings:
         name = "carts"

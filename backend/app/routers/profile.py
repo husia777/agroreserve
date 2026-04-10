@@ -2,7 +2,8 @@
 Роутер профиля пользователя (личный кабинет).
 Эндпоинты: /api/v1/profile/
 """
-from datetime import datetime, timezone
+
+from datetime import UTC, datetime
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -52,11 +53,12 @@ async def update_profile(
     # UC-265: Обновление пакета документов
     if data.document_preferences is not None:
         from app.models.user import DocumentPreferences
-        current_user.document_preferences = DocumentPreferences(
-            **data.document_preferences.model_dump())
+
+        current_user.document_preferences = DocumentPreferences(**data.document_preferences.model_dump())
 
     if data.organization is not None:
         from app.models.user import ClientType, OrganizationDetails
+
         if current_user.client_type == ClientType.B2B:
             # Сохраняем существующие ogrn и correspondent_account
             existing_org = current_user.organization
@@ -77,7 +79,7 @@ async def update_profile(
                 detail="Реквизиты организации можно указать только для B2B клиентов",
             )
 
-    current_user.updated_at = datetime.now(timezone.utc)
+    current_user.updated_at = datetime.now(UTC)
     await current_user.save()
     logger.info("Профиль обновлён", user_id=str(current_user.id))
 

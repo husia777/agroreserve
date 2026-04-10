@@ -2,6 +2,7 @@
 Модель настроек системы (синглтон).
 Коллекция: settings
 """
+
 from datetime import datetime, timezone
 from typing import List, Optional
 
@@ -11,6 +12,7 @@ from pydantic import BaseModel, Field
 
 class BankDetails(BaseModel):
     """Банковские реквизиты ИП."""
+
     bank_name: str = Field("", description="Название банка")
     bik: str = Field("", description="БИК банка")
     account: str = Field("", description="Расчётный счёт")
@@ -20,6 +22,7 @@ class BankDetails(BaseModel):
 
 class DeliverySlot(BaseModel):
     """Временной слот доставки."""
+
     label: str = Field(..., description="Отображаемое название (08:00-11:00)")
     start_time: str = Field(..., description="Начало слота в формате HH:MM")
     end_time: str = Field(..., description="Конец слота в формате HH:MM")
@@ -49,9 +52,7 @@ class SystemSettings(Document):
     kpp: Optional[str] = Field(None, description="КПП (для ООО, у ИП — нет)")
     ogrn: str = Field("", description="ОГРН / ОГРНИП")
     legal_address: str = Field(
-        "г. Тобольск, Тюменская область",
-        description="Юридический адрес"
-    )
+        "г. Тобольск, Тюменская область", description="Юридический адрес")
     actual_address: Optional[str] = Field(
         None, description="Фактический адрес склада")
     phone: str = Field("", description="Контактный телефон")
@@ -60,8 +61,9 @@ class SystemSettings(Document):
 
     # ── Банковские реквизиты ──────────────────────────────────
     bank_details: BankDetails = Field(
-        default_factory=BankDetails,
-        description="Банковские реквизиты для документов"
+        default_factory=lambda: BankDetails(
+            bank_name="", bik="", account="", correspondent_account="",
+        ), description="Банковские реквизиты для документов"
     )
 
     # ── Медиа для документов ──────────────────────────────────
@@ -73,22 +75,20 @@ class SystemSettings(Document):
         None, description="URL изображения подписи")
 
     # ── Режим работы ──────────────────────────────────────────
-    work_hours: str = Field(
-        "Пн-Пт: 08:00-17:00, Сб: 08:00-14:00",
-        description="Часы работы для отображения"
-    )
+    work_hours: str = Field("Пн-Пт: 08:00-17:00, Сб: 08:00-14:00",
+                            description="Часы работы для отображения")
 
     # ── Слоты доставки ────────────────────────────────────────
     delivery_slots: List[DeliverySlot] = Field(
         default_factory=lambda: [
-            DeliverySlot(label="08:00-11:00",
-                         start_time="08:00", end_time="11:00"),
-            DeliverySlot(label="11:00-14:00",
-                         start_time="11:00", end_time="14:00"),
-            DeliverySlot(label="14:00-17:00",
-                         start_time="14:00", end_time="17:00"),
+            DeliverySlot(label="08:00-11:00", start_time="08:00",
+                         end_time="11:00", is_active=True),
+            DeliverySlot(label="11:00-14:00", start_time="11:00",
+                         end_time="14:00", is_active=True),
+            DeliverySlot(label="14:00-17:00", start_time="14:00",
+                         end_time="17:00", is_active=True),
         ],
-        description="Временные слоты доставки"
+        description="Временные слоты доставки",
     )
 
     # ── Бизнес-настройки ─────────────────────────────────────
@@ -112,8 +112,7 @@ class SystemSettings(Document):
 
     # ── Метаданные ────────────────────────────────────────────
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+        default_factory=lambda: datetime.now(timezone.utc))
 
     class Settings:
         name = "settings"

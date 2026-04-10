@@ -2,6 +2,7 @@
 Роутер аутентификации и авторизации.
 Эндпоинты: /api/v1/auth/
 """
+
 from datetime import datetime, timezone
 
 import structlog
@@ -11,7 +12,6 @@ from app.config import settings
 from app.models.user import ClientType, User, UserRole, UserStatus
 from app.schemas.auth import (
     AuthLoginResponse,
-    ChangePasswordRequest,
     DocumentPreferencesSchema,
     OrganizationResponse,
     RefreshTokenRequest,
@@ -48,6 +48,16 @@ def _build_user_response(user: User) -> UserResponse:
         )
 
     # UC-265: Пакет документов
+    doc_prefs = None
+    if user.document_preferences:
+        doc_prefs = DocumentPreferencesSchema(
+            torg12=user.document_preferences.torg12,
+            invoice=user.document_preferences.invoice,
+            upd=user.document_preferences.upd,
+            scheta_factura=user.document_preferences.scheta_factura,
+            act_sverki=user.document_preferences.act_sverki,
+            realization=user.document_preferences.realization,
+        )
     doc_prefs = None
     if user.document_preferences:
         doc_prefs = DocumentPreferencesSchema(
@@ -129,21 +139,22 @@ async def register(data: UserRegister):
             detail="Для B2B регистрации необходимо указать реквизиты организации",
         )
 
-    initial_status = (
-        UserStatus.PENDING if client_type == ClientType.B2B else UserStatus.APPROVED
-    )
+    initial_status = UserStatus.PENDING if client_type == ClientType.B2B else UserStatus.APPROVED
 
     org_details = None
     if org:
         from app.models.user import OrganizationDetails
+
         org_details = OrganizationDetails(
             name=org.name,
             inn=org.inn,
             kpp=org.kpp,
+            ogrn=None,
             legal_address=org.legal_address,
             bank_name=org.bank_name,
             bik=org.bik,
             account=org.account,
+            correspondent_account=None,
         )
 
     new_user = User(
@@ -206,8 +217,7 @@ async def login(data: UserLogin):
         )
 
     if not verify_password(data.password, user.password_hash):
-        logger.warning("Неверный пароль при входе",
-                       phone=data.phone, email=str(data.email))
+        logger.warning("Неверный пароль при входе", phone=data.phone, email=str(data.email))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неверный телефон/email или пароль",
@@ -222,8 +232,7 @@ async def login(data: UserLogin):
     user.last_login_at = datetime.now(timezone.utc)
     await user.save()
 
-    logger.info("Успешный вход в систему", user_id=str(
-        user.id), role=user.role.value)
+    logger.info("Успешный вход в систему", user_id=str(user.id), role=user.role.value)
 
     return AuthLoginResponse(
         tokens=_build_tokens(user),
@@ -265,60 +274,3 @@ async def refresh_tokens(data: RefreshTokenRequest):
 )
 async def get_me(current_user: User = Depends(get_current_user)):
     return _build_user_response(current_user)
-
-
-@router.post(
-    "/logout",
-    summary="Выход из системы",
-)
-async def logout(current_user: User = Depends(get_current_user)):
-    """
-    Выход из системы.
-    Добавляет access token в Redis blacklist до момента его истечения.
-    """
-    import redis.asyncio as aioredis
-    from app.config import settings
-
-    try:
-        r = aioredis.from_url(settings.REDIS_URL)
-        token_key = f"blacklist:{current_user.id}"
-        await r.setex(
-            token_key,
-            settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            "1",
-        )
-        await r.aclose()
-    except Exception as e:
-        logger.warning("Не удалось добавить токен в blacklist", error=str(e))
-
-    logger.info("Пользователь вышел из системы", user_id=str(current_user.id))
-    return {"detail": "Вы успешно вышли из системы"}
-
-
-@router.post(
-    "/change-password",
-    summary="Смена пароля",
-)
-async def change_password(
-    data: ChangePasswordRequest,
-    current_user: User = Depends(get_current_user),
-):
-    """Смена пароля авторизованного пользователя."""
-    if not verify_password(data.current_password, current_user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Неверный текущий пароль",
-        )
-
-    if len(data.new_password) < 6:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Новый пароль должен быть не менее 6 символов",
-        )
-
-    current_user.password_hash = get_password_hash(data.new_password)
-    current_user.updated_at = datetime.now(timezone.utc)
-    await current_user.save()
-
-    logger.info("Пароль изменён", user_id=str(current_user.id))
-    return {"detail": "Пароль успешно изменён"}

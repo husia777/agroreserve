@@ -2,17 +2,17 @@
 Роутер экспорта данных (UC-83).
 Эндпоинты: /api/v1/admin/export/
 """
-from datetime import datetime, timezone
+
+from datetime import UTC, datetime
 
 import structlog
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
-from app.services.export_service import export_products_excel, export_products_csv
+from app.services.export_service import export_products_csv, export_products_excel
 from app.utils.security import require_admin
 
-router = APIRouter(prefix="/api/v1/admin/export",
-                   tags=["Администрирование — Экспорт"])
+router = APIRouter(prefix="/api/v1/admin/export", tags=["Администрирование — Экспорт"])
 logger = structlog.get_logger(__name__)
 
 
@@ -21,8 +21,7 @@ logger = structlog.get_logger(__name__)
     summary="Экспорт товаров в Excel (UC-83)",
 )
 async def export_products_to_excel(
-    include_purchase_price: bool = Query(
-        True, description="Включить закупочную цену"),
+    include_purchase_price: bool = Query(True, description="Включить закупочную цену"),
     only_active: bool = Query(False, description="Только активные товары"),
     category_id: str = Query(None, description="Фильтр по категории"),
     admin=Depends(require_admin),
@@ -34,7 +33,7 @@ async def export_products_to_excel(
         category_id=category_id,
     )
 
-    filename = f"agroreserve_products_{datetime.now(timezone.utc).strftime('%Y%m%d')}.xlsx"
+    filename = f"agroreserve_products_{datetime.now(UTC).strftime('%Y%m%d')}.xlsx"
 
     return StreamingResponse(
         buffer,
@@ -48,8 +47,7 @@ async def export_products_to_excel(
     summary="Экспорт товаров в CSV (UC-83)",
 )
 async def export_products_to_csv(
-    include_purchase_price: bool = Query(
-        True, description="Включить закупочную цену"),
+    include_purchase_price: bool = Query(True, description="Включить закупочную цену"),
     only_active: bool = Query(False, description="Только активные товары"),
     admin=Depends(require_admin),
 ):
@@ -59,7 +57,7 @@ async def export_products_to_csv(
         only_active=only_active,
     )
 
-    filename = f"agroreserve_products_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"
+    filename = f"agroreserve_products_{datetime.now(UTC).strftime('%Y%m%d')}.csv"
 
     return StreamingResponse(
         iter([buffer.getvalue()]),

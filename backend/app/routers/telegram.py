@@ -4,6 +4,7 @@
 
 Принимает обновления от Telegram и обрабатывает команды бота.
 """
+
 import structlog
 from fastapi import APIRouter, HTTPException, Request, status
 

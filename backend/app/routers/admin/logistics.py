@@ -2,7 +2,8 @@
 Роутер логистики (администратор).
 Эндпоинты: /api/v1/admin/logistics/
 """
-from datetime import date, datetime, timezone
+
+from datetime import UTC, date, datetime
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -147,14 +148,10 @@ async def get_delivery_summary(
             continue
 
         by_date[key]["orders_count"] += 1
-        by_date[key]["total_amount"] = round(
-            by_date[key]["total_amount"] + order.total, 2
-        )
+        by_date[key]["total_amount"] = round(by_date[key]["total_amount"] + order.total, 2)
 
         order_status = order.status.value if hasattr(order.status, "value") else order.status
-        by_date[key]["statuses"][order_status] = (
-            by_date[key]["statuses"].get(order_status, 0) + 1
-        )
+        by_date[key]["statuses"][order_status] = by_date[key]["statuses"].get(order_status, 0) + 1
 
     return {
         "date_from": str(date_from),
@@ -162,5 +159,5 @@ async def get_delivery_summary(
         "total_orders": len(orders),
         "total_amount": round(sum(o.total for o in orders), 2),
         "by_date": list(by_date.values()),
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }

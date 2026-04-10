@@ -2,7 +2,8 @@
 Подключение к MongoDB через Motor (асинхронный драйвер).
 Инициализация Beanie ODM с регистрацией всех документов.
 """
-from typing import Optional
+
+from typing import Optional, Sequence
 
 import structlog
 from beanie import init_beanie
@@ -75,7 +76,7 @@ async def connect_to_mongo() -> None:
     logger.info("Соединение с MongoDB установлено", db=settings.MONGODB_DB_NAME)
 
     # Полный список документов для Beanie
-    document_models = [
+    document_models: list[type] = [
         # v1 документы
         User,
         Category,
@@ -108,7 +109,7 @@ async def connect_to_mongo() -> None:
     # Инициализируем Beanie со всеми документами
     await init_beanie(
         database=_database,
-        document_models=document_models,
+        document_models=document_models,  # type: ignore[arg-type]
     )
 
     logger.info(

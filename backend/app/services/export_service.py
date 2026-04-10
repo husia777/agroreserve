@@ -2,6 +2,7 @@
 Сервис экспорта данных в Excel/CSV (UC-83).
 Выгрузка продуктов, остатков, цен.
 """
+
 import io
 from datetime import datetime, timezone
 from typing import Optional
@@ -10,6 +11,8 @@ import structlog
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+
+from typing import Any
 
 from app.models.product import Product, Category
 
@@ -39,7 +42,7 @@ async def export_products_excel(
       Цена опт, Цена закупки (опционально), Страна, Условия хранения, Статус
     """
     # Получаем товары
-    query = {}
+    query: dict[str, Any] = {}
     if only_active:
         query["is_active"] = True
     if category_id:
@@ -87,11 +90,13 @@ async def export_products_excel(
     ]
     if include_purchase_price:
         headers.append(("Цена закупки, ₽", 16))
-    headers.extend([
-        ("Страна", 15),
-        ("Условия хранения", 25),
-        ("Статус", 12),
-    ])
+    headers.extend(
+        [
+            ("Страна", 15),
+            ("Условия хранения", 25),
+            ("Статус", 12),
+        ]
+    )
 
     for col_idx, (header_text, width) in enumerate(headers, 1):
         cell = ws.cell(row=3, column=col_idx, value=header_text)
@@ -118,11 +123,13 @@ async def export_products_excel(
         ]
         if include_purchase_price:
             row_data.append(product.cost_price or 0)
-        row_data.extend([
-            product.origin_country or "—",
-            product.storage_conditions or "—",
-            "Активен" if product.is_active else "Неактивен",
-        ])
+        row_data.extend(
+            [
+                product.origin_country or "—",
+                product.storage_conditions or "—",
+                "Активен" if product.is_active else "Неактивен",
+            ]
+        )
 
         for col_idx, value in enumerate(row_data, 1):
             cell = ws.cell(row=row_idx, column=col_idx, value=value)
@@ -130,7 +137,7 @@ async def export_products_excel(
             cell.border = thin_border
             if isinstance(value, (int, float)):
                 cell.alignment = Alignment(horizontal="right")
-                cell.number_format = '#,##0.00' if isinstance(value, float) else '#,##0'
+                cell.number_format = "#,##0.00" if isinstance(value, float) else "#,##0"
 
         # Подсветка критических остатков
         stock_qty = product.stock_qty or 0
@@ -174,23 +181,21 @@ async def export_products_csv(
     """
     import csv
 
-    products = await Product.find(
-        {"is_active": True} if only_active else {}
-    ).sort("name").to_list()
+    products = await Product.find({"is_active": True} if only_active else {}).sort("name").to_list()
 
     categories = await Category.find_all().to_list()
     cat_map = {str(c.id): c.name for c in categories}
 
     buffer = io.StringIO()
     # BOM для Excel
-    buffer.write('\ufeff')
+    buffer.write("\ufeff")
 
     headers = ["Название", "Категория", "Ед. изм.", "Остаток", "Мин. остаток", "Цена опт"]
     if include_purchase_price:
         headers.append("Цена закупки")
     headers.extend(["Страна", "Статус"])
 
-    writer = csv.writer(buffer, delimiter=';')
+    writer = csv.writer(buffer, delimiter=";")
     writer.writerow(headers)
 
     for product in products:
@@ -204,10 +209,12 @@ async def export_products_csv(
         ]
         if include_purchase_price:
             row.append(product.cost_price or 0)
-        row.extend([
-            product.origin_country or "—",
-            "Активен" if product.is_active else "Неактивен",
-        ])
+        row.extend(
+            [
+                product.origin_country or "—",
+                "Активен" if product.is_active else "Неактивен",
+            ]
+        )
         writer.writerow(row)
 
     buffer.seek(0)

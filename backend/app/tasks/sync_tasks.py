@@ -1,6 +1,7 @@
 """
 Celery задачи синхронизации с 1С и периодические задачи.
 """
+
 import asyncio
 import structlog
 from celery import Task
@@ -16,6 +17,7 @@ def _run_async(coro):
         loop = asyncio.get_event_loop()
         if loop.is_running():
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 future = pool.submit(asyncio.run, coro)
                 return future.result()
@@ -72,10 +74,12 @@ def create_recurring_expenses() -> dict:
     Ищет расходы с is_recurring=True и создаёт новые записи
     с датой 1-го числа текущего месяца.
     """
+
     async def _execute():
         from datetime import date, datetime, timezone
 
         from app.database import get_database
+
         # Инициализация Beanie для работы в Celery контексте
         try:
             from app.models.finance import Expense, ExpenseCategory
@@ -102,6 +106,7 @@ def create_recurring_expenses() -> dict:
 
         # Ищем шаблоны повторяющихся расходов из предыдущего месяца
         from datetime import timedelta
+
         last_month_end = first_day - timedelta(days=1)
         last_month_start = last_month_end.replace(day=1)
 
@@ -133,7 +138,7 @@ def create_recurring_expenses() -> dict:
         return {"status": "ok", "created": created}
 
     try:
-        return _run_async(_execute())
+        return dict(_run_async(_execute()))
     except Exception as e:
         logger.error("Ошибка создания повторяющихся расходов", error=str(e))
         return {"status": "error", "error": str(e)}

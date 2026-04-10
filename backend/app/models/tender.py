@@ -2,8 +2,10 @@
 Модель тендера (госзакупки с ЕИС).
 Коллекция: tenders
 """
-from datetime import date as DateType, datetime, timezone
-from typing import List, Optional
+
+from datetime import UTC, datetime
+from datetime import date as DateType
+from typing import Optional
 
 from beanie import Document
 from pydantic import BaseModel, Field
@@ -11,6 +13,7 @@ from pydantic import BaseModel, Field
 
 class TenderItem(BaseModel):
     """Позиция тендера — товар с объёмом и максимальной ценой."""
+
     name: str = Field(..., description="Наименование позиции")
     qty: float = Field(..., ge=0, description="Количество")
     unit: str = Field(..., description="Единица измерения")
@@ -40,7 +43,7 @@ class Tender(Document):
     margin_estimate: Optional[float] = Field(None, description="Расчётная маржа (₽)")
 
     # ── Позиции ───────────────────────────────────────────────
-    items: List[TenderItem] = Field(default_factory=list, description="Позиции тендера")
+    items: list[TenderItem] = Field(default_factory=list, description="Позиции тендера")
 
     # ── Сроки ─────────────────────────────────────────────────
     deadline: datetime = Field(..., description="Срок подачи заявки")
@@ -62,12 +65,10 @@ class Tender(Document):
 
     # ── Метаданные ────────────────────────────────────────────
     found_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Когда тендер был найден/добавлен",
     )
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "tenders"

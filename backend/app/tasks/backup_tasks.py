@@ -2,6 +2,7 @@
 Celery задачи резервного копирования (UC-51).
 Ежедневный бэкап MongoDB → локальный файл → S3 (Яндекс.Облако).
 """
+
 import gzip
 import json
 import os
@@ -26,6 +27,7 @@ def _get_s3_client():
         return None
 
     import boto3
+
     return boto3.client(
         "s3",
         endpoint_url=settings.S3_ENDPOINT_URL or "https://storage.yandexcloud.net",
@@ -124,7 +126,7 @@ def create_mongodb_backup():
 
     try:
         # Шаг 1: Дамп MongoDB
-        client = MongoClient(settings.MONGODB_URI)
+        client: MongoClient = MongoClient(settings.MONGODB_URI)
         db = client[settings.MONGODB_DB_NAME]
         dump_data = {}
         total_docs = 0
@@ -234,7 +236,8 @@ def _rotate_backups(max_count=7):
     try:
         entries = sorted(
             [e for e in os.scandir(BACKUP_DIR) if e.name.startswith("backup_") and e.name.endswith(".json.gz")],
-            key=lambda x: x.stat().st_mtime, reverse=True,
+            key=lambda x: x.stat().st_mtime,
+            reverse=True,
         )
         for old in entries[max_count:]:
             os.remove(old.path)

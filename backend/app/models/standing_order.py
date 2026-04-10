@@ -2,8 +2,9 @@
 Модель регулярного (автоматического) заказа.
 Коллекция: standing_orders
 """
-from datetime import datetime, timezone
-from typing import List, Optional
+
+from datetime import UTC, datetime
+from typing import Optional
 
 from beanie import Document, PydanticObjectId
 from pydantic import BaseModel, Field
@@ -11,6 +12,7 @@ from pydantic import BaseModel, Field
 
 class StandingOrderItem(BaseModel):
     """Позиция регулярного заказа."""
+
     product_id: PydanticObjectId = Field(..., description="ID товара")
     product_name: str = Field(..., description="Название товара (кэш)")
     qty: float = Field(..., ge=0, description="Количество в регулярном заказе")
@@ -35,9 +37,7 @@ class StandingOrder(Document):
     client_name: str = Field(..., description="Название клиента (кэш)")
 
     # ── Состав ────────────────────────────────────────────────
-    items: List[StandingOrderItem] = Field(
-        default_factory=list, description="Позиции регулярного заказа"
-    )
+    items: list[StandingOrderItem] = Field(default_factory=list, description="Позиции регулярного заказа")
 
     # ── Расписание ────────────────────────────────────────────
     schedule: str = Field(
@@ -60,9 +60,7 @@ class StandingOrder(Document):
     note: Optional[str] = Field(None, description="Примечание к регулярному заказу")
 
     # ── Метаданные ────────────────────────────────────────────
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "standing_orders"

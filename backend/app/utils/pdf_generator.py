@@ -6,6 +6,7 @@
 - Общие стили для документов
 - Получение реквизитов ИП из настроек
 """
+
 import os
 from pathlib import Path
 from typing import Optional
