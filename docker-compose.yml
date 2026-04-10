@@ -1,171 +1,106 @@
-
 # ============================================================
-# Docker Compose для проекта Агрорезерв
-# Сервисы: FastAPI backend, MongoDB, Redis, Nginx
+# Docker Compose — Агрорезерв (development)
+# Запуск: make docker-up  или  docker compose up -d
 # ============================================================
 
 services:
-  # ── MongoDB — основная база данных ──────────────────────────
+  # ── MongoDB ──────────────────────────────────────────────────
   mongodb:
     image: mongo:7.0
-    container_name: agroreserve_mongodb
+    container_name: agroreserve-mongodb
     restart: unless-stopped
+    ports:
+      - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-supersecret}
       MONGO_INITDB_DATABASE: agroreserve
     volumes:
       - mongodb_data:/data/db
-      - mongodb_config:/data/configdb
-      - ./backend/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
-    ports:
-      - "27017:27017"
-    networks:
-      - agroreserve_net
+      - mongodb_backup:/data/backup
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 20s
 
-  # ── Redis — брокер задач Celery и кэш ───────────────────────
+  # ── Redis ────────────────────────────────────────────────────
   redis:
     image: redis:7.2-alpine
-    container_name: agroreserve_redis
+    container_name: agroreserve-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispass}
-    volumes:
-      - redis_data:/data
     ports:
       - "6379:6379"
-    networks:
-      - agroreserve_net
+    volumes:
+      - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redispass}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   # ── FastAPI Backend ──────────────────────────────────────────
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: agroreserve_backend
+  api:
+    build: .
+    container_name: agroreserve-api
     restart: unless-stopped
-    env_file:
-      - ./backend/.env
-    environment:
-      - MONGODB_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-supersecret}@mongodb:27017/agroreserve?authSource=admin
-      - REDIS_URI=redis://:${REDIS_PASSWORD:-redispass}@redis:6379/0
-    volumes:
-      - ./backend:/app
-      - backend_uploads:/app/uploads
-      - backend_backups:/app/backups
     ports:
       - "8000:8000"
-    networks:
-      - agroreserve_net
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/agroreserve
+      - REDIS_URL=redis://redis:6379/0
+      - ENV=development
+      - DEBUG=true
+    volumes:
+      - ./app:/app/app:ro
+      - uploads_data:/app/uploads
+      - media_data:/app/media
     depends_on:
       mongodb:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level info
-
-  # ── Celery Worker — фоновые задачи ──────────────────────────
-  celery_worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: agroreserve_celery
-    restart: unless-stopped
-    env_file:
-      - ./backend/.env
-    environment:
-      - MONGODB_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-supersecret}@mongodb:27017/agroreserve?authSource=admin
-      - REDIS_URI=redis://:${REDIS_PASSWORD:-redispass}@redis:6379/0
-    volumes:
-      - ./backend:/app
-      - backend_uploads:/app/uploads
-    networks:
-      - agroreserve_net
-    depends_on:
-      mongodb:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2 -Q default,notifications,sync
-
-  # ── Celery Beat — планировщик задач ─────────────────────────
-  celery_beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: agroreserve_celery_beat
-    restart: unless-stopped
-    env_file:
-      - ./backend/.env
-    environment:
-      - MONGODB_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-supersecret}@mongodb:27017/agroreserve?authSource=admin
-      - REDIS_URI=redis://:${REDIS_PASSWORD:-redispass}@redis:6379/0
-    volumes:
-      - ./backend:/app
-      - celerybeat_schedule:/tmp
-    networks:
-      - agroreserve_net
-    depends_on:
-      - celery_worker
-    command: celery -A app.tasks.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule
-
-  # ── Nginx — reverse proxy ────────────────────────────────────
-  nginx:
-    image: nginx:1.25-alpine
-    container_name: agroreserve_nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - nginx_logs:/var/log/nginx
-      # SSL сертификаты (Let's Encrypt)
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      # Статические файлы фронтенда (после сборки)
-      - ./frontend/dist:/usr/share/nginx/html:ro
-    networks:
-      - agroreserve_net
-    depends_on:
-      - backend
     healthcheck:
-      test: ["CMD", "nginx", "-t"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-# ── Тома для хранения данных ─────────────────────────────────
+  # ── Celery Worker ────────────────────────────────────────────
+  celery-worker:
+    build: .
+    container_name: agroreserve-celery
+    restart: unless-stopped
+    command: uv run celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/agroreserve
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./app:/app/app:ro
+      - uploads_data:/app/uploads
+      - media_data:/app/media
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery Beat (планировщик) ────────────────────────────────
+  celery-beat:
+    build: .
+    container_name: agroreserve-beat
+    restart: unless-stopped
+    command: uv run celery -A app.tasks.celery_app beat --loglevel=info
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/agroreserve
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./app:/app/app:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+
 volumes:
   mongodb_data:
-    driver: local
-  mongodb_config:
-    driver: local
+  mongodb_backup:
   redis_data:
-    driver: local
-  backend_uploads:
-    driver: local
-  nginx_logs:
-    driver: local
-  celerybeat_schedule:
-    driver: local
-  backend_backups:
-    driver: local
-
-# ── Сеть проекта ─────────────────────────────────────────────
-networks:
-  agroreserve_net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+  uploads_data:
+  media_data:

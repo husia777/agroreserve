@@ -24,7 +24,8 @@ from app.utils.security import get_current_user, require_approved_client
 
 class RepeatOrderRequest(BaseModel):
     """Запрос на повтор заказа. Дата доставки опциональна — если не указана, позиции добавляются в корзину."""
-    delivery_date: Optional[DateType] = Field(None, description="Новая дата доставки")
+    delivery_date: Optional[DateType] = Field(
+        None, description="Новая дата доставки")
     delivery_slot: Optional[str] = Field(None, description="Слот доставки")
     delivery_address: Optional[str] = Field(None, description="Адрес доставки")
     delivery_priority: Optional[str] = Field(None, description="Приоритет")
@@ -42,11 +43,14 @@ class RetailOrderCreate(BaseModel):
     """Розничный заказ без регистрации (UC-10)."""
     name: str = Field(..., min_length=2, description="Имя покупателя")
     phone: str = Field(..., description="Телефон покупателя")
-    items: List[RetailOrderItemCreate] = Field(..., min_length=1, description="Позиции")
+    items: List[RetailOrderItemCreate] = Field(
+        ..., min_length=1, description="Позиции")
     delivery_date: DateType = Field(..., description="Дата доставки")
     delivery_slot: str = Field("08:00-11:00", description="Слот доставки")
-    delivery_address: str = Field(..., min_length=5, description="Адрес доставки")
+    delivery_address: str = Field(..., min_length=5,
+                                  description="Адрес доставки")
     note: Optional[str] = Field(None, description="Примечание")
+
 
 logger = structlog.get_logger(__name__)
 
@@ -165,7 +169,8 @@ async def create_order(
 
             is_b2b = current_user.client_type in ("ip", "ooo", "b2b")
             price = product.get_price_for_client(is_b2b)
-            unit = product.unit.value if hasattr(product.unit, "value") else product.unit
+            unit = product.unit.value if hasattr(
+                product.unit, "value") else product.unit
             item_total = round(item_data.qty * price, 2)
 
             cart_items.append(
@@ -228,7 +233,8 @@ async def create_order(
     summary="Мои заказы",
 )
 async def get_my_orders(
-    status_filter: Optional[str] = Query(None, alias="status", description="Фильтр по статусу"),
+    status_filter: Optional[str] = Query(
+        None, alias="status", description="Фильтр по статусу"),
     page: int = Query(1, ge=1, description="Номер страницы"),
     limit: int = Query(20, ge=1, le=100, description="Записей на странице"),
     current_user=Depends(get_current_user),
@@ -300,10 +306,12 @@ async def get_order(
     try:
         order = await Order.get(PydanticObjectId(order_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     if not order:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     # Проверяем принадлежность заказа (для не-администраторов)
     if current_user.role != "admin":
@@ -311,7 +319,8 @@ async def get_order(
         cid = order.client_id
         if hasattr(cid, "ref"):
             # DBRef
-            client_id_str = str(cid.ref.id) if hasattr(cid.ref, "id") else str(cid.ref)
+            client_id_str = str(cid.ref.id) if hasattr(
+                cid.ref, "id") else str(cid.ref)
         elif hasattr(cid, "id"):
             client_id_str = str(cid.id)
         else:
@@ -349,10 +358,12 @@ async def repeat_order(
     try:
         source_order = await Order.get(PydanticObjectId(order_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     if not source_order:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     # Клиент может повторять только свои заказы
     client_id_str = (
@@ -361,7 +372,8 @@ async def repeat_order(
         else str(source_order.client_id)
     )
     if client_id_str != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
 
     if not source_order.items:
         raise HTTPException(
@@ -391,7 +403,8 @@ async def repeat_order(
             continue
 
         # Обновляем или добавляем позицию в корзину
-        existing = next((ci for ci in cart.items if ci.product_id == item.product_id), None)
+        existing = next(
+            (ci for ci in cart.items if ci.product_id == item.product_id), None)
         if existing:
             existing.qty = item.ordered_qty
         else:
@@ -402,7 +415,8 @@ async def repeat_order(
                     product_name=product.name,
                     qty=item.ordered_qty,
                     unit=item.unit,
-                    price=product.get_price_for_client(current_user.client_type == "b2b"),
+                    price=product.get_price_for_client(
+                        current_user.client_type == "b2b"),
                 )
             )
         added_count += 1
@@ -439,7 +453,8 @@ async def repeat_order(
                 delivery_info=delivery_info,
             )
         except ValueError as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
         logger.info(
             "Повтор заказа — новый заказ оформлен",
@@ -467,10 +482,12 @@ async def track_order(
     try:
         order = await Order.get(PydanticObjectId(order_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     if not order:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     # Проверяем принадлежность
     if current_user.role != "admin":
@@ -504,7 +521,8 @@ async def track_order(
             "by": entry.by,
             "comment": entry.comment,
             "is_current": (
-                (entry.status.value if hasattr(entry.status, "value") else entry.status)
+                (entry.status.value if hasattr(
+                    entry.status, "value") else entry.status)
                 == order.status.value
             ),
         }
@@ -523,6 +541,79 @@ async def track_order(
         "current_step": current_idx + 1 if current_idx >= 0 else 0,
         "total_steps": len(status_order),
     }
+
+
+@router.post(
+    "/{order_id}/cancel",
+    response_model=OrderResponse,
+    summary="Отмена заказа клиентом",
+)
+async def cancel_order(
+    order_id: str,
+    data: dict = None,
+    current_user=Depends(get_current_user),
+):
+    """
+    Отмена заказа клиентом.
+    Возможна только для статусов: new, confirmed.
+    """
+    from datetime import datetime, timezone
+    from app.models.order import StatusHistoryEntry
+
+    try:
+        order = await Order.get(PydanticObjectId(order_id))
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+
+    # Проверяем принадлежность
+    client_id_str = (
+        str(order.client_id.id)
+        if hasattr(order.client_id, "id")
+        else str(order.client_id)
+    )
+    if current_user.role != "admin" and client_id_str != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+
+    # Отмена возможна только на ранних этапах
+    cancellable = {OrderStatus.NEW, OrderStatus.CONFIRMED}
+    if order.status not in cancellable:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Нельзя отменить заказ в статусе «{order.status.value}». Допустимо: new, confirmed",
+        )
+
+    reason = (data or {}).get("reason", "Отменён клиентом")
+
+    now = datetime.now(timezone.utc)
+    order.status = OrderStatus.CANCELLED
+    order.updated_at = now
+    order.status_history.append(
+        StatusHistoryEntry(
+            status=OrderStatus.CANCELLED,
+            timestamp=now,
+            by=str(current_user.id),
+            comment=reason,
+        )
+    )
+    await order.save()
+
+    # Возвращаем зарезервированные остатки
+    try:
+        from app.services.stock_service import release_stock
+        await release_stock(order.items)
+    except Exception as e:
+        logger.warning("Не удалось вернуть остатки при отмене", error=str(e))
+
+    logger.info("Заказ отменён клиентом",
+                order_number=order.order_number, reason=reason)
+
+    return _order_to_response(order)
 
 
 @router.post(
@@ -663,7 +754,8 @@ async def create_retail_order(data: RetailOrderCreate):
     except ValueError as e:
         # Откатываем заказ при ошибке резервирования
         await order.delete()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     logger.info(
         "Розничный заказ без регистрации оформлен",
@@ -677,7 +769,8 @@ async def create_retail_order(data: RetailOrderCreate):
         from app.services.notification_service import notify_admin_new_order
         await notify_admin_new_order(order)
     except Exception as e:
-        logger.warning("Не удалось отправить уведомление о розничном заказе", error=str(e))
+        logger.warning(
+            "Не удалось отправить уведомление о розничном заказе", error=str(e))
 
     # Прямая отправка в Telegram как fallback (Celery может быть недоступен)
     try:

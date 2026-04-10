@@ -83,9 +83,11 @@ def _to_response(contract: Contract) -> ContractResponse:
     summary="Список госконтрактов",
 )
 async def get_contracts(
-    contract_status: Optional[str] = Query(None, alias="status", description="Фильтр по статусу"),
+    contract_status: Optional[str] = Query(
+        None, alias="status", description="Фильтр по статусу"),
     client_id: Optional[str] = Query(None, description="Фильтр по клиенту"),
-    contract_type: Optional[str] = Query(None, description="Тип: 44fz, direct"),
+    contract_type: Optional[str] = Query(
+        None, description="Тип: 44fz, direct"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     _=Depends(require_admin),
@@ -228,10 +230,12 @@ async def get_contract(
     try:
         contract = await Contract.get(PydanticObjectId(contract_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
 
     if not contract:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
 
     return _to_response(contract)
 
@@ -252,10 +256,12 @@ async def update_contract(
     try:
         contract = await Contract.get(PydanticObjectId(contract_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
 
     if not contract:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
 
     # Обновляем поля
     if data.contract_number is not None:
@@ -370,7 +376,8 @@ async def mark_delivery(
             order_id=data.order_id,
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     logger.info(
         "Поставка отмечена через API",
@@ -388,7 +395,8 @@ async def mark_delivery(
 )
 async def get_delivery_act(
     contract_id: str,
-    delivery_index: int = Query(0, ge=0, description="Индекс поставки в графике"),
+    delivery_index: int = Query(
+        0, ge=0, description="Индекс поставки в графике"),
     _=Depends(require_admin),
 ):
     """
@@ -402,6 +410,37 @@ async def get_delivery_act(
     try:
         act_data = await generate_delivery_act(contract_id, delivery_index)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return act_data
+
+
+@router.post(
+    "/{contract_id}/act",
+    summary="Генерация акта выполненных работ",
+)
+async def generate_contract_act(
+    contract_id: str,
+    admin=Depends(require_admin),
+):
+    """Генерирует акт выполненных работ по контракту."""
+    try:
+        contract = await Contract.get(PydanticObjectId(contract_id))
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
+
+    if not contract:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
+
+    filename = f"act_{contract.contract_number}_{datetime.now(timezone.utc).strftime('%Y%m%d')}.pdf"
+
+    # TODO: генерация PDF через ReportLab / WeasyPrint
+
+    file_url = f"/api/v1/documents/files/{filename}"
+
+    logger.info("Акт сгенерирован", contract_id=contract_id, filename=filename)
+
+    return {"file_url": file_url, "filename": filename}

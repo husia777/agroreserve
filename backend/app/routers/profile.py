@@ -8,9 +8,9 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.models.user import User
+from app.routers.auth import _build_user_response
 from app.schemas.auth import UserResponse, UserUpdateProfile
 from app.utils.security import get_current_user
-from app.routers.auth import _build_user_response
 
 router = APIRouter(prefix="/api/v1/profile", tags=["Профиль"])
 logger = structlog.get_logger(__name__)
@@ -49,17 +49,27 @@ async def update_profile(
     if data.delivery_address is not None:
         current_user.delivery_address = data.delivery_address
 
+    # UC-265: Обновление пакета документов
+    if data.document_preferences is not None:
+        from app.models.user import DocumentPreferences
+        current_user.document_preferences = DocumentPreferences(
+            **data.document_preferences.model_dump())
+
     if data.organization is not None:
         from app.models.user import ClientType, OrganizationDetails
         if current_user.client_type == ClientType.B2B:
+            # Сохраняем существующие ogrn и correspondent_account
+            existing_org = current_user.organization
             current_user.organization = OrganizationDetails(
                 name=data.organization.name,
                 inn=data.organization.inn,
                 kpp=data.organization.kpp,
+                ogrn=existing_org.ogrn if existing_org else None,
                 legal_address=data.organization.legal_address,
                 bank_name=data.organization.bank_name,
                 bik=data.organization.bik,
                 account=data.organization.account,
+                correspondent_account=existing_org.correspondent_account if existing_org else None,
             )
         else:
             raise HTTPException(

@@ -6,27 +6,27 @@ UC-13: Парсер ЕИС — поиск и управление тендера
 UC-42: Калькулятор тендерной ставки
 """
 import math
-from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 import structlog
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.models.tender import Tender, TenderItem
+from app.models.tender import Tender
+from app.services.tender_docs_service import generate_tender_documents_zip
 from app.utils.security import require_admin
-
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1/admin/tenders", tags=["Админ: Тендеры"])
 
-
 # ── Pydantic схемы ─────────────────────────────────────────────────────────────
+
 
 class TenderSearchRequest(BaseModel):
     """Запрос на поиск тендеров в ЕИС."""
-    keywords: List[str] = Field(
+    keywords: list[str] = Field(
         default=["овощи", "фрукты", "продукты"],
         description='Ключевые слова поиска (["овощи", "фрукты", "продукты"])',
     )
@@ -47,9 +47,12 @@ class TenderUpdate(BaseModel):
         None,
         description="Статус: new, analyzing, bid_submitted, won, lost, skipped",
     )
-    notes: Optional[str] = Field(None, max_length=2000, description="Заметки по тендеру")
-    our_price: Optional[float] = Field(None, gt=0, description="Наша цена в заявке (₽)")
-    is_relevant: Optional[bool] = Field(None, description="Релевантен ли тендер")
+    notes: Optional[str] = Field(
+        None, max_length=2000, description="Заметки по тендеру")
+    our_price: Optional[float] = Field(
+        None, gt=0, description="Наша цена в заявке (₽)")
+    is_relevant: Optional[bool] = Field(
+        None, description="Релевантен ли тендер")
 
 
 class TenderBidCalculationRequest(BaseModel):
@@ -84,7 +87,8 @@ def _tender_to_dict(tender: Tender) -> dict:
     from datetime import date
     today = date.today()
     deadline_date = tender.deadline.date() if tender.deadline else None
-    days_to_deadline = (deadline_date - today).days if deadline_date and deadline_date >= today else None
+    days_to_deadline = (
+        deadline_date - today).days if deadline_date and deadline_date >= today else None
 
     return {
         "id": str(tender.id),
@@ -128,10 +132,13 @@ async def get_tenders(
         alias="status",
         description="Фильтр по статусу: new, analyzing, bid_submitted, won, lost, skipped",
     ),
-    min_price: Optional[float] = Query(None, description="Минимальная НМЦК (₽)"),
-    max_price: Optional[float] = Query(None, description="Максимальная НМЦК (₽)"),
+    min_price: Optional[float] = Query(
+        None, description="Минимальная НМЦК (₽)"),
+    max_price: Optional[float] = Query(
+        None, description="Максимальная НМЦК (₽)"),
     region: Optional[str] = Query(None, description="Регион"),
-    is_relevant: Optional[bool] = Query(None, description="Только релевантные"),
+    is_relevant: Optional[bool] = Query(
+        None, description="Только релевантные"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     admin=Depends(require_admin),
@@ -148,7 +155,8 @@ async def get_tenders(
     query_filter: dict = {}
 
     if tender_status:
-        valid_statuses = ["new", "analyzing", "bid_submitted", "won", "lost", "skipped"]
+        valid_statuses = ["new", "analyzing",
+                          "bid_submitted", "won", "lost", "skipped"]
         if tender_status not in valid_statuses:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -260,10 +268,12 @@ async def get_tender(
     try:
         tender = await Tender.get(PydanticObjectId(tender_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
 
     if not tender:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
 
     return _tender_to_dict(tender)
 
@@ -291,13 +301,16 @@ async def update_tender(
     try:
         tender = await Tender.get(PydanticObjectId(tender_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
 
     if not tender:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
 
     if data.status is not None:
-        valid_statuses = ["new", "analyzing", "bid_submitted", "won", "lost", "skipped"]
+        valid_statuses = ["new", "analyzing",
+                          "bid_submitted", "won", "lost", "skipped"]
         if data.status not in valid_statuses:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -342,10 +355,12 @@ async def hide_tender(
     try:
         tender = await Tender.get(PydanticObjectId(tender_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
 
     if not tender:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
 
     tender.is_relevant = False
     tender.status = "skipped"
@@ -389,7 +404,8 @@ async def calculate_tender_bid(
             distance_km=data.distance_km,
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
         logger.error(
             "Ошибка расчёта тендерной ставки",
@@ -410,3 +426,31 @@ async def calculate_tender_bid(
     )
 
     return result
+
+
+@router.get(
+    "/{tender_id}/documents",
+    summary="UC-227: Генерация комплекта документов для тендера",
+)
+async def generate_tender_docs(
+    tender_id: str,
+    admin=Depends(require_admin),
+):
+    """
+    Генерирует ZIP-архив с комплектом документов для подачи заявки на тендер:
+    - Коммерческое предложение
+    - Декларация соответствия 44-ФЗ
+    - Справка о ресурсах и опыте
+    - Перечень сертификатов
+    """
+    try:
+        buffer = await generate_tender_documents_zip(tender_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="tender_{tender_id}_docs.zip"'},
+    )

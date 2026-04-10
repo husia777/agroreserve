@@ -8,16 +8,18 @@
 - Все роутеры
 - Structlog настройка
 """
+import os
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import Callable
 
 import structlog
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import close_mongo_connection, connect_to_mongo
@@ -117,7 +119,8 @@ app.add_middleware(
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-API-Key"],
+    allow_headers=["Authorization", "Content-Type",
+                   "Accept", "X-Request-ID", "X-API-Key"],
     expose_headers=["X-Total-Count", "X-Page", "X-Limit"],
     max_age=3600,
 )
@@ -153,7 +156,8 @@ async def rate_limit_middleware(request: Request, call_next: Callable) -> Respon
 
     # Очищаем старые записи
     key = f"{client_ip}:{path.split('/')[3] if len(path.split('/')) > 3 else 'root'}"
-    _rate_limit_store[key] = [t for t in _rate_limit_store[key] if now - t < window]
+    _rate_limit_store[key] = [
+        t for t in _rate_limit_store[key] if now - t < window]
 
     # Проверяем лимит
     if len(_rate_limit_store[key]) >= limit:
@@ -181,7 +185,8 @@ async def rate_limit_middleware(request: Request, call_next: Callable) -> Respon
 
     # Добавляем заголовки с информацией о лимите
     response.headers["X-RateLimit-Limit"] = str(limit)
-    response.headers["X-RateLimit-Remaining"] = str(limit - len(_rate_limit_store[key]))
+    response.headers["X-RateLimit-Remaining"] = str(
+        limit - len(_rate_limit_store[key]))
 
     return response
 
@@ -190,7 +195,8 @@ async def rate_limit_middleware(request: Request, call_next: Callable) -> Respon
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next: Callable) -> Response:
     """Логирование всех входящих запросов и ответов."""
-    request_id = request.headers.get("X-Request-ID", f"req_{int(time.time() * 1000)}")
+    request_id = request.headers.get(
+        "X-Request-ID", f"req_{int(time.time() * 1000)}")
     start_time = time.time()
 
     # Добавляем контекст к логам
@@ -236,7 +242,8 @@ async def internal_error_handler(request: Request, exc: Exception) -> JSONRespon
     logger.error("Внутренняя ошибка сервера", error=str(exc), exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"detail": "Внутренняя ошибка сервера. Мы уже работаем над устранением."},
+        content={
+            "detail": "Внутренняя ошибка сервера. Мы уже работаем над устранением."},
     )
 
 
@@ -279,10 +286,7 @@ async def root():
     }
 
 
-
 # ── Отдача загруженных медиафайлов ────────────────────────────
-from fastapi.staticfiles import StaticFiles
-import os
 os.makedirs("/app/media/products", exist_ok=True)
 app.mount("/media", StaticFiles(directory="/app/media"), name="media")
 
@@ -291,6 +295,7 @@ app.mount("/media", StaticFiles(directory="/app/media"), name="media")
 # Авторизация
 from app.routers.auth import router as auth_router  # noqa: E402
 app.include_router(auth_router)
+
 
 # Публичный каталог
 from app.routers.catalog import router as catalog_router  # noqa: E402
@@ -303,6 +308,7 @@ app.include_router(catalog_certificates_router)
 # Профиль пользователя
 from app.routers.profile import router as profile_router  # noqa: E402
 app.include_router(profile_router)
+
 
 # Корзина — РЕАЛИЗОВАНА в Phase 2
 from app.routers.cart import router as cart_router  # noqa: E402
@@ -432,7 +438,7 @@ app.include_router(admin_labels_router)
 
 logger.info(
     "Все роутеры подключены",
-    router_count=34,
+    router_count=38,
 )
 
 # UC-51: Бэкапы MongoDB
@@ -442,3 +448,7 @@ app.include_router(admin_backups_router)
 # UC-46: SEO (sitemap.xml, robots.txt)
 from app.routers.seo import router as seo_router  # noqa: E402
 app.include_router(seo_router)
+
+
+from app.routers.admin.export import router as admin_export_router  # noqa: E402
+app.include_router(admin_export_router)

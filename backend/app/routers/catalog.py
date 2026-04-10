@@ -178,7 +178,8 @@ async def get_products(
                 try:
                     fetched_cat = await product.category_id.fetch()
                     if fetched_cat:
-                        category_info[cat_id] = {"name": fetched_cat.name, "slug": fetched_cat.slug or ""}
+                        category_info[cat_id] = {
+                            "name": fetched_cat.name, "slug": fetched_cat.slug or ""}
                     else:
                         category_info[cat_id] = {"name": "", "slug": ""}
                 except Exception:
@@ -191,7 +192,8 @@ async def get_products(
         cat_data = category_info.get(cat_id_str, {"name": "", "slug": ""})
         cat_name = cat_data["name"]
 
-        items.append(ProductResponse(**_product_to_response(product, cat_name, is_b2b, category_slug=cat_data["slug"])))
+        items.append(ProductResponse(**_product_to_response(product,
+                     cat_name, is_b2b, category_slug=cat_data["slug"])))
 
     pages = math.ceil(total / limit) if total > 0 else 0
 
@@ -202,6 +204,44 @@ async def get_products(
         limit=limit,
         pages=pages,
     )
+
+
+@router.get(
+    "/products/id/{product_id}",
+    response_model=ProductResponse,
+    summary="Товар по ID",
+)
+async def get_product_by_id(
+    product_id: str,
+    current_user=Depends(get_current_user_optional),
+):
+    """Получение товара по MongoDB ObjectId."""
+    from beanie import PydanticObjectId
+
+    try:
+        product = await Product.get(PydanticObjectId(product_id))
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Товар не найден")
+
+    if not product or not product.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Товар не найден")
+
+    is_b2b = current_user is not None and current_user.is_b2b_approved()
+
+    cat_name = ""
+    cat_slug = ""
+    if product.category_id:
+        try:
+            cat = await product.category_id.fetch()
+            if cat:
+                cat_name = cat.name
+                cat_slug = cat.slug or ""
+        except Exception:
+            pass
+
+    return ProductResponse(**_product_to_response(product, cat_name, is_b2b, category_slug=cat_slug))
 
 
 @router.get(

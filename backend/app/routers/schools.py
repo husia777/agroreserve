@@ -1,5 +1,6 @@
 """
 Роутер школьного блока — меню, блюда, КБЖУ.
+UC-109/136/141/145/146: Школьное питание
 Эндпоинты: /api/v1/schools/
 """
 import math
@@ -467,6 +468,7 @@ async def create_order_from_menu(
 )
 async def get_kbzhu_report(
     menu_id: str,
+    age_group: str = Query("school_7_11", description="Возрастная группа для проверки СанПиН"),
     current_user=Depends(require_approved_client),
 ):
     """
@@ -489,6 +491,175 @@ async def get_kbzhu_report(
 
     from app.services.menu_service import generate_kbzhu_pdf
 
-    report_data = await generate_kbzhu_pdf(menu)
+    report_data = await generate_kbzhu_pdf(menu, age_group=age_group)
 
     return KbzhuReport(**report_data)
+
+
+# ══════════════════════════════════════════════════════════════
+# UC-105: Нормы СанПиН
+# ══════════════════════════════════════════════════════════════
+
+@router.get(
+    "/sanpin-norms",
+    summary="UC-105: Справочник норм питания СанПиН",
+)
+async def get_sanpin_norms(
+    current_user=Depends(require_approved_client),
+):
+    """
+    Возвращает все нормы питания по возрастным группам (СанПиН 2.3/2.4.3590-20).
+    """
+    from app.services.sanpin_norms import get_all_norms
+    return {"norms": get_all_norms()}
+
+
+# ══════════════════════════════════════════════════════════════
+# UC-136: Авто-генерация меню на неделю
+# ══════════════════════════════════════════════════════════════
+
+@router.post(
+    "/menu/auto-generate",
+    summary="UC-136: Автоматическая генерация меню на неделю",
+)
+async def auto_generate_menu(
+    age_group: str = Query("school_7_11", description="Возрастная группа"),
+    children_count: int = Query(100, ge=1, description="Количество детей"),
+    week_start: str = Query(..., description="Начало недели (YYYY-MM-DD)"),
+    current_user=Depends(require_approved_client),
+):
+    """
+    Автоматически генерирует меню на неделю из имеющихся блюд в БД.
+    Подбирает блюда по нормам СанПиН для указанной возрастной группы.
+    """
+    from datetime import date as date_type
+    from app.services.menu_service import auto_generate_weekly_menu
+
+    try:
+        parsed_date = date_type.fromisoformat(week_start)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Неверный формат даты. Используйте YYYY-MM-DD")
+
+    try:
+        result = await auto_generate_weekly_menu(
+            age_group=age_group,
+            children_count=children_count,
+            week_start=parsed_date,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return result
+
+
+# ══════════════════════════════════════════════════════════════
+# UC-141: Расчёт стоимости меню
+# ══════════════════════════════════════════════════════════════
+
+@router.get(
+    "/menu/{menu_id}/cost",
+    summary="UC-141: Расчёт стоимости меню",
+)
+async def get_menu_cost(
+    menu_id: str,
+    children_count: int = Query(100, ge=1, description="Количество детей"),
+    current_user=Depends(require_approved_client),
+):
+    """
+    Рассчитывает полную стоимость меню:
+    итого, за день, на ребёнка, на ребёнка в день.
+    """
+    try:
+        menu = await Menu.get(PydanticObjectId(menu_id))
+    except Exception:
+        raise HTTPException(status_code=404, detail="Меню не найдено")
+
+    if not menu:
+        raise HTTPException(status_code=404, detail="Меню не найдено")
+
+    if current_user.role != "admin" and str(menu.client_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Доступ запрещён")
+
+    from app.services.menu_service import calculate_menu_cost
+
+    is_b2b = getattr(current_user, "client_type", "b2b") == "b2b"
+    return await calculate_menu_cost(menu, children_count, is_b2b)
+
+
+# ══════════════════════════════════════════════════════════════
+# UC-145: Ежедневный отчёт повара
+# ══════════════════════════════════════════════════════════════
+
+@router.post(
+    "/menu/{menu_id}/daily-report",
+    summary="UC-145: Ежедневный отчёт повара",
+)
+async def create_daily_report(
+    menu_id: str,
+    report_date: str = Query(..., description="Дата отчёта (YYYY-MM-DD)"),
+    current_user=Depends(require_approved_client),
+):
+    """
+    Формирует ежедневный отчёт повара: плановые vs фактические порции,
+    расход продуктов, отклонения.
+    """
+    from datetime import date as date_type
+    from app.services.menu_service import generate_daily_cook_report
+
+    try:
+        menu = await Menu.get(PydanticObjectId(menu_id))
+    except Exception:
+        raise HTTPException(status_code=404, detail="Меню не найдено")
+
+    if not menu:
+        raise HTTPException(status_code=404, detail="Меню не найдено")
+
+    if current_user.role != "admin" and str(menu.client_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Доступ запрещён")
+
+    try:
+        parsed_date = date_type.fromisoformat(report_date)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Неверный формат даты")
+
+    try:
+        return await generate_daily_cook_report(menu, parsed_date)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ══════════════════════════════════════════════════════════════
+# UC-146: Бюджетный контроль 44-ФЗ
+# ══════════════════════════════════════════════════════════════
+
+@router.get(
+    "/menu/{menu_id}/budget-check",
+    summary="UC-146: Бюджетный контроль 44-ФЗ",
+)
+async def check_menu_budget(
+    menu_id: str,
+    contract_id: str = Query(..., description="ID контракта 44-ФЗ"),
+    children_count: int = Query(100, ge=1, description="Количество детей"),
+    current_user=Depends(require_approved_client),
+):
+    """
+    Проверяет укладывается ли стоимость меню в бюджет контракта 44-ФЗ.
+    Возвращает: лимит, потрачено, осталось, прогноз, алерты.
+    """
+    try:
+        menu = await Menu.get(PydanticObjectId(menu_id))
+    except Exception:
+        raise HTTPException(status_code=404, detail="Меню не найдено")
+
+    if not menu:
+        raise HTTPException(status_code=404, detail="Меню не найдено")
+
+    if current_user.role != "admin" and str(menu.client_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Доступ запрещён")
+
+    from app.services.menu_service import check_budget_compliance
+
+    try:
+        return await check_budget_compliance(contract_id, menu, children_count)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

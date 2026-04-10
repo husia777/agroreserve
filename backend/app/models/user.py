@@ -44,7 +44,22 @@ class OrganizationDetails(BaseModel):
     bank_name: Optional[str] = Field(None, description="Название банка")
     bik: Optional[str] = Field(None, description="БИК банка")
     account: Optional[str] = Field(None, description="Расчётный счёт")
-    correspondent_account: Optional[str] = Field(None, description="Корреспондентский счёт")
+    correspondent_account: Optional[str] = Field(
+        None, description="Корреспондентский счёт")
+
+
+class DocumentPreferences(BaseModel):
+    """
+    UC-265: Настройка пакета документов клиента.
+    Клиент выбирает, какие документы получать при отгрузке.
+    """
+    torg12: bool = Field(True, description="ТОРГ-12")
+    invoice: bool = Field(True, description="Счёт на оплату")
+    upd: bool = Field(
+        False, description="УПД (универсальный передаточный документ)")
+    scheta_factura: bool = Field(False, description="Счёт-фактура")
+    act_sverki: bool = Field(False, description="Акт сверки (ежемесячный)")
+    realization: bool = Field(False, description="Реализация товаров и услуг")
 
 
 class NotificationChannels(BaseModel):
@@ -67,8 +82,10 @@ class User(Document):
     """
 
     # ── Контактные данные ────────────────────────────────────
-    phone: Indexed(str, unique=True) = Field(..., description="Телефон в формате +7XXXXXXXXXX")
-    email: Optional[Indexed(EmailStr, unique=True)] = Field(None, description="Email адрес")
+    phone: Indexed(str, unique=True) = Field(...,
+                                             description="Телефон в формате +7XXXXXXXXXX")
+    email: Optional[Indexed(EmailStr, unique=True)] = Field(
+        None, description="Email адрес")
     name: str = Field(..., description="Полное имя / название организации")
     password_hash: str = Field(..., description="Хэш пароля (bcrypt)")
 
@@ -77,27 +94,41 @@ class User(Document):
     client_type: ClientType = Field(ClientType.B2C, description="Тип клиента")
 
     # ── Реквизиты организации (для B2B) ──────────────────────
-    organization: Optional[OrganizationDetails] = Field(None, description="Реквизиты организации")
+    organization: Optional[OrganizationDetails] = Field(
+        None, description="Реквизиты организации")
 
     # ── Адрес доставки по умолчанию ──────────────────────────
-    delivery_address: Optional[str] = Field(None, description="Адрес доставки по умолчанию")
+    delivery_address: Optional[str] = Field(
+        None, description="Адрес доставки по умолчанию")
 
     # ── Финансы ───────────────────────────────────────────────
-    credit_limit: float = Field(0.0, ge=0, description="Кредитный лимит в рублях")
-    current_debt: float = Field(0.0, ge=0, description="Текущая задолженность в рублях")
+    credit_limit: float = Field(
+        0.0, ge=0, description="Кредитный лимит в рублях")
+    current_debt: float = Field(
+        0.0, ge=0, description="Текущая задолженность в рублях")
 
     # ── Статус аккаунта ───────────────────────────────────────
-    status: UserStatus = Field(UserStatus.APPROVED, description="Статус аккаунта")
-    rejection_reason: Optional[str] = Field(None, description="Причина отклонения (от администратора)")
+    status: UserStatus = Field(
+        UserStatus.APPROVED, description="Статус аккаунта")
+    rejection_reason: Optional[str] = Field(
+        None, description="Причина отклонения (от администратора)")
 
     # ── Telegram интеграция ───────────────────────────────────
-    telegram_chat_id: Optional[str] = Field(None, description="Telegram chat ID для уведомлений")
-    telegram_username: Optional[str] = Field(None, description="Telegram username")
+    telegram_chat_id: Optional[str] = Field(
+        None, description="Telegram chat ID для уведомлений")
+    telegram_username: Optional[str] = Field(
+        None, description="Telegram username")
 
     # ── Настройки уведомлений ─────────────────────────────────
     notification_channels: NotificationChannels = Field(
         default_factory=NotificationChannels,
         description="Каналы уведомлений",
+    )
+
+    # ── UC-265: Пакет документов клиента ──────────────────────
+    document_preferences: DocumentPreferences = Field(
+        default_factory=DocumentPreferences,
+        description="Какие документы формировать при отгрузке",
     )
 
     # ── Метаданные ────────────────────────────────────────────
@@ -109,7 +140,8 @@ class User(Document):
         default_factory=lambda: datetime.now(timezone.utc),
         description="Дата последнего обновления",
     )
-    last_login_at: Optional[datetime] = Field(None, description="Последний вход в систему")
+    last_login_at: Optional[datetime] = Field(
+        None, description="Последний вход в систему")
 
     class Settings:
         name = "users"

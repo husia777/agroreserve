@@ -81,8 +81,8 @@ def generate_standing_orders(self) -> dict:
     Статус нового заказа: OrderStatus.NEW (в ожидании подтверждения)
     """
     async def _execute() -> dict:
-        from app.database import init_db
-        await init_db()
+        from app.database import connect_to_mongo
+        await connect_to_mongo()
 
         from datetime import date
         today = date.today()
@@ -142,7 +142,8 @@ def generate_standing_orders(self) -> dict:
                 # Формируем позиции заказа
                 order_items = []
                 order_total = 0.0
-                is_b2b = client.client_type.value == "b2b" if hasattr(client.client_type, "value") else client.client_type == "b2b"
+                is_b2b = client.client_type.value == "b2b" if hasattr(
+                    client.client_type, "value") else client.client_type == "b2b"
 
                 for so_item in so.items:
                     try:
@@ -204,7 +205,8 @@ def generate_standing_orders(self) -> dict:
                 from datetime import timedelta
                 delivery_date = today + timedelta(days=1)
                 if delivery_date.weekday() >= 5:  # Суббота или воскресенье
-                    delivery_date = today + timedelta(days=(7 - today.weekday()))
+                    delivery_date = today + \
+                        timedelta(days=(7 - today.weekday()))
 
                 # Создаём заказ
                 new_order = Order(
@@ -221,7 +223,8 @@ def generate_standing_orders(self) -> dict:
                     delivery_slot=so.delivery_slot,
                     delivery_address=so.delivery_address,
                     payment_method=PaymentMethod.BANK_TRANSFER,
-                    note=f"Регулярный заказ (автогенерация). {so.note or ''}".strip(),
+                    note=f"Регулярный заказ (автогенерация). {so.note or ''}".strip(
+                    ),
                 )
                 await new_order.insert()
 
@@ -279,7 +282,8 @@ def generate_standing_orders(self) -> dict:
                     try:
                         await send_message(settings.TELEGRAM_ADMIN_CHAT_ID, admin_msg)
                     except Exception as e:
-                        logger.warning("Не удалось уведомить администратора", error=str(e))
+                        logger.warning(
+                            "Не удалось уведомить администратора", error=str(e))
 
             except Exception as e:
                 logger.error(

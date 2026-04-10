@@ -1,4 +1,4 @@
-// Тендеры — поиск, просмотр, калькулятор цены
+// Тендеры — поиск, просмотр, калькулятор цены (UC-227: документы)
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -9,8 +9,10 @@ import {
   ExternalLink,
   Calculator,
   X,
+  FileDown,
 } from 'lucide-react'
 import { getTenders, getTender, searchTenders, updateTender, calculateTenderPrice } from '@/api/admin'
+import apiClient from '@/api/client'
 import type { Tender } from '@/types'
 import { formatPrice, formatDate } from '@/utils/format'
 import { PageSpinner } from '@/components/ui/Spinner'
@@ -40,6 +42,29 @@ const TenderDetails: React.FC<{ tenderId: string }> = ({ tenderId }) => {
   const qc = useQueryClient()
   const [markup, setMarkup] = useState(15)
   const [calcResult, setCalcResult] = useState<{ our_price: number; margin_estimate: number } | null>(null)
+  const [downloadingDocs, setDownloadingDocs] = useState(false)
+
+  // UC-227: Скачивание комплекта документов
+  const handleDownloadDocs = async () => {
+    try {
+      setDownloadingDocs(true)
+      const response = await apiClient.get(`/admin/tenders/${tenderId}/documents`, {
+        responseType: 'blob',
+      })
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `tender_${tenderId}_docs.zip`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      alert('Ошибка при генерации документов')
+    } finally {
+      setDownloadingDocs(false)
+    }
+  }
 
   const { data: tender, isLoading } = useQuery({
     queryKey: ['tender', tenderId],
@@ -185,6 +210,16 @@ const TenderDetails: React.FC<{ tenderId: string }> = ({ tenderId }) => {
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
+
+        {/* UC-227: Кнопка генерации документов */}
+        <button
+          onClick={handleDownloadDocs}
+          disabled={downloadingDocs}
+          className="flex items-center gap-2 bg-white border border-primary-300 hover:bg-primary-50 text-primary-700 text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-60"
+        >
+          <FileDown className={`w-4 h-4 ${downloadingDocs ? 'animate-pulse' : ''}`} />
+          {downloadingDocs ? 'Генерация...' : 'Скачать документы'}
+        </button>
 
         <a
           href={tender.source_url}

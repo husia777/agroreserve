@@ -1,10 +1,10 @@
-// Страница профиля
+// Страница профиля (UC-265: настройка пакета документов)
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
-import { User, Building, MapPin, Eye, EyeOff, Lock } from 'lucide-react'
+import { User, Building, MapPin, Eye, EyeOff, Lock, FileText } from 'lucide-react'
 import { apiClient } from '@/api/client'
 import { changePassword } from '@/api/auth'
 import { useAuthStore } from '@/stores/authStore'
@@ -191,6 +191,11 @@ export const ProfilePage: React.FC = () => {
         </div>
       )}
 
+      {/* UC-265: Настройка пакета документов */}
+      {isB2B && (
+        <DocumentPreferencesBlock user={user} />
+      )}
+
       {/* Смена пароля */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <div className="flex items-center gap-2 mb-4">
@@ -233,6 +238,96 @@ export const ProfilePage: React.FC = () => {
             </Button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+// UC-265: Компонент настройки пакета документов
+const DOCUMENT_OPTIONS = [
+  { key: 'torg12', label: 'ТОРГ-12', description: 'Товарная накладная' },
+  { key: 'invoice', label: 'Счёт на оплату', description: 'Для предоплаты или постоплаты' },
+  { key: 'upd', label: 'УПД', description: 'Универсальный передаточный документ' },
+  { key: 'scheta_factura', label: 'Счёт-фактура', description: 'Для организаций с НДС' },
+  { key: 'act_sverki', label: 'Акт сверки', description: 'Ежемесячная сверка взаиморасчётов' },
+  { key: 'realization', label: 'Реализация товаров', description: 'Документ реализации товаров и услуг' },
+] as const
+
+interface DocPrefs {
+  torg12: boolean
+  invoice: boolean
+  upd: boolean
+  scheta_factura: boolean
+  act_sverki: boolean
+  realization: boolean
+}
+
+const DocumentPreferencesBlock: React.FC<{ user: any }> = ({ user }) => {
+  const [saving, setSaving] = useState(false)
+  const [prefs, setPrefs] = useState<DocPrefs>({
+    torg12: user?.document_preferences?.torg12 ?? true,
+    invoice: user?.document_preferences?.invoice ?? true,
+    upd: user?.document_preferences?.upd ?? false,
+    scheta_factura: user?.document_preferences?.scheta_factura ?? false,
+    act_sverki: user?.document_preferences?.act_sverki ?? false,
+    realization: user?.document_preferences?.realization ?? false,
+  })
+
+  const handleToggle = (key: keyof DocPrefs) => {
+    setPrefs((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const handleSave = async () => {
+    try {
+      setSaving(true)
+      await apiClient.patch('/profile', { document_preferences: prefs })
+      showToast.success('Настройки документов сохранены')
+    } catch {
+      showToast.error('Ошибка при сохранении')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <FileText className="w-5 h-5 text-gray-500" />
+        <h2 className="text-base font-semibold text-gray-900">Пакет документов</h2>
+      </div>
+      <p className="text-sm text-gray-500 mb-4">
+        Выберите, какие документы формировать при каждой отгрузке
+      </p>
+      <div className="space-y-3">
+        {DOCUMENT_OPTIONS.map((doc) => (
+          <label
+            key={doc.key}
+            className="flex items-start gap-3 cursor-pointer group"
+          >
+            <input
+              type="checkbox"
+              checked={prefs[doc.key]}
+              onChange={() => handleToggle(doc.key)}
+              className="mt-0.5 w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+            />
+            <div>
+              <span className="text-sm font-medium text-gray-900 group-hover:text-primary-600">
+                {doc.label}
+              </span>
+              <span className="block text-xs text-gray-400">{doc.description}</span>
+            </div>
+          </label>
+        ))}
+      </div>
+      <div className="flex justify-end mt-4 pt-3 border-t border-gray-100">
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleSave}
+          loading={saving}
+        >
+          Сохранить настройки
+        </Button>
       </div>
     </div>
   )

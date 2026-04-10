@@ -44,8 +44,8 @@ def check_reminders(self) -> dict:
     до явного подтверждения администратором.
     """
     async def _execute() -> dict:
-        from app.database import init_db
-        await init_db()
+        from app.database import connect_to_mongo
+        await connect_to_mongo()
 
         from app.models.reminder import Reminder
         from app.config import settings
@@ -63,7 +63,7 @@ def check_reminders(self) -> dict:
         # Находим просроченные невыполненные напоминания
         due_reminders = await Reminder.find(
             Reminder.remind_at <= now,      # type: ignore
-            Reminder.is_completed == False, # noqa: E712
+            Reminder.is_completed == False,  # noqa: E712
         ).sort(Reminder.remind_at).to_list()
 
         result["reminders_found"] = len(due_reminders)
@@ -73,13 +73,15 @@ def check_reminders(self) -> dict:
 
         # Проверяем, что есть Telegram администратора
         if not settings.TELEGRAM_ADMIN_CHAT_ID:
-            logger.warning("TELEGRAM_ADMIN_CHAT_ID не настроен, уведомления не отправлены")
+            logger.warning(
+                "TELEGRAM_ADMIN_CHAT_ID не настроен, уведомления не отправлены")
             return result
 
         for reminder in due_reminders:
             try:
                 # Формируем сообщение
-                overdue_minutes = int((now - reminder.remind_at).total_seconds() / 60)
+                overdue_minutes = int(
+                    (now - reminder.remind_at).total_seconds() / 60)
 
                 if overdue_minutes < 60:
                     overdue_text = f"{overdue_minutes} мин. назад"
@@ -104,7 +106,8 @@ def check_reminders(self) -> dict:
                         "tender": "Тендер",
                         "payment": "Оплата",
                     }
-                    label = type_labels.get(reminder.related_type, reminder.related_type)
+                    label = type_labels.get(
+                        reminder.related_type, reminder.related_type)
                     lines.append(f"\n📎 Связано с: {label}")
 
                 if reminder.is_recurring and reminder.recurrence_rule:
@@ -113,7 +116,8 @@ def check_reminders(self) -> dict:
                         "weekly": "еженедельно",
                         "monthly": "ежемесячно",
                     }
-                    rule_label = rule_labels.get(reminder.recurrence_rule, reminder.recurrence_rule)
+                    rule_label = rule_labels.get(
+                        reminder.recurrence_rule, reminder.recurrence_rule)
                     lines.append(f"🔁 Повтор: {rule_label}")
 
                 message = "\n".join(lines)

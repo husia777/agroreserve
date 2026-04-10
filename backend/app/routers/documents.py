@@ -27,7 +27,8 @@ DOCUMENTS_DIR = "/app/media/documents"
     summary="Мои документы",
 )
 async def get_my_documents(
-    doc_type: Optional[str] = Query(None, description="Фильтр по типу: invoice, torg12, label"),
+    doc_type: Optional[str] = Query(
+        None, description="Фильтр по типу: invoice, torg12, label"),
     date_from: Optional[date] = Query(None, description="С даты (YYYY-MM-DD)"),
     date_to: Optional[date] = Query(None, description="По дату (YYYY-MM-DD)"),
     page: int = Query(1, ge=1),
@@ -49,12 +50,14 @@ async def get_my_documents(
 
     if date_from:
         from datetime import datetime, timezone
-        dt_from = datetime(date_from.year, date_from.month, date_from.day, tzinfo=timezone.utc)
+        dt_from = datetime(date_from.year, date_from.month,
+                           date_from.day, tzinfo=timezone.utc)
         query_filter.setdefault("created_at", {})["$gte"] = dt_from
 
     if date_to:
         from datetime import datetime, timezone
-        dt_to = datetime(date_to.year, date_to.month, date_to.day, 23, 59, 59, tzinfo=timezone.utc)
+        dt_to = datetime(date_to.year, date_to.month,
+                         date_to.day, 23, 59, 59, tzinfo=timezone.utc)
         query_filter.setdefault("created_at", {})["$lte"] = dt_to
 
     total = await DocumentRecord.find(query_filter).count()
@@ -98,7 +101,8 @@ async def download_file_by_name(filename: str):
     """Внутренний эндпоинт для отдачи PDF файлов."""
     filepath = os.path.join(DOCUMENTS_DIR, filename)
     if not os.path.exists(filepath):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
 
     # Определяем content-type
     if filename.endswith(".pdf"):
@@ -130,10 +134,12 @@ async def download_document(
     try:
         doc = await DocumentRecord.get(PydanticObjectId(document_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
 
     if not doc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
 
     # Проверяем принадлежность (не для администратора)
     if current_user.role != "admin" and doc.client_id != str(current_user.id):
@@ -162,7 +168,8 @@ async def download_document(
                 detail="Файл документа не найден на сервере",
             )
 
-    media_type = "application/pdf" if filepath.endswith(".pdf") else "text/html"
+    media_type = "application/pdf" if filepath.endswith(
+        ".pdf") else "text/html"
 
     logger.info(
         "Документ скачан",
@@ -176,4 +183,67 @@ async def download_document(
         filename=doc.file_name,
         media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="{doc.file_name}"'},
+    )
+
+
+@router.post(
+    "/download-zip",
+    summary="Скачать документы за период (ZIP)",
+)
+async def download_documents_zip(
+    data: dict,
+    current_user=Depends(get_current_user),
+):
+    """Скачивает архив документов за указанный период."""
+    import io
+    import zipfile
+    from fastapi.responses import StreamingResponse
+
+    date_from = data.get("date_from")
+    date_to = data.get("date_to")
+    doc_types = data.get("doc_types")
+
+    user_id = str(current_user.id)
+    query_filter: dict = {"client_id": user_id}
+
+    if date_from:
+        from datetime import datetime as dt, timezone
+        d = dt.fromisoformat(date_from)
+        query_filter.setdefault("created_at", {})["$gte"] = d
+
+    if date_to:
+        from datetime import datetime as dt, timezone
+        d = dt.fromisoformat(date_to).replace(hour=23, minute=59, second=59)
+        query_filter.setdefault("created_at", {})["$lte"] = d
+
+    if doc_types:
+        query_filter["doc_type"] = {"$in": doc_types}
+
+    documents = await DocumentRecord.find(query_filter).to_list()
+
+    if not documents:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Документы за указанный период не найдены",
+        )
+
+    # Собираем ZIP
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for doc in documents:
+            if not doc.file_name:
+                continue
+            filepath = os.path.join(DOCUMENTS_DIR, doc.file_name)
+            if os.path.exists(filepath):
+                zf.write(filepath, doc.file_name)
+
+    zip_buffer.seek(0)
+
+    logger.info("ZIP архив документов сформирован",
+                user_id=user_id, count=len(documents))
+
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="documents.zip"'},
     )

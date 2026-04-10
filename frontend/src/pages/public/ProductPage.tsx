@@ -82,6 +82,13 @@ export const ProductPage: React.FC = () => {
   const calcSumKg = +(calcKg * displayPrice).toFixed(2)
   const calcSumPcs = +(calcKgFromPcs * displayPrice).toFixed(2)
 
+  // UC-107: Калькулятор порций
+  const [portionWeight, setPortionWeight] = useState(150) // грамм
+  const [portionKg, setPortionKg] = useState(10) // кг
+  const portionCount = portionWeight > 0 ? Math.floor((portionKg * 1000) / portionWeight) : 0
+  const portionCost = portionCount > 0 ? (portionKg * displayPrice) / portionCount : 0
+  const portionTotal = portionKg * displayPrice
+
   const handleAddToCart = () => {
     addItem(product, quantity, showWholesale)
     showToast.success(`«${product.name}» добавлен в корзину (${formatQuantity(quantity, product.unit)})`)
@@ -365,6 +372,68 @@ export const ProductPage: React.FC = () => {
             <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 mb-5">
               <span className="font-medium text-gray-900">Условия хранения: </span>
               {product.storage_conditions}
+            </div>
+          )}
+
+          {/* UC-107: Калькулятор порций */}
+          {product.unit === 'kg' && (
+            <div className="border border-gray-200 rounded-xl p-4 mb-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Calculator className="w-4 h-4 text-primary-600" />
+                <h3 className="text-sm font-semibold text-gray-900">Калькулятор порций</h3>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Кол-во (кг)</label>
+                  <input
+                    type="number"
+                    value={portionKg}
+                    onChange={(e) => setPortionKg(Math.max(0, +e.target.value))}
+                    min="0"
+                    step="1"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Порция (г)</label>
+                  <div className="flex gap-1">
+                    {[100, 150, 200].map((w) => (
+                      <button
+                        key={w}
+                        onClick={() => setPortionWeight(w)}
+                        className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                          portionWeight === w
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {w}г
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Результат */}
+              <div className="bg-primary-50 rounded-lg p-3">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm text-gray-700">
+                    {portionKg} кг {product.name.toLowerCase()}
+                  </span>
+                  <span className="text-lg font-bold text-primary-700">
+                    = {portionCount} порций
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-xs text-gray-500">
+                    по {portionWeight}г каждая
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {formatPrice(portionCost)} / порция · {formatPrice(portionTotal)} итого
+                  </span>
+                </div>
+              </div>
             </div>
           )}
 

@@ -3,12 +3,14 @@
 Эндпоинты: /api/v1/admin/write-offs/
 """
 import math
+import os
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
 import structlog
 from beanie import PydanticObjectId
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from app.models.write_off import WriteOff
 from app.schemas.write_off import (
@@ -25,6 +27,7 @@ router = APIRouter(prefix="/api/v1/admin/write-offs", tags=["Админ: Спи�
 
 # Допустимые причины списания
 VALID_REASONS = {"spoilage", "expired", "damage", "other"}
+UPLOAD_DIR = "/app/uploads/write_offs"
 
 
 def _to_response(wo: WriteOff) -> WriteOffResponse:
@@ -54,7 +57,8 @@ def _to_response(wo: WriteOff) -> WriteOffResponse:
     summary="Список списаний",
 )
 async def get_write_offs(
-    reason: Optional[str] = Query(None, description="Причина: spoilage, expired, damage, other"),
+    reason: Optional[str] = Query(
+        None, description="Причина: spoilage, expired, damage, other"),
     product_id: Optional[str] = Query(None, description="Фильтр по товару"),
     date_from: Optional[str] = Query(None, description="С даты (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="По дату (YYYY-MM-DD)"),
@@ -100,7 +104,8 @@ async def get_write_offs(
     if date_to:
         try:
             # До конца указанного дня
-            dt_to = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59)
+            dt_to = datetime.fromisoformat(date_to).replace(
+                hour=23, minute=59, second=59)
             date_filter["$lte"] = dt_to
         except ValueError:
             raise HTTPException(
@@ -313,10 +318,13 @@ async def get_write_off_analytics(
     for wo in write_offs:
         key = wo.reason
         if key not in by_reason:
-            by_reason[key] = {"reason": key, "count": 0, "total_loss": 0.0, "total_qty": 0.0}
+            by_reason[key] = {"reason": key, "count": 0,
+                              "total_loss": 0.0, "total_qty": 0.0}
         by_reason[key]["count"] += 1
-        by_reason[key]["total_loss"] = round(by_reason[key]["total_loss"] + wo.total_loss, 2)
-        by_reason[key]["total_qty"] = round(by_reason[key]["total_qty"] + wo.qty, 3)
+        by_reason[key]["total_loss"] = round(
+            by_reason[key]["total_loss"] + wo.total_loss, 2)
+        by_reason[key]["total_qty"] = round(
+            by_reason[key]["total_qty"] + wo.qty, 3)
 
     # Группировка по товарам (топ-10 по убыткам)
     by_product: dict = {}
@@ -330,19 +338,24 @@ async def get_write_off_analytics(
                 "total_qty": 0.0,
                 "count": 0,
             }
-        by_product[key]["total_loss"] = round(by_product[key]["total_loss"] + wo.total_loss, 2)
-        by_product[key]["total_qty"] = round(by_product[key]["total_qty"] + wo.qty, 3)
+        by_product[key]["total_loss"] = round(
+            by_product[key]["total_loss"] + wo.total_loss, 2)
+        by_product[key]["total_qty"] = round(
+            by_product[key]["total_qty"] + wo.qty, 3)
         by_product[key]["count"] += 1
 
-    top_products = sorted(by_product.values(), key=lambda x: x["total_loss"], reverse=True)[:10]
+    top_products = sorted(by_product.values(),
+                          key=lambda x: x["total_loss"], reverse=True)[:10]
 
     # Динамика по месяцам
     by_month: dict = {}
     for wo in write_offs:
         month_key = wo.created_at.strftime("%Y-%m")
         if month_key not in by_month:
-            by_month[month_key] = {"month": month_key, "total_loss": 0.0, "count": 0}
-        by_month[month_key]["total_loss"] = round(by_month[month_key]["total_loss"] + wo.total_loss, 2)
+            by_month[month_key] = {"month": month_key,
+                                   "total_loss": 0.0, "count": 0}
+        by_month[month_key]["total_loss"] = round(
+            by_month[month_key]["total_loss"] + wo.total_loss, 2)
         by_month[month_key]["count"] += 1
 
     by_month_list = sorted(by_month.values(), key=lambda x: x["month"])
@@ -354,3 +367,35 @@ async def get_write_off_analytics(
         by_product=top_products,
         by_month=by_month_list,
     )
+
+
+@router.post(
+    "/upload-photo",
+    summary="UC-113: Загрузка фото брака",
+)
+async def upload_write_off_photo(
+    file: UploadFile = File(...),
+    admin=Depends(require_admin),
+):
+    """Загружает фото испорченного товара. Возвращает URL."""
+    # Валидация
+    allowed_types = {"image/jpeg", "image/png", "image/webp"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(400, detail="Допустимые форматы: JPEG, PNG, WebP")
+
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(400, detail="Максимальный размер: 5 МБ")
+
+    # Сохранение
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    ext = file.filename.rsplit(
+        ".", 1)[-1] if "." in (file.filename or "") else "jpg"
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    url = f"/uploads/write_offs/{filename}"
+    return {"url": url, "filename": filename}
