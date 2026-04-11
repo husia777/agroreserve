@@ -7,10 +7,10 @@
 и помечаем запись как notified.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 
-from beanie import Document, Indexed
+from beanie import Document
 from pydantic import EmailStr, Field
 
 
@@ -24,24 +24,19 @@ class StockWaitlist(Document):
 
     # ── Товар ─────────────────────────────────────────────────
     product_id: str = Field(..., description="ID товара (Product)")
-    product_name: str = Field(..., max_length=200,
-                              description="Название товара (для удобства в уведомлении)")
+    product_name: str = Field(..., max_length=200, description="Название товара (для удобства в уведомлении)")
 
     # ── Подписчик ─────────────────────────────────────────────
     email: EmailStr = Field(..., description="Email для уведомления")
-    user_id: Optional[str] = Field(
-        None, description="ID пользователя (если авторизован)")
-    user_name: Optional[str] = Field(
-        None, max_length=200, description="Имя пользователя (если авторизован)")
+    user_id: Optional[str] = Field(None, description="ID пользователя (если авторизован)")
+    user_name: Optional[str] = Field(None, max_length=200, description="Имя пользователя (если авторизован)")
 
     # ── Статус ────────────────────────────────────────────────
     is_notified: bool = Field(False, description="Уведомление уже отправлено")
-    notified_at: Optional[datetime] = Field(
-        None, description="Дата отправки уведомления")
+    notified_at: Optional[datetime] = Field(None, description="Дата отправки уведомления")
 
     # ── Метаданные ────────────────────────────────────────────
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "stock_waitlist"

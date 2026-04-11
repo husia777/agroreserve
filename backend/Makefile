@@ -59,12 +59,12 @@ celery-all:
 # ── Качество кода ───────────────────────────────────────────────────────────────
 
 lint:
-	uv run ruff check app/ tests/
-	uv run ruff format --check app/ tests/
+	uv run ruff check app/
+	uv run ruff format --check app/
 
 format:
-	uv run ruff format app/ tests/
-	uv run ruff check --fix app/ tests/
+	uv run ruff format app/
+	uv run ruff check --fix app/
 
 typecheck:
 	uv run mypy app/

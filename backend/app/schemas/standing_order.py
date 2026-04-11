@@ -19,15 +19,13 @@ class StandingOrderItemSchema(BaseModel):
 class StandingOrderCreate(BaseModel):
     """Создание регулярного заказа."""
 
-    items: list[StandingOrderItemSchema] = Field(
-        ..., min_length=1, description="Позиции заказа")
+    items: list[StandingOrderItemSchema] = Field(..., min_length=1, description="Позиции заказа")
     schedule: str = Field(
         ...,
         description="Расписание: weekly_mon..weekly_sun, biweekly, monthly_1, monthly_15",
     )
     delivery_slot: str = Field(..., description="Временной слот: 08:00-11:00")
-    delivery_address: str = Field(..., min_length=5,
-                                  description="Адрес доставки")
+    delivery_address: str = Field(..., min_length=5, description="Адрес доставки")
     note: Optional[str] = Field(None, description="Примечание")
 
 

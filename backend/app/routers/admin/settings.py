@@ -3,14 +3,14 @@
 Эндпоинты: /api/v1/admin/settings/
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Optional
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from typing import Optional, List
 
-from app.models.settings import SystemSettings, BankDetails, DeliverySlot
+from app.models.settings import SystemSettings
 from app.utils.security import require_admin
 
 router = APIRouter(prefix="/api/v1/admin/settings", tags=["Администрирование — Настройки"])
@@ -128,7 +128,7 @@ async def update_settings(data: SettingsUpdate, admin=Depends(require_admin)):
     if data.default_payment_days is not None:
         settings_doc.default_payment_days = data.default_payment_days
 
-    settings_doc.updated_at = datetime.now(timezone.utc)
+    settings_doc.updated_at = datetime.now(UTC)
 
     if settings_doc.id:
         await settings_doc.save()

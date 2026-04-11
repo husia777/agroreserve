@@ -5,8 +5,6 @@
 UC-54: Карточка клиента — полная информация, заметки, история взаимодействий.
 """
 
-import math
-from datetime import datetime, timezone
 from typing import Optional
 
 import structlog
@@ -102,14 +100,14 @@ async def get_client_card(
     """
     try:
         client = await User.get(PydanticObjectId(client_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден") from e
 
     if not client:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")
 
     # ── Заказы клиента ────────────────────────────────────────
-    from app.models.order import Order, OrderStatus, PaymentStatus
+    from app.models.order import Order, OrderStatus
 
     all_orders = (
         await Order.find(
@@ -131,7 +129,6 @@ async def get_client_card(
     for order in delivered_orders:
         for item in order.items:
             pid = item.product_id
-            qty = item.actual_qty if item.actual_qty is not None else item.ordered_qty
             if pid not in products_map:
                 products_map[pid] = {
                     "name": item.product_name,
@@ -246,8 +243,8 @@ async def add_note(
     """Добавляет заметку администратора к карточке клиента."""
     try:
         client = await User.get(PydanticObjectId(client_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден") from e
 
     if not client:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")
@@ -293,7 +290,7 @@ async def get_interactions(
             )
         query_filter["interaction_type"] = interaction_type
 
-    total = await ClientInteraction.find(query_filter).count()
+    await ClientInteraction.find(query_filter).count()
     interactions = (
         await ClientInteraction.find(query_filter)
         .sort(-ClientInteraction.created_at)
@@ -318,8 +315,8 @@ async def add_interaction(
     """Добавляет запись о взаимодействии с клиентом."""
     try:
         client = await User.get(PydanticObjectId(client_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден") from e
 
     if not client:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")

@@ -3,11 +3,12 @@
 Коллекция: certificates
 """
 
-from datetime import date as DateType, datetime, timezone
+from datetime import UTC, datetime
+from datetime import date as DateType
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
-from beanie import Document, Indexed
+from beanie import Document
 from pydantic import Field
 
 
@@ -40,40 +41,33 @@ class Certificate(Document):
 
     # ── Номер и тип ───────────────────────────────────────────
     number: str = Field(..., description="Номер сертификата / декларации")
-    cert_type: CertificateType = Field(...,
-                                       description="Тип сертификационного документа")
+    cert_type: CertificateType = Field(..., description="Тип сертификационного документа")
 
     # ── Даты ──────────────────────────────────────────────────
     issued_date: DateType = Field(..., description="Дата выдачи")
     expiry_date: DateType = Field(..., description="Срок действия")
-    issuing_authority: Optional[str] = Field(
-        None, description="Орган, выдавший документ")
+    issuing_authority: Optional[str] = Field(None, description="Орган, выдавший документ")
 
     # ── Привязка к товарам ────────────────────────────────────
     # Хранится как список строк (ObjectId) для избежания циклических зависимостей
-    product_ids: List[str] = Field(
+    product_ids: list[str] = Field(
         default_factory=list,
         description="ID товаров, на которые распространяется сертификат",
     )
 
     # ── Файл ──────────────────────────────────────────────────
-    file_url: Optional[str] = Field(
-        None, description="URL скана сертификата (S3/GridFS)")
-    file_name: Optional[str] = Field(
-        None, description="Оригинальное имя файла")
+    file_url: Optional[str] = Field(None, description="URL скана сертификата (S3/GridFS)")
+    file_name: Optional[str] = Field(None, description="Оригинальное имя файла")
 
     # ── Статус ────────────────────────────────────────────────
-    status: CertificateStatus = Field(
-        CertificateStatus.ACTIVE, description="Статус действия")
+    status: CertificateStatus = Field(CertificateStatus.ACTIVE, description="Статус действия")
 
     # ── Дополнительно ─────────────────────────────────────────
     notes: Optional[str] = Field(None, description="Дополнительные заметки")
 
     # ── Метаданные ────────────────────────────────────────────
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "certificates"

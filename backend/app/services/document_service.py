@@ -5,8 +5,8 @@
 Если WeasyPrint не установлен — создаёт заглушку в виде HTML файла.
 """
 
-import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Optional
 
 import structlog
@@ -33,7 +33,7 @@ async def get_next_doc_number(doc_type: DocumentType) -> str:
     Returns:
         Строка с номером документа
     """
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     prefix = DocumentRecord.get_document_prefix(doc_type)
 
     last_doc = (
@@ -114,7 +114,7 @@ def _build_invoice_html(order, doc_number: str) -> str:
         HTML строка
     """
     seller = _get_seller_info()
-    today = datetime.now(timezone.utc).strftime("%d.%m.%Y")
+    today = datetime.now(UTC).strftime("%d.%m.%Y")
 
     # Реквизиты покупателя
     buyer_name = order.client_name
@@ -212,7 +212,7 @@ def _build_torg12_html(order, doc_number: str) -> str:
     Строит HTML для товарной накладной ТОРГ-12.
     """
     seller = _get_seller_info()
-    today = datetime.now(timezone.utc).strftime("%d.%m.%Y")
+    today = datetime.now(UTC).strftime("%d.%m.%Y")
 
     rows_html = ""
     for i, item in enumerate(order.items, 1):
@@ -330,25 +330,25 @@ async def _save_pdf(html: str, filename: str) -> Optional[str]:
     Returns:
         Путь к файлу или None при ошибке
     """
-    os.makedirs(DOCUMENTS_DIR, exist_ok=True)
-    filepath = os.path.join(DOCUMENTS_DIR, filename)
+    Path(DOCUMENTS_DIR).mkdir(parents=True, exist_ok=True)
+    filepath = Path(DOCUMENTS_DIR) / filename
 
     try:
         import weasyprint
 
         weasyprint.HTML(string=html).write_pdf(filepath)
         logger.info("PDF сгенерирован через WeasyPrint", filename=filename)
-        return filepath
+        return str(filepath)
     except ImportError:
         # WeasyPrint не установлен — сохраняем HTML как fallback
-        html_filepath = filepath.replace(".pdf", ".html")
-        with open(html_filepath, "w", encoding="utf-8") as f:
+        html_filepath = str(filepath).replace(".pdf", ".html")
+        with Path(html_filepath).open("w", encoding="utf-8") as f:
             f.write(html)
         logger.warning(
             "WeasyPrint не установлен, сохранён HTML",
-            html_filename=os.path.basename(html_filepath),
+            html_filename=Path(html_filepath).name,
         )
-        return html_filepath
+        return str(html_filepath)
     except Exception as e:
         logger.error("Ошибка генерации PDF", error=str(e), filename=filename)
         return None
@@ -367,7 +367,7 @@ async def generate_invoice(order) -> Optional[DocumentRecord]:
     client_id = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
 
     doc_number = await get_next_doc_number(DocumentType.INVOICE)
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
 
     html = _build_invoice_html(order, doc_number)
     filename = f"invoice_{order.order_number}_{doc_number.replace('/', '-')}.pdf"
@@ -375,7 +375,7 @@ async def generate_invoice(order) -> Optional[DocumentRecord]:
 
     # URL для скачивания
     file_url = f"/api/v1/documents/files/{filename}" if filepath else None
-    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
+    file_size = Path(filepath).stat().st_size if filepath and Path(filepath).exists() else None
 
     doc = DocumentRecord(
         doc_type=DocumentType.INVOICE,
@@ -387,6 +387,8 @@ async def generate_invoice(order) -> Optional[DocumentRecord]:
         file_url=file_url,
         file_name=filename,
         file_size_bytes=file_size,
+        created_at=datetime.now(UTC),
+        created_by="system",
     )
     await doc.insert()
 
@@ -412,14 +414,14 @@ async def generate_torg12(order) -> Optional[DocumentRecord]:
     client_id = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
 
     doc_number = await get_next_doc_number(DocumentType.TORG12)
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
 
     html = _build_torg12_html(order, doc_number)
     filename = f"torg12_{order.order_number}_{doc_number.replace('/', '-')}.pdf"
     filepath = await _save_pdf(html, filename)
 
     file_url = f"/api/v1/documents/files/{filename}" if filepath else None
-    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
+    file_size = Path(filepath).stat().st_size if filepath and Path(filepath).exists() else None
 
     doc = DocumentRecord(
         doc_type=DocumentType.TORG12,
@@ -431,6 +433,8 @@ async def generate_torg12(order) -> Optional[DocumentRecord]:
         file_url=file_url,
         file_name=filename,
         file_size_bytes=file_size,
+        created_at=datetime.now(UTC),
+        created_by="system",
     )
     await doc.insert()
 
@@ -454,7 +458,7 @@ async def generate_labels(products: list, order_id: Optional[str] = None) -> Opt
     Returns:
         DocumentRecord
     """
-    today_str = datetime.now(timezone.utc).strftime("%d.%m.%Y")
+    today_str = datetime.now(UTC).strftime("%d.%m.%Y")
 
     label_html = """<!DOCTYPE html>
 <html lang="ru">
@@ -496,12 +500,12 @@ async def generate_labels(products: list, order_id: Optional[str] = None) -> Opt
     label_html += "</body></html>"
 
     doc_number = await get_next_doc_number(DocumentType.LABEL)
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     filename = f"labels_{today_str.replace('.', '')}_{doc_number.replace('/', '-')}.pdf"
     filepath = await _save_pdf(label_html, filename)
 
     file_url = f"/api/v1/documents/files/{filename}" if filepath else None
-    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
+    file_size = Path(filepath).stat().st_size if filepath and Path(filepath).exists() else None
 
     doc = DocumentRecord(
         doc_type=DocumentType.LABEL,
@@ -513,6 +517,8 @@ async def generate_labels(products: list, order_id: Optional[str] = None) -> Opt
         file_url=file_url,
         file_name=filename,
         file_size_bytes=file_size,
+        created_at=datetime.now(UTC),
+        created_by="system",
     )
     await doc.insert()
 
@@ -550,7 +556,7 @@ def _build_reconciliation_html(
     Returns:
         HTML строка
     """
-    today = datetime.now(timezone.utc).strftime("%d.%m.%Y")
+    today = datetime.now(UTC).strftime("%d.%m.%Y")
 
     # Строки таблицы транзакций
     rows_html = f"""
@@ -709,15 +715,17 @@ async def generate_reconciliation_act(
         bytes — PDF или HTML файл
     """
     from datetime import datetime as dt
+
     from beanie import PydanticObjectId
+
+    from app.models.order import Order, OrderStatus
     from app.models.user import User
-    from app.models.order import Order, OrderStatus, PaymentStatus
 
     # Получаем клиента
     try:
         client = await User.get(PydanticObjectId(client_id))
-    except Exception:
-        raise ValueError(f"Клиент с ID {client_id} не найден")
+    except Exception as e:
+        raise ValueError(f"Клиент с ID {client_id} не найден") from e
 
     if not client:
         raise ValueError(f"Клиент с ID {client_id} не найден")
@@ -730,8 +738,8 @@ async def generate_reconciliation_act(
     date_to_str = date_to.strftime("%d.%m.%Y")
 
     # Конвертируем даты в datetime для MongoDB
-    start_dt = dt(date_from.year, date_from.month, date_from.day, 0, 0, 0, tzinfo=timezone.utc)
-    end_dt = dt(date_to.year, date_to.month, date_to.day, 23, 59, 59, tzinfo=timezone.utc)
+    start_dt = dt(date_from.year, date_from.month, date_from.day, 0, 0, 0, tzinfo=UTC)
+    end_dt = dt(date_to.year, date_to.month, date_to.day, 23, 59, 59, tzinfo=UTC)
 
     # Заказы клиента за период (только доставленные или подтверждённые)
     orders = (
@@ -821,9 +829,9 @@ async def generate_reconciliation_act(
 
     # Сохраняем запись в БД
     doc_number = await get_next_doc_number(DocumentType.ACT_SVERKI)
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     file_url = f"/admin/documents/files/{filename}" if filepath else None
-    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
+    file_size = Path(filepath).stat().st_size if filepath and Path(filepath).exists() else None
 
     doc_record = DocumentRecord(
         doc_type=DocumentType.ACT_SVERKI,
@@ -847,8 +855,8 @@ async def generate_reconciliation_act(
     )
 
     # Читаем и возвращаем байты
-    if filepath and os.path.exists(filepath):
-        with open(filepath, "rb") as f:
+    if filepath and Path(filepath).exists():
+        with Path(filepath).open("rb") as f:
             return f.read()
     else:
         return html.encode("utf-8")
@@ -859,7 +867,7 @@ async def generate_reconciliation_act(
 
 def _build_contract_number(contract_type: str, counter: int) -> str:
     """Генерирует номер договора в формате ДГ-YYYY-NNNNN."""
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     prefix_map = {
         "supply": "ДП",  # Договор поставки
         "supply_44fz": "ГК",  # Госконтракт 44-ФЗ
@@ -1177,13 +1185,14 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
         raise ValueError(f"Допустимые типы договоров: {', '.join(valid_types)}")
 
     from beanie import PydanticObjectId
+
     from app.models.user import User
 
     # Получаем клиента
     try:
         client = await User.get(PydanticObjectId(client_id))
-    except Exception:
-        raise ValueError(f"Клиент с ID {client_id} не найден")
+    except Exception as e:
+        raise ValueError(f"Клиент с ID {client_id} не найден") from e
 
     if not client:
         raise ValueError(f"Клиент с ID {client_id} не найден")
@@ -1201,14 +1210,14 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
 
     # Генерируем номер договора
     # Получаем счётчик из коллекции документов
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     existing_contracts = await DocumentRecord.find(
         DocumentRecord.doc_type == DocumentType.CONTRACT,
         DocumentRecord.year == year,
     ).count()
     contract_counter = existing_contracts + 1
     contract_number = _build_contract_number(contract_type, contract_counter)
-    today = datetime.now(timezone.utc).strftime("%d.%m.%Y")
+    today = datetime.now(UTC).strftime("%d.%m.%Y")
 
     # Выбираем шаблон
     if contract_type == "supply":
@@ -1246,7 +1255,7 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
 
     # Сохраняем запись в БД
     file_url = f"/admin/documents/files/{filename}" if filepath else None
-    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
+    file_size = Path(filepath).stat().st_size if filepath and Path(filepath).exists() else None
 
     doc_record = DocumentRecord(
         doc_type=DocumentType.CONTRACT,
@@ -1269,8 +1278,8 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
     )
 
     # Возвращаем байты
-    if filepath and os.path.exists(filepath):
-        with open(filepath, "rb") as f:
+    if filepath and Path(filepath).exists():
+        with Path(filepath).open("rb") as f:
             return f.read()
     else:
         return html.encode("utf-8")

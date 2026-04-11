@@ -9,8 +9,8 @@
 - Автонумерация приходов
 """
 
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
+from typing import Optional
 
 import structlog
 
@@ -27,7 +27,7 @@ async def get_next_receipt_number() -> str:
 
     Атомарно: ищет максимальный номер за текущий год.
     """
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     prefix = f"REC-{year}-"
 
     # Ищем последний приход этого года
@@ -99,10 +99,10 @@ async def create_stock_receipt(data: dict, created_by: Optional[str] = None) -> 
     from beanie import PydanticObjectId
 
     receipt_number = await get_next_receipt_number()
-    receipt_date = data.get("date") or datetime.now(timezone.utc).date()
+    receipt_date = data.get("date") or datetime.now(UTC).date()
 
     # Строим позиции прихода
-    receipt_items: List[StockReceiptItem] = []
+    receipt_items: list[StockReceiptItem] = []
     total_amount = 0.0
 
     for item_data in data["items"]:
@@ -138,7 +138,7 @@ async def create_stock_receipt(data: dict, created_by: Optional[str] = None) -> 
         new_wac = await update_weighted_average_cost(product, qty, cost_price)
         product.cost_price = new_wac
         product.stock_qty = round(product.stock_qty + qty, 3)
-        product.updated_at = datetime.now(timezone.utc)
+        product.updated_at = datetime.now(UTC)
         await product.save()
 
         logger.info(
@@ -186,12 +186,11 @@ async def create_stock_receipt(data: dict, created_by: Optional[str] = None) -> 
     return receipt
 
 
-async def _check_low_stock_after_receipt(receipt_items: List[StockReceiptItem]) -> None:
+async def _check_low_stock_after_receipt(receipt_items: list[StockReceiptItem]) -> None:
     """
     После прихода проверяет, не опустились ли товары ниже минимума.
     Используется только как инфо-проверка (обычно после прихода остатки растут).
     """
-    pass
 
 
 async def reserve_stock(items: list) -> None:
@@ -227,7 +226,7 @@ async def reserve_stock(items: list) -> None:
             )
 
         product.stock_qty = round(product.stock_qty - qty, 3)
-        product.updated_at = datetime.now(timezone.utc)
+        product.updated_at = datetime.now(UTC)
         await product.save()
 
         logger.info(
@@ -271,7 +270,7 @@ async def release_stock(items: list) -> None:
             continue
 
         product.stock_qty = round(product.stock_qty + qty, 3)
-        product.updated_at = datetime.now(timezone.utc)
+        product.updated_at = datetime.now(UTC)
         await product.save()
 
         logger.info(
@@ -327,17 +326,16 @@ async def create_batch(receipt_item: StockReceiptItem, receipt: StockReceipt) ->
     Returns:
         Созданная партия
     """
-    from datetime import date as date_type
 
-    from beanie import PydanticObjectId as PO_ID
+    from beanie import PydanticObjectId
 
     from app.models.batch import Batch
 
     batch = Batch(
-        product_id=PO_ID(receipt_item.product_id),
+        product_id=PydanticObjectId(receipt_item.product_id),
         product_name=receipt_item.product_name,
         receipt_id=receipt.id,
-        supplier_id=PO_ID(receipt.supplier_id) if receipt.supplier_id else None,
+        supplier_id=PydanticObjectId(receipt.supplier_id) if receipt.supplier_id else None,
         supplier_name=receipt.supplier_name,
         qty_initial=receipt_item.qty,
         qty_remaining=receipt_item.qty,
@@ -345,7 +343,7 @@ async def create_batch(receipt_item: StockReceiptItem, receipt: StockReceipt) ->
         cost_price=receipt_item.cost_price,
         received_date=receipt.date,
         is_exhausted=False,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     await batch.insert()
 
@@ -377,7 +375,7 @@ async def consume_batches_fifo(product_id: str, qty: float) -> list:
     Raises:
         ValueError: Если суммарного остатка в партиях недостаточно
     """
-    from beanie import PydanticObjectId as PO_ID
+    from beanie import PydanticObjectId
 
     from app.models.batch import Batch
 
@@ -385,12 +383,12 @@ async def consume_batches_fifo(product_id: str, qty: float) -> list:
     batches = (
         await Batch.find(
             {
-                "product_id": PO_ID(product_id),
+                "product_id": PydanticObjectId(product_id),
                 "is_exhausted": False,
                 "qty_remaining": {"$gt": 0},
             }
         )
-        .sort(+Batch.received_date)
+        .sort(Batch.received_date)
         .to_list()
     )
 
@@ -445,7 +443,8 @@ async def get_expiring_batches(days: int = 7) -> list:
     Returns:
         Список словарей с данными о партиях
     """
-    from datetime import date as date_type, timedelta
+    from datetime import date as date_type
+    from datetime import timedelta
 
     from app.models.batch import Batch
 
@@ -531,8 +530,9 @@ async def notify_stock_waitlist(receipt_items: list) -> None:
 
         # Получаем slug товара для ссылки
         try:
-            from app.models.product import Product
             from beanie import PydanticObjectId
+
+            from app.models.product import Product
 
             product = await Product.get(PydanticObjectId(entry.product_id))
             product_slug = product.slug if product else "unknown"
@@ -547,10 +547,10 @@ async def notify_stock_waitlist(receipt_items: list) -> None:
         )
 
         if ok:
-            from datetime import datetime, timezone
+            from datetime import datetime
 
             entry.is_notified = True
-            entry.notified_at = datetime.now(timezone.utc)
+            entry.notified_at = datetime.now(UTC)
             await entry.save()
             notified_count += 1
             logger.info(

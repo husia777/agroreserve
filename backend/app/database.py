@@ -3,7 +3,7 @@
 Инициализация Beanie ODM с регистрацией всех документов.
 """
 
-from typing import Optional, Sequence
+from typing import Optional
 
 import structlog
 from beanie import init_beanie
@@ -26,32 +26,32 @@ async def connect_to_mongo() -> None:
     global _client, _database
 
     # Импортируем все Beanie документы для регистрации (v1)
-    from app.models.user import User
-    from app.models.product import Product, Category
-    from app.models.order import Order
+    from app.models.batch import Batch
     from app.models.cart import Cart
-    from app.models.stock import StockReceipt
-    from app.models.finance import Expense
     from app.models.certificate import Certificate
+    from app.models.contract import Contract
+
+    # Импортируем v2 документы (Группы 4-5) — CRM
+    from app.models.crm import ClientInteraction, ClientNote
+    from app.models.dish import Dish
     from app.models.document import DocumentRecord as Document
+    from app.models.finance import Expense
+    from app.models.menu import Menu
     from app.models.notification import Notification
+    from app.models.order import Order
+    from app.models.price_log import PriceLog
+    from app.models.product import Category, Product
+    from app.models.reminder import Reminder
     from app.models.settings import SystemSettings
+    from app.models.standing_order import StandingOrder
+    from app.models.stock import StockReceipt
+    from app.models.stock_waitlist import StockWaitlist
 
     # Импортируем v2 документы (Группы 1-3)
     from app.models.supplier import Supplier
-    from app.models.contract import Contract
-    from app.models.dish import Dish
-    from app.models.menu import Menu
-    from app.models.write_off import WriteOff
-    from app.models.reminder import Reminder
-    from app.models.standing_order import StandingOrder
-    from app.models.batch import Batch
     from app.models.tender import Tender
-    from app.models.price_log import PriceLog
-    from app.models.stock_waitlist import StockWaitlist
-
-    # Импортируем v2 документы (Группы 4-5) — CRM
-    from app.models.crm import ClientNote, ClientInteraction
+    from app.models.user import User
+    from app.models.write_off import WriteOff
 
     logger.info("Подключение к MongoDB", uri=settings.MONGODB_URI[:50] + "...")
 

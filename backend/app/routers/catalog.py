@@ -8,16 +8,14 @@
 """
 
 import math
-from typing import List, Optional
+from typing import Optional
 
 import structlog
-from beanie.operators import In, RegEx, Text
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.models.product import Category, Product
 from app.schemas.product import (
     CategoryResponse,
-    ProductFilters,
     ProductListResponse,
     ProductResponse,
 )
@@ -67,7 +65,7 @@ logger = structlog.get_logger(__name__)
 
 @router.get(
     "/categories",
-    response_model=List[CategoryResponse],
+    response_model=list[CategoryResponse],
     summary="Список категорий",
     description="Возвращает активные категории, отсортированные по sort_order.",
 )
@@ -137,7 +135,7 @@ async def get_products(
 
                 cat = await Category.get(PydanticObjectId(category))
             except Exception:
-                pass
+                logger.warning("Категория не найдена по slug или id", category=category)
 
         if cat:
             query_conditions["category_id.$id"] = cat.id
@@ -231,6 +229,10 @@ async def get_product_by_slug(
                 cat_name = cat.name
                 cat_slug = cat.slug or ""
         except Exception:
-            pass
+            logger.warning(
+                "Ошибка получения категории для товара",
+                product_id=str(product.id),
+                category_id=str(product.category_id),
+            )
 
     return ProductResponse(**_product_to_response(product, cat_name, is_b2b, category_slug=cat_slug))

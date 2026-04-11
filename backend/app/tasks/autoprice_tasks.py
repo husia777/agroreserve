@@ -5,6 +5,7 @@ UC-17: Еженедельная отправка прайс-листа всем 
 """
 
 import asyncio
+from datetime import UTC
 
 import structlog
 
@@ -62,18 +63,16 @@ def send_pricelist_telegram(self) -> dict:
     """
 
     async def _execute() -> dict:
-        from app.database import connect_to_mongo
-
         await connect_to_mongo()
 
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from app.config import settings
         from app.models.product import Category, Product
         from app.models.user import User, UserRole
         from app.utils.telegram_bot import send_message
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         date_str = now.strftime("%d.%m.%Y")
 
         clients_sent = 0
@@ -104,8 +103,7 @@ def send_pricelist_telegram(self) -> dict:
         # ── 2. Группируем по категориям ───────────────────────
         # Собираем категории
         category_ids = list(
-            {str(p.category_id.id) if hasattr(p.category_id, "id")
-             else str(p.category_id) for p in products}
+            {str(p.category_id.id) if hasattr(p.category_id, "id") else str(p.category_id) for p in products}
         )
         categories: dict = {}
 
@@ -124,8 +122,7 @@ def send_pricelist_telegram(self) -> dict:
         # Группируем товары по категориям
         grouped: dict = {}
         for product in products:
-            cat_id = str(product.category_id.id) if hasattr(
-                product.category_id, "id") else str(product.category_id)
+            cat_id = str(product.category_id.id) if hasattr(product.category_id, "id") else str(product.category_id)
             cat_name = categories.get(cat_id, "Прочее")
             if cat_name not in grouped:
                 grouped[cat_name] = []
@@ -133,7 +130,7 @@ def send_pricelist_telegram(self) -> dict:
 
         # ── 3. Формируем прайс-лист ───────────────────────────
         lines = [
-            f"🌿 <b>АГРОРЕЗЕРВ — Прайс-лист</b>",
+            "🌿 <b>АГРОРЕЗЕРВ — Прайс-лист</b>",
             f"📅 {date_str}",
             "",
             "Актуальные цены на оптовую поставку:",
@@ -153,28 +150,23 @@ def send_pricelist_telegram(self) -> dict:
         }
 
         for cat_name, cat_products in sorted(grouped.items()):
-            emoji = next((v for k, v in category_emojis.items()
-                         if k.lower() in cat_name.lower()), "📦")
+            emoji = next((v for k, v in category_emojis.items() if k.lower() in cat_name.lower()), "📦")
             lines.append(f"{emoji} <b>{cat_name}</b>")
 
             for product in cat_products:
                 price = product.price_wholesale
-                unit = product.unit.value if hasattr(
-                    product.unit, "value") else product.unit
+                unit = product.unit.value if hasattr(product.unit, "value") else product.unit
                 if product.stock_qty > 0:
-                    lines.append(
-                        f"  • {product.name} — {_format_price(price)} ₽/{unit}")
+                    lines.append(f"  • {product.name} — {_format_price(price)} ₽/{unit}")
                 else:
-                    lines.append(
-                        f"  • {product.name} — {_format_price(price)} ₽/{unit} (нет в наличии)")
+                    lines.append(f"  • {product.name} — {_format_price(price)} ₽/{unit} (нет в наличии)")
 
             lines.append("")
 
         lines.extend(
             [
                 "💬 Для заказа отвечайте на это сообщение",
-                "📱 или звоните: " +
-                    (settings.TELEGRAM_ADMIN_CHAT_ID and "+7 (xxx) xxx-xx-xx" or "+7 (xxx) xxx-xx-xx"),
+                "📱 или звоните: " + (settings.TELEGRAM_ADMIN_CHAT_ID and "+7 (xxx) xxx-xx-xx" or "+7 (xxx) xxx-xx-xx"),
                 "",
                 "🚚 Бесплатная доставка по Тобольску",
                 "📑 Полный пакет документов (ТОРГ-12, счёт, декларации)",
@@ -244,4 +236,4 @@ def send_pricelist_telegram(self) -> dict:
         return dict(_run_async(_execute()))
     except Exception as exc:
         logger.error("Ошибка задачи send_pricelist_telegram", error=str(exc))
-        raise self.retry(exc=exc)
+        return {"status": "error", "error": str(exc)}

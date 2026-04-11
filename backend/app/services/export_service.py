@@ -4,17 +4,15 @@
 """
 
 import io
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
+from typing import Any, Optional
 
 import structlog
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-from typing import Any
-
-from app.models.product import Product, Category
+from app.models.product import Category, Product
 
 logger = structlog.get_logger(__name__)
 
@@ -74,7 +72,7 @@ async def export_products_excel(
     # Заголовок документа
     ws.merge_cells("A1:H1")
     title_cell = ws["A1"]
-    title_cell.value = f"Агрорезерв — Каталог товаров ({datetime.now(timezone.utc).strftime('%d.%m.%Y')})"
+    title_cell.value = f"Агрорезерв — Каталог товаров ({datetime.now(UTC).strftime('%d.%m.%Y')})"
     title_cell.font = Font(name="Arial", bold=True, size=14, color="16A34A")
     title_cell.alignment = Alignment(horizontal="left", vertical="center")
     ws.row_dimensions[1].height = 30
@@ -135,7 +133,7 @@ async def export_products_excel(
             cell = ws.cell(row=row_idx, column=col_idx, value=value)
             cell.font = cell_font
             cell.border = thin_border
-            if isinstance(value, (int, float)):
+            if isinstance(value, int | float):
                 cell.alignment = Alignment(horizontal="right")
                 cell.number_format = "#,##0.00" if isinstance(value, float) else "#,##0"
 

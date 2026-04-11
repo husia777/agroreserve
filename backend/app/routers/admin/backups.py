@@ -10,6 +10,7 @@ import gzip
 import json
 import os
 from datetime import UTC, datetime
+from pathlib import Path
 
 import structlog
 from bson import json_util
@@ -77,17 +78,16 @@ def _human_size(size_bytes: int) -> str:
     """Форматирует размер в читаемый вид."""
     if size_bytes < 1024:
         return f"{size_bytes} Б"
-    elif size_bytes < 1024 * 1024:
+    if size_bytes < 1024 * 1024:
         return f"{size_bytes / 1024:.1f} КБ"
-    elif size_bytes < 1024 * 1024 * 1024:
+    if size_bytes < 1024 * 1024 * 1024:
         return f"{size_bytes / (1024 * 1024):.1f} МБ"
-    else:
-        return f"{size_bytes / (1024 * 1024 * 1024):.2f} ГБ"
+    return f"{size_bytes / (1024 * 1024 * 1024):.2f} ГБ"
 
 
 def _list_backups():
     """Сканирует директорию бэкапов."""
-    os.makedirs(BACKUP_DIR, exist_ok=True)
+    Path(BACKUP_DIR).mkdir(parents=True, exist_ok=True)
     backups = []
 
     for entry in os.scandir(BACKUP_DIR):
@@ -160,7 +160,7 @@ def _rotate_backups(max_count=7):
         )
         for old_entry in entries[max_count:]:
             try:
-                os.remove(old_entry.path)
+                Path(old_entry.path).unlink()
                 logger.info("Старый бэкап удалён", path=old_entry.path)
             except Exception as e:
                 logger.warning("Не удалось удалить", path=old_entry.path, error=str(e))
@@ -192,8 +192,8 @@ async def create_backup(admin=Depends(require_admin)):
     """Создаёт полный бэкап базы данных MongoDB в сжатый JSON."""
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     backup_name = f"backup_{timestamp}.json.gz"
-    backup_path = os.path.join(BACKUP_DIR, backup_name)
-    os.makedirs(BACKUP_DIR, exist_ok=True)
+    backup_path = Path(BACKUP_DIR) / backup_name
+    Path(BACKUP_DIR).mkdir(parents=True, exist_ok=True)
 
     logger.info("Создание бэкапа", admin_id=str(admin.id), backup_name=backup_name)
 
@@ -203,7 +203,7 @@ async def create_backup(admin=Depends(require_admin)):
         with gzip.open(backup_path, "wb") as f:
             f.write(json_bytes)
 
-        size = os.path.getsize(backup_path)
+        size = Path(backup_path).stat().st_size
         meta = dump["meta"]
         _rotate_backups(max_count=7)
 
@@ -224,7 +224,7 @@ async def create_backup(admin=Depends(require_admin)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка создания бэкапа: {e!s}",
-        )
+        ) from e
 
 
 @router.get(
@@ -233,8 +233,8 @@ async def create_backup(admin=Depends(require_admin)):
 )
 async def download_backup(backup_name: str, admin=Depends(require_admin)):
     """Скачивает файл бэкапа."""
-    backup_path = os.path.join(BACKUP_DIR, backup_name)
-    if not os.path.exists(backup_path):
+    backup_path = Path(BACKUP_DIR) / backup_name
+    if not backup_path.exists():
         raise HTTPException(status_code=404, detail=f"Бэкап '{backup_name}' не найден")
 
     return FileResponse(path=backup_path, filename=backup_name, media_type="application/gzip")
@@ -247,8 +247,8 @@ async def download_backup(backup_name: str, admin=Depends(require_admin)):
 )
 async def restore_backup(backup_name: str, admin=Depends(require_admin)):
     """Восстанавливает базу из бэкапа. Перезаписывает текущие данные!"""
-    backup_path = os.path.join(BACKUP_DIR, backup_name)
-    if not os.path.exists(backup_path):
+    backup_path = Path(BACKUP_DIR) / backup_name
+    if not backup_path.exists():
         raise HTTPException(status_code=404, detail=f"Бэкап '{backup_name}' не найден")
 
     logger.warning("Восстановление из бэкапа", backup_name=backup_name, admin_id=str(admin.id))
@@ -282,7 +282,7 @@ async def restore_backup(backup_name: str, admin=Depends(require_admin)):
 
     except Exception as e:
         logger.error("Ошибка восстановления", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Ошибка восстановления: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Ошибка восстановления: {e!s}") from e
 
 
 @router.delete(
@@ -292,12 +292,12 @@ async def restore_backup(backup_name: str, admin=Depends(require_admin)):
 )
 async def delete_backup(backup_name: str, admin=Depends(require_admin)):
     """Удаляет указанный бэкап."""
-    backup_path = os.path.join(BACKUP_DIR, backup_name)
-    if not os.path.exists(backup_path):
+    backup_path = Path(BACKUP_DIR) / backup_name
+    if not backup_path.exists():
         raise HTTPException(status_code=404, detail=f"Бэкап '{backup_name}' не найден")
 
     try:
-        os.remove(backup_path)
+        backup_path.unlink()
         logger.info("Бэкап удалён", backup_name=backup_name)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Не удалось удалить: {e!s}")
+        logger.error("Ошибка удаления бэкапа", backup_name=backup_name, error=str(e))

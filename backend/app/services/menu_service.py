@@ -10,9 +10,10 @@ UC-146: Бюджетный контроль 44-ФЗ лимит на питани
 + Все существующие функции из menu_service.py
 """
 
-from datetime import date, datetime, timedelta, timezone
+import contextlib
 import uuid
-from typing import Any, Dict, List, Optional
+from datetime import UTC, date, datetime, timedelta
+from typing import Any, Optional
 
 import structlog
 from beanie import PydanticObjectId
@@ -23,8 +24,6 @@ from app.models.product import Product
 from app.services.sanpin_norms import (
     MEAL_DISTRIBUTION,
     MEAL_LABELS,
-    SANPIN_NORMS,
-    NutritionNorm,
     get_norm,
 )
 
@@ -36,9 +35,9 @@ logger = structlog.get_logger(__name__)
 # ══════════════════════════════════════════════════════════════
 
 
-async def calculate_ingredients(menu: Menu) -> Dict[str, Any]:
+async def calculate_ingredients(menu: Menu) -> dict[str, Any]:
     """Рассчитывает суммарные ингредиенты для всего меню."""
-    ingredient_totals: Dict[str, Dict[str, Any]] = {}
+    ingredient_totals: dict[str, dict[str, Any]] = {}
 
     for day in menu.days:
         for menu_item in day.items:
@@ -67,7 +66,7 @@ async def calculate_ingredients(menu: Menu) -> Dict[str, Any]:
     return ingredient_totals
 
 
-async def calculate_kbzhu(menu: Menu) -> List[Dict[str, Any]]:
+async def calculate_kbzhu(menu: Menu) -> list[dict[str, Any]]:
     """Рассчитывает КБЖУ по дням меню."""
     daily_kbzhu = []
 
@@ -79,7 +78,7 @@ async def calculate_kbzhu(menu: Menu) -> List[Dict[str, Any]]:
         day_portions = 0
         meals_info = []
 
-        meals_by_type: Dict[str, List] = {}
+        meals_by_type: dict[str, list] = {}
         for menu_item in day.items:
             meal_type = menu_item.meal_type
             if meal_type not in meals_by_type:
@@ -153,7 +152,7 @@ async def generate_order_from_menu(menu: Menu, user: Any) -> Any:
     cart_items = []
     skipped = []
 
-    for key, ingredient in ingredients.items():
+    for _key, ingredient in ingredients.items():
         if not ingredient["product_id"]:
             skipped.append(ingredient["name"])
             continue
@@ -252,7 +251,7 @@ async def recalculate_menu_totals(menu: Menu) -> Menu:
 # ══════════════════════════════════════════════════════════════
 
 
-async def generate_kbzhu_pdf(menu: Menu, age_group: str = "school_7_11") -> Dict[str, Any]:
+async def generate_kbzhu_pdf(menu: Menu, age_group: str = "school_7_11") -> dict[str, Any]:
     """
     Формирует данные для КБЖУ-отчёта с проверкой по СанПиН.
 
@@ -302,7 +301,7 @@ async def generate_kbzhu_pdf(menu: Menu, age_group: str = "school_7_11") -> Dict
         "compliance": compliance,
         "sanpin_compliant": compliance.get("compliant", False) if compliance else False,
         "total_portions": menu.total_portions,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }
 
     logger.info(
@@ -325,8 +324,8 @@ async def auto_generate_weekly_menu(
     age_group: str,
     children_count: int,
     week_start: date,
-    meals_config: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    meals_config: Optional[list[str]] = None,
+) -> dict[str, Any]:
     """
     Автоматически генерирует меню на неделю из имеющихся блюд в БД.
 
@@ -355,7 +354,7 @@ async def auto_generate_weekly_menu(
         raise ValueError("В базе нет блюд. Добавьте блюда в справочник.")
 
     # Группируем блюда по категориям
-    dishes_by_category: Dict[str, List[Dish]] = {}
+    dishes_by_category: dict[str, list[Dish]] = {}
     for dish in all_dishes:
         cat = dish.category or "other"
         if cat not in dishes_by_category:
@@ -457,7 +456,7 @@ async def calculate_menu_cost(
     menu: Menu,
     children_count: int = 1,
     is_b2b: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Рассчитывает полную стоимость меню с разбивкой по дням и продуктам.
 
@@ -475,13 +474,11 @@ async def calculate_menu_cost(
     total_cost = 0.0
     products_not_found = []
 
-    for key, ingredient in ingredients.items():
+    for _key, ingredient in ingredients.items():
         product = None
         if ingredient["product_id"]:
-            try:
+            with contextlib.suppress(Exception):
                 product = await Product.get(PydanticObjectId(ingredient["product_id"]))
-            except Exception:
-                pass
 
         qty_kg = ingredient["qty_kg"]
         if product:
@@ -524,7 +521,7 @@ async def calculate_menu_cost(
             "cost_per_child": cost_per_child,
             "cost_per_child_per_day": cost_per_child_per_day,
         },
-        "calculated_at": datetime.now(timezone.utc).isoformat(),
+        "calculated_at": datetime.now(UTC).isoformat(),
     }
 
     logger.info(
@@ -546,8 +543,8 @@ async def calculate_menu_cost(
 async def generate_daily_cook_report(
     menu: Menu,
     report_date: date,
-    actual_portions: Optional[Dict[str, int]] = None,
-) -> Dict[str, Any]:
+    actual_portions: Optional[dict[str, int]] = None,
+) -> dict[str, Any]:
     """
     Формирует ежедневный отчёт повара: плановые vs фактические порции и расход продуктов.
 
@@ -572,8 +569,8 @@ async def generate_daily_cook_report(
     meals_report = []
     total_plan_portions = 0
     total_actual_portions = 0
-    ingredient_plan: Dict[str, float] = {}
-    ingredient_actual: Dict[str, float] = {}
+    ingredient_plan: dict[str, float] = {}
+    ingredient_actual: dict[str, float] = {}
 
     for menu_item in day_data.items:
         try:
@@ -642,7 +639,7 @@ async def generate_daily_cook_report(
             "actual_portions": total_actual_portions,
             "deviation_portions": total_actual_portions - total_plan_portions,
         },
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -655,7 +652,7 @@ async def check_budget_compliance(
     contract_id: str,
     menu: Menu,
     children_count: int = 1,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Проверяет укладывается ли стоимость меню в бюджет контракта 44-ФЗ.
 

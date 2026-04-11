@@ -71,7 +71,7 @@ async def get_suppliers(
             {"contact_person": {"$regex": search, "$options": "i"}},
         ]
 
-    total = await Supplier.find(query).count()
+    await Supplier.find(query).count()
     suppliers = await Supplier.find(query).sort(-Supplier.rating).skip((page - 1) * limit).limit(limit).to_list()
 
     return [_to_response(s) for s in suppliers]
@@ -129,8 +129,8 @@ async def get_supplier(
     """Детальная информация о поставщике."""
     try:
         supplier = await Supplier.get(PydanticObjectId(supplier_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден") from e
 
     if not supplier:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден")
@@ -153,8 +153,8 @@ async def update_supplier(
     """
     try:
         supplier = await Supplier.get(PydanticObjectId(supplier_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден") from e
 
     if not supplier:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден")
@@ -206,8 +206,8 @@ async def delete_supplier(
     """
     try:
         supplier = await Supplier.get(PydanticObjectId(supplier_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден") from e
 
     if not supplier:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден")
@@ -239,8 +239,8 @@ async def get_supplier_price_history(
     """
     try:
         supplier = await Supplier.get(PydanticObjectId(supplier_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден") from e
 
     if not supplier:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден")
@@ -249,13 +249,13 @@ async def get_supplier_price_history(
     if product_id:
         try:
             query["product_id"] = PydanticObjectId(product_id)
-        except Exception:
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Неверный формат product_id",
-            )
+            ) from e
 
-    price_logs = await PriceLog.find(query).sort(-PriceLog.logged_at).limit(limit).to_list()
+    price_logs = await PriceLog.find(query).sort(PriceLog.logged_at).limit(limit).to_list()
 
     return {
         "supplier_id": supplier_id,
@@ -290,8 +290,8 @@ async def get_supplier_products(
     """
     try:
         supplier = await Supplier.get(PydanticObjectId(supplier_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден") from e
 
     if not supplier:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Поставщик не найден")

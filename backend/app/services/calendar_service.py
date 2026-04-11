@@ -11,8 +11,7 @@ UC-50: Агрегирует события из разных источнико�
 """
 
 import calendar
-from datetime import date, datetime, timedelta, timezone
-from typing import List, Optional
+from datetime import UTC, date, datetime, timedelta
 
 import structlog
 
@@ -30,7 +29,7 @@ EVENT_COLORS = {
 }
 
 
-async def get_events(year: int, month: int) -> List[dict]:
+async def get_events(year: int, month: int) -> list[dict]:
     """
     UC-50: Собирает все события на указанный месяц из разных источников.
 
@@ -55,10 +54,10 @@ async def get_events(year: int, month: int) -> List[dict]:
     month_end = date(year, month, last_day)
 
     # Немного захватываем окрестности для удобства (±3 дня)
-    range_start = month_start - timedelta(days=3)
-    range_end = month_end + timedelta(days=3)
+    month_start - timedelta(days=3)
+    month_end + timedelta(days=3)
 
-    events: List[dict] = []
+    events: list[dict] = []
 
     # ── 1. Доставки из заказов ────────────────────────────────
     try:
@@ -109,8 +108,8 @@ async def get_events(year: int, month: int) -> List[dict]:
     try:
         from app.models.tender import Tender
 
-        start_dt = datetime(month_start.year, month_start.month, month_start.day, 0, 0, 0, tzinfo=timezone.utc)
-        end_dt = datetime(month_end.year, month_end.month, month_end.day, 23, 59, 59, tzinfo=timezone.utc)
+        start_dt = datetime(month_start.year, month_start.month, month_start.day, 0, 0, 0, tzinfo=UTC)
+        end_dt = datetime(month_end.year, month_end.month, month_end.day, 23, 59, 59, tzinfo=UTC)
 
         tenders = await Tender.find(
             {
@@ -149,7 +148,6 @@ async def get_events(year: int, month: int) -> List[dict]:
     # ── 3. Ожидаемые оплаты ──────────────────────────────────
     try:
         from app.models.order import Order, OrderStatus, PaymentStatus
-        from app.config import settings as app_settings
 
         # Заказы с pending-оплатой в доставленном статусе
         unpaid_orders = await Order.find(
@@ -194,8 +192,8 @@ async def get_events(year: int, month: int) -> List[dict]:
     try:
         from app.models.reminder import Reminder
 
-        start_dt = datetime(month_start.year, month_start.month, month_start.day, 0, 0, 0, tzinfo=timezone.utc)
-        end_dt = datetime(month_end.year, month_end.month, month_end.day, 23, 59, 59, tzinfo=timezone.utc)
+        start_dt = datetime(month_start.year, month_start.month, month_start.day, 0, 0, 0, tzinfo=UTC)
+        end_dt = datetime(month_end.year, month_end.month, month_end.day, 23, 59, 59, tzinfo=UTC)
 
         reminders = await Reminder.find(
             Reminder.remind_at >= start_dt,

@@ -56,14 +56,13 @@ async def send_message(chat_id: str, text: str, parse_mode: str = "HTML") -> boo
                     message_id=data.get("result", {}).get("message_id"),
                 )
                 return True
-            else:
-                logger.warning(
-                    "Telegram API вернул ошибку",
-                    chat_id=chat_id,
-                    status=response.status_code,
-                    error=data.get("description"),
-                )
-                return False
+            logger.warning(
+                "Telegram API вернул ошибку",
+                chat_id=chat_id,
+                status=response.status_code,
+                error=data.get("description"),
+            )
+            return False
 
     except Exception as e:
         logger.error("Ошибка отправки Telegram сообщения", chat_id=chat_id, error=str(e))
@@ -203,7 +202,7 @@ async def process_webhook_update(update: dict) -> Optional[str]:
             "После привязки вы будете получать уведомления о заказах здесь."
         )
 
-    elif text == "/help":
+    if text == "/help":
         return (
             "Команды бота:\n"
             "/start — начало работы\n"
@@ -212,8 +211,7 @@ async def process_webhook_update(update: dict) -> Optional[str]:
             "\nДля заказов перейдите на: agroreserve.ru"
         )
 
-    else:
-        return (
-            "Для оформления заказов используйте наш сайт: agroreserve.ru\n"
-            "Здесь мы отправляем уведомления о ваших заказах 📦"
-        )
+    return (
+        "Для оформления заказов используйте наш сайт: agroreserve.ru\n"
+        "Здесь мы отправляем уведомления о ваших заказах 📦"
+    )

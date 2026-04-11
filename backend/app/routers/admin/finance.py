@@ -248,8 +248,8 @@ async def update_expense(
     """Обновляет существующую запись о расходе."""
     try:
         expense = await Expense.get(PydanticObjectId(expense_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Расход не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Расход не найден") from e
 
     if not expense:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Расход не найден")
@@ -284,8 +284,8 @@ async def delete_expense(
     """Удаляет запись о расходе."""
     try:
         expense = await Expense.get(PydanticObjectId(expense_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Расход не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Расход не найден") from e
 
     if not expense:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Расход не найден")
@@ -413,7 +413,7 @@ async def reconcile_payments(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка при выполнении автосверки",
-        )
+        ) from e
 
     logger.info(
         "Автосверка оплат выполнена",

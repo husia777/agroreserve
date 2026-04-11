@@ -33,8 +33,8 @@ async def get_dashboard(admin=Depends(require_admin)) -> dict[str, Any]:
     from app.models.user import User, UserStatus
 
     today = date.today()
-    yesterday = today - timedelta(days=1)
-    now = datetime.now(UTC)
+    today - timedelta(days=1)
+    datetime.now(UTC)
 
     today_start = datetime(today.year, today.month, today.day, tzinfo=UTC)
     today_end = today_start + timedelta(days=1)

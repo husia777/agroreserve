@@ -13,13 +13,10 @@ class WriteOffCreate(BaseModel):
     product_id: str = Field(..., description="ID товара")
     qty: float = Field(..., gt=0, description="Количество для списания")
     unit: str = Field("kg", description="Единица измерения")
-    reason: str = Field(...,
-                        description="Причина: spoilage, expired, damage, other")
+    reason: str = Field(..., description="Причина: spoilage, expired, damage, other")
     description: Optional[str] = Field(None, description="Описание причины")
-    photo_url: Optional[str] = Field(
-        None, description="URL фото подтверждения")
-    batch_id: Optional[str] = Field(
-        None, description="ID конкретной партии (FIFO)")
+    photo_url: Optional[str] = Field(None, description="URL фото подтверждения")
+    batch_id: Optional[str] = Field(None, description="ID конкретной партии (FIFO)")
 
     class Config:
         json_schema_extra = {
@@ -68,9 +65,6 @@ class WriteOffAnalytics(BaseModel):
 
     total_loss: float = Field(..., description="Общий убыток (₽)")
     total_qty: float = Field(..., description="Общее количество списанного")
-    by_reason: list[dict[str, Any]] = Field(
-        default_factory=list, description="Группировка по причинам")
-    by_product: list[dict[str, Any]] = Field(
-        default_factory=list, description="Топ товаров по убыткам")
-    by_month: list[dict[str, Any]] = Field(
-        default_factory=list, description="Динамика по месяцам")
+    by_reason: list[dict[str, Any]] = Field(default_factory=list, description="Группировка по причинам")
+    by_product: list[dict[str, Any]] = Field(default_factory=list, description="Топ товаров по убыткам")
+    by_month: list[dict[str, Any]] = Field(default_factory=list, description="Динамика по месяцам")

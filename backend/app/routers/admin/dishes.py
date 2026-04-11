@@ -4,7 +4,7 @@
 """
 
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 
 import structlog
@@ -63,10 +63,8 @@ async def get_dishes(
     category: Optional[str] = Query(None, description="Фильтр по категории"),
     age_group: Optional[str] = Query(None, description="Возрастная группа"),
     search: Optional[str] = Query(None, description="Поиск по названию"),
-    is_active: Optional[bool] = Query(
-        None, description="Фильтр по активности"),
-    sanpin_only: bool = Query(
-        False, description="Только соответствующие СанПиН"),
+    is_active: Optional[bool] = Query(None, description="Фильтр по активности"),
+    sanpin_only: bool = Query(False, description="Только соответствующие СанПиН"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=200),
     _=Depends(require_admin),
@@ -129,8 +127,7 @@ async def create_dish(
         description=data.description,
         ingredients=[
             DishIngredient(
-                product_id=PydanticObjectId(
-                    i.product_id) if i.product_id else None,
+                product_id=PydanticObjectId(i.product_id) if i.product_id else None,
                 name=i.name,
                 qty_per_portion_g=i.qty_per_portion_g,
                 unit=i.unit,
@@ -145,7 +142,7 @@ async def create_dish(
         sanpin_compliant=data.sanpin_compliant,
         age_groups=data.age_groups,
         is_active=data.is_active,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     await dish.insert()
 
@@ -171,13 +168,11 @@ async def get_dish(
     """Детальная информация о блюде."""
     try:
         dish = await Dish.get(PydanticObjectId(dish_id))
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено") from e
 
     if not dish:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     return _to_response(dish)
 
@@ -197,13 +192,11 @@ async def update_dish(
     """
     try:
         dish = await Dish.get(PydanticObjectId(dish_id))
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено") from e
 
     if not dish:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     # Проверяем уникальность нового имени
     if data.name is not None and data.name != dish.name:
@@ -222,8 +215,7 @@ async def update_dish(
     if data.ingredients is not None:
         dish.ingredients = [
             DishIngredient(
-                product_id=PydanticObjectId(
-                    i.product_id) if i.product_id else None,
+                product_id=PydanticObjectId(i.product_id) if i.product_id else None,
                 name=i.name,
                 qty_per_portion_g=i.qty_per_portion_g,
                 unit=i.unit,
@@ -273,13 +265,11 @@ async def delete_dish(
     """
     try:
         dish = await Dish.get(PydanticObjectId(dish_id))
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено") from e
 
     if not dish:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     dish.is_active = False
     await dish.save()

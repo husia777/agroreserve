@@ -7,8 +7,8 @@
 - Генерацию актов приёмки
 """
 
-from datetime import date, datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, date, datetime
+from typing import Any, Optional
 
 import structlog
 from beanie import PydanticObjectId
@@ -35,8 +35,8 @@ async def update_completion(contract_id: str) -> float:
     """
     try:
         contract = await Contract.get(PydanticObjectId(contract_id))
-    except Exception:
-        raise ValueError(f"Контракт с ID {contract_id} не найден")
+    except Exception as e:
+        raise ValueError(f"Контракт с ID {contract_id} не найден") from e
 
     if not contract:
         raise ValueError(f"Контракт с ID {contract_id} не найден")
@@ -61,7 +61,7 @@ async def update_completion(contract_id: str) -> float:
             contract_number=contract.contract_number,
         )
 
-    contract.updated_at = datetime.now(timezone.utc)
+    contract.updated_at = datetime.now(UTC)
     await contract.save()
 
     logger.info(
@@ -74,7 +74,7 @@ async def update_completion(contract_id: str) -> float:
     return float(new_percent)
 
 
-async def check_overdue_contracts() -> List[Contract]:
+async def check_overdue_contracts() -> list[Contract]:
     """
     Находит просроченные активные контракты (end_date < сегодня, статус active).
 
@@ -96,7 +96,7 @@ async def check_overdue_contracts() -> List[Contract]:
     updated_ids = []
     for contract in overdue_contracts:
         contract.status = "overdue"
-        contract.updated_at = datetime.now(timezone.utc)
+        contract.updated_at = datetime.now(UTC)
         await contract.save()
         updated_ids.append(str(contract.id))
 
@@ -110,7 +110,7 @@ async def check_overdue_contracts() -> List[Contract]:
     return overdue_contracts
 
 
-async def generate_delivery_act(contract_id: str, delivery_index: int) -> Dict[str, Any]:
+async def generate_delivery_act(contract_id: str, delivery_index: int) -> dict[str, Any]:
     """
     Генерирует данные акта приёмки по поставке из графика.
 
@@ -126,8 +126,8 @@ async def generate_delivery_act(contract_id: str, delivery_index: int) -> Dict[s
     """
     try:
         contract = await Contract.get(PydanticObjectId(contract_id))
-    except Exception:
-        raise ValueError(f"Контракт с ID {contract_id} не найден")
+    except Exception as e:
+        raise ValueError(f"Контракт с ID {contract_id} не найден") from e
 
     if not contract:
         raise ValueError(f"Контракт с ID {contract_id} не найден")
@@ -156,7 +156,7 @@ async def generate_delivery_act(contract_id: str, delivery_index: int) -> Dict[s
 
     act_data = {
         "act_number": f"АКТ-{contract.contract_number}-{delivery_index + 1:02d}",
-        "act_date": datetime.now(timezone.utc).date().isoformat(),
+        "act_date": datetime.now(UTC).date().isoformat(),
         "contract_number": contract.contract_number,
         "contract_date": str(contract.start_date),
         "supplier": {
@@ -182,7 +182,7 @@ async def generate_delivery_act(contract_id: str, delivery_index: int) -> Dict[s
         "is_completed": delivery.is_completed,
         "order_id": str(delivery.order_id) if delivery.order_id else None,
         "completion_percent": contract.completion_percent,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }
 
     logger.info(
@@ -219,8 +219,8 @@ async def mark_delivery_completed(
     """
     try:
         contract = await Contract.get(PydanticObjectId(contract_id))
-    except Exception:
-        raise ValueError(f"Контракт с ID {contract_id} не найден")
+    except Exception as e:
+        raise ValueError(f"Контракт с ID {contract_id} не найден") from e
 
     if not contract:
         raise ValueError(f"Контракт с ID {contract_id} не найден")
@@ -245,7 +245,7 @@ async def mark_delivery_completed(
                 contract_item.delivered_qty = round(contract_item.delivered_qty + delivery_item.qty, 3)
                 break
 
-    contract.updated_at = datetime.now(timezone.utc)
+    contract.updated_at = datetime.now(UTC)
     await contract.save()
 
     # Пересчитываем % исполнения

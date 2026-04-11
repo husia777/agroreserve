@@ -6,7 +6,7 @@ UC-53: Управление напоминаниями — создание, п�
 """
 
 import math
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Optional
 
 import structlog
@@ -51,10 +51,10 @@ class ReminderCreate(BaseModel):
             dt = datetime.fromisoformat(self.remind_at)
             # Если нет таймзоны — считаем UTC
             if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
+                dt = dt.replace(tzinfo=UTC)
             return dt
-        except ValueError:
-            raise ValueError(f"Некорректный формат даты: {self.remind_at}")
+        except ValueError as e:
+            raise ValueError(f"Некорректный формат даты: {self.remind_at}") from e
 
 
 class ReminderUpdate(BaseModel):
@@ -82,11 +82,11 @@ class ReminderUpdate(BaseModel):
 
 def _reminder_to_dict(reminder: Reminder) -> dict:
     """Конвертирует Reminder в словарь (поля фронтенда)."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     # MongoDB может вернуть naive datetime — приводим к aware (UTC)
     remind_at = reminder.remind_at
     if remind_at.tzinfo is None:
-        remind_at = remind_at.replace(tzinfo=timezone.utc)
+        remind_at = remind_at.replace(tzinfo=UTC)
     is_overdue = not reminder.is_completed and remind_at < now
 
     return {
@@ -115,7 +115,7 @@ async def get_upcoming_reminders(
     admin=Depends(require_admin),
 ):
     """UC-53: Ближайшие невыполненные напоминания."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     threshold = now + timedelta(hours=hours)
 
     upcoming = (
@@ -187,7 +187,7 @@ async def create_reminder(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     # Валидация recurrence_rule
     if data.is_recurring and data.recurrence_rule:
@@ -202,11 +202,11 @@ async def create_reminder(
     if data.related_id:
         try:
             related_id = PydanticObjectId(data.related_id)
-        except Exception:
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Некорректный формат related_id",
-            )
+            ) from e
 
     reminder = Reminder(
         title=data.title,
@@ -257,8 +257,8 @@ async def update_reminder(
     """Обновляет данные напоминания."""
     try:
         reminder = await Reminder.get(PydanticObjectId(reminder_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено") from e
 
     if not reminder:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено")
@@ -269,13 +269,13 @@ async def update_reminder(
         try:
             dt = datetime.fromisoformat(update_data["remind_at"])
             if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
+                dt = dt.replace(tzinfo=UTC)
             update_data["remind_at"] = dt
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Некорректный формат даты remind_at",
-            )
+            ) from e
 
     if "recurrence_rule" in update_data:
         valid_rules = ["daily", "weekly", "monthly"]
@@ -285,14 +285,14 @@ async def update_reminder(
                 detail=f"Допустимые правила повтора: {', '.join(valid_rules)}",
             )
 
-    if "related_id" in update_data and update_data["related_id"]:
+    if update_data.get("related_id"):
         try:
             update_data["related_id"] = PydanticObjectId(update_data["related_id"])
-        except Exception:
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Некорректный формат related_id",
-            )
+            ) from e
 
     for field, value in update_data.items():
         setattr(reminder, field, value)
@@ -319,8 +319,8 @@ async def complete_reminder(
     """UC-53: Отмечает напоминание как выполненное. Если повторяющееся — создаёт следующее."""
     try:
         reminder = await Reminder.get(PydanticObjectId(reminder_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено") from e
 
     if not reminder:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено")
@@ -382,8 +382,8 @@ async def delete_reminder(
     """Удаляет напоминание."""
     try:
         reminder = await Reminder.get(PydanticObjectId(reminder_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено") from e
 
     if not reminder:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено")

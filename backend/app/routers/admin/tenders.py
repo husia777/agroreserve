@@ -229,7 +229,7 @@ async def search_tenders(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка при поиске тендеров",
-        )
+        ) from e
 
     logger.info(
         "Поиск тендеров завершён",
@@ -262,8 +262,8 @@ async def get_tender(
     """Получить детальную информацию по тендеру."""
     try:
         tender = await Tender.get(PydanticObjectId(tender_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден") from e
 
     if not tender:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
@@ -293,8 +293,8 @@ async def update_tender(
     """
     try:
         tender = await Tender.get(PydanticObjectId(tender_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден") from e
 
     if not tender:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
@@ -344,8 +344,8 @@ async def hide_tender(
     """
     try:
         tender = await Tender.get(PydanticObjectId(tender_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден") from e
 
     if not tender:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Тендер не найден")
@@ -392,7 +392,7 @@ async def calculate_tender_bid(
             distance_km=data.distance_km,
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except Exception as e:
         logger.error(
             "Ошибка расчёта тендерной ставки",
@@ -402,7 +402,7 @@ async def calculate_tender_bid(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка при расчёте тендерной ставки",
-        )
+        ) from e
 
     logger.info(
         "Тендерная ставка рассчитана",
@@ -433,7 +433,7 @@ async def generate_tender_docs(
     try:
         buffer = await generate_tender_documents_zip(tender_id)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
     return StreamingResponse(
         buffer,

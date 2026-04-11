@@ -14,29 +14,20 @@ class StockReceiptItemCreate(BaseModel):
     product_id: str = Field(..., description="ID товара")
     quantity: float = Field(..., gt=0, description="Количество")
     unit: str = Field("kg", description="Единица измерения")
-    purchase_price: float = Field(..., ge=0,
-                                  description="Закупочная цена за единицу (₽)")
+    purchase_price: float = Field(..., ge=0, description="Закупочная цена за единицу (₽)")
 
 
 class StockReceiptCreate(BaseModel):
     """Запрос на создание приходного документа."""
 
-    supplier_name: str = Field(..., min_length=2,
-                               max_length=200, description="Название поставщика")
-    supplier_id: Optional[str] = Field(
-        None, description="ID поставщика из справочника")
-    supplier_contact: Optional[str] = Field(
-        None, max_length=200, description="Контакты поставщика")
-    invoice_number: Optional[str] = Field(
-        None, max_length=50, description="Номер накладной поставщика")
-    invoice_date: Optional[DateType] = Field(
-        None, description="Дата накладной")
-    date: Optional[str] = Field(
-        None, description="Дата прихода (по умолчанию — сегодня)")
-    items: list[StockReceiptItemCreate] = Field(
-        ..., min_length=1, description="Позиции прихода")
-    note: Optional[str] = Field(
-        None, max_length=1000, description="Заметки к приходу")
+    supplier_name: str = Field(..., min_length=2, max_length=200, description="Название поставщика")
+    supplier_id: Optional[str] = Field(None, description="ID поставщика из справочника")
+    supplier_contact: Optional[str] = Field(None, max_length=200, description="Контакты поставщика")
+    invoice_number: Optional[str] = Field(None, max_length=50, description="Номер накладной поставщика")
+    invoice_date: Optional[DateType] = Field(None, description="Дата накладной")
+    date: Optional[str] = Field(None, description="Дата прихода (по умолчанию — сегодня)")
+    items: list[StockReceiptItemCreate] = Field(..., min_length=1, description="Позиции прихода")
+    note: Optional[str] = Field(None, max_length=1000, description="Заметки к приходу")
 
 
 class StockReceiptItemResponse(BaseModel):

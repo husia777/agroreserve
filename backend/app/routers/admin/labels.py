@@ -5,6 +5,7 @@
 UC-22: Печать ярлыков/сертификатов — генерация PDF с ярлыками для наклейки на упаковку.
 """
 
+import contextlib
 import io
 import math
 from datetime import date, timedelta
@@ -96,7 +97,13 @@ async def _get_certificate_info(product: Product) -> tuple[Optional[str], Option
                 }
                 cert_type_label = type_labels.get(cert.cert_type.value, cert.cert_type.value)
                 return cert.number, cert_type_label
-        except Exception:
+        except Exception as e:
+            logger.error(
+                "Ошибка получения сертификата для ярлыка",
+                product_id=str(product.id),
+                cert_ref=cert_ref,
+                error=str(e),
+            )
             continue
 
     return None, None
@@ -268,10 +275,8 @@ async def get_products_for_labels(
         query_filter["name"] = {"$regex": search, "$options": "i"}
 
     if category_id:
-        try:
+        with contextlib.suppress(Exception):
             query_filter["category_id"] = PydanticObjectId(category_id)
-        except Exception:
-            pass
 
     products = await Product.find(query_filter).sort("name").limit(100).to_list()
 
@@ -305,8 +310,8 @@ async def preview_label(
     """Возвращает HTML одного ярлыка для предпросмотра."""
     try:
         product = await Product.get(PydanticObjectId(data.product_id))
-    except Exception:
-        raise HTTPException(status_code=404, detail="Товар не найден")
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Товар не найден") from e
 
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -431,7 +436,7 @@ async def generate_labels_pdf(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка генерации PDF: {e!s}",
-        )
+        ) from e
 
     # Формируем имя файла
     today_str = date.today().strftime("%Y-%m-%d")

@@ -11,15 +11,14 @@ UC-227: Генерация комплекта документов для тен
 
 import io
 import zipfile
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 import structlog
 from weasyprint import HTML
 
-from app.models.tender import Tender
-from app.models.settings import SystemSettings
 from app.models.certificate import Certificate
+from app.models.settings import SystemSettings
+from app.models.tender import Tender
 
 logger = structlog.get_logger(__name__)
 
@@ -83,7 +82,7 @@ def _generate_commercial_offer(tender: dict, company: dict) -> bytes:
     1. Коммерческое предложение.
     Содержит: реквизиты, позиции тендера с ценами, общая сумма.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     items_html = ""
     total = 0
     for i, item in enumerate(tender.get("items", []), 1):
@@ -171,7 +170,7 @@ def _generate_declaration(tender: dict, company: dict) -> bytes:
     """
     2. Декларация соответствия требованиям 44-ФЗ.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{_base_css()}</style></head><body>
     <div class="header">
         <div class="company">{company['name']}</div>
@@ -225,7 +224,7 @@ def _generate_resource_reference(tender: dict, company: dict) -> bytes:
     """
     3. Справка о ресурсах и опыте.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{_base_css()}</style></head><body>
     <div class="header">
         <div class="company">{company['name']}</div>
@@ -281,7 +280,7 @@ async def _generate_certificates_list(tender: dict, company: dict) -> bytes:
     """
     4. Список действующих сертификатов.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Получаем активные сертификаты
     certs = await Certificate.find({"status": {"$in": ["active", "expiring_soon"]}}).sort("expiry_date").to_list()

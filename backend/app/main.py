@@ -9,11 +9,12 @@
 - Structlog настройка
 """
 
-import os
 import time
 from collections import defaultdict
 from collections.abc import Callable
 from contextlib import asynccontextmanager
+from datetime import UTC
+from pathlib import Path
 
 import structlog
 from fastapi import FastAPI, Request, Response, status
@@ -40,7 +41,9 @@ structlog.configure(
         # В production — JSON, в dev — красивый формат
         structlog.processors.JSONRenderer(
             # type: ignore[list-item]
-        ) if not settings.DEBUG else structlog.dev.ConsoleRenderer(),
+        )
+        if not settings.DEBUG
+        else structlog.dev.ConsoleRenderer(),
     ],
     wrapper_class=structlog.stdlib.BoundLogger,
     context_class=dict,
@@ -73,10 +76,9 @@ async def lifespan(app: FastAPI):
     await connect_to_mongo()
 
     # Создаём директории для хранения файлов
-    import os
 
     for directory in ["/app/media/documents", "/app/media/certificates", "/app/backups"]:
-        os.makedirs(directory, exist_ok=True)
+        Path(directory).mkdir(parents=True, exist_ok=True)
 
     # Создаём индексы (Beanie делает это автоматически при init)
     logger.info("Индексы MongoDB проверены/созданы")
@@ -123,8 +125,7 @@ app.add_middleware(
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type",
-                   "Accept", "X-Request-ID", "X-API-Key"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-API-Key"],
     expose_headers=["X-Total-Count", "X-Page", "X-Limit"],
     max_age=3600,
 )
@@ -160,8 +161,7 @@ async def rate_limit_middleware(request: Request, call_next: Callable) -> Respon
 
     # Очищаем старые записи
     key = f"{client_ip}:{path.split('/')[3] if len(path.split('/')) > 3 else 'root'}"
-    _rate_limit_store[key] = [
-        t for t in _rate_limit_store[key] if now - t < window]
+    _rate_limit_store[key] = [t for t in _rate_limit_store[key] if now - t < window]
 
     # Проверяем лимит
     if len(_rate_limit_store[key]) >= limit:
@@ -189,8 +189,7 @@ async def rate_limit_middleware(request: Request, call_next: Callable) -> Respon
 
     # Добавляем заголовки с информацией о лимите
     response.headers["X-RateLimit-Limit"] = str(limit)
-    response.headers["X-RateLimit-Remaining"] = str(
-        limit - len(_rate_limit_store[key]))
+    response.headers["X-RateLimit-Remaining"] = str(limit - len(_rate_limit_store[key]))
 
     return response
 
@@ -199,8 +198,7 @@ async def rate_limit_middleware(request: Request, call_next: Callable) -> Respon
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next: Callable) -> Response:
     """Логирование всех входящих запросов и ответов."""
-    request_id = request.headers.get(
-        "X-Request-ID", f"req_{int(time.time() * 1000)}")
+    request_id = request.headers.get("X-Request-ID", f"req_{int(time.time() * 1000)}")
     start_time = time.time()
 
     # Добавляем контекст к логам
@@ -246,8 +244,7 @@ async def internal_error_handler(request: Request, exc: Exception) -> JSONRespon
     logger.error("Внутренняя ошибка сервера", error=str(exc), exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={
-            "detail": "Внутренняя ошибка сервера. Мы уже работаем над устранением."},
+        content={"detail": "Внутренняя ошибка сервера. Мы уже работаем над устранением."},
     )
 
 
@@ -258,8 +255,9 @@ async def health_check():
     Проверка работоспособности сервиса.
     Используется Nginx и Docker для healthcheck.
     """
+    from datetime import datetime
+
     from app.database import get_database
-    from datetime import datetime, timezone
 
     # Проверяем соединение с MongoDB
     try:
@@ -275,7 +273,7 @@ async def health_check():
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "database": db_status,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -291,7 +289,7 @@ async def root():
 
 
 # ── Отдача загруженных медиафайлов ────────────────────────────
-os.makedirs("/app/media/products", exist_ok=True)
+Path("/app/media/products").mkdir(parents=True, exist_ok=True)
 app.mount("/media", StaticFiles(directory="/app/media"), name="media")
 
 # ── Подключение роутеров ──────────────────────────────────────

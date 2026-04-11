@@ -10,21 +10,17 @@ from pydantic import BaseModel, Field
 class DishIngredientSchema(BaseModel):
     """Ингредиент блюда."""
 
-    product_id: Optional[str] = Field(
-        None, description="ID товара в каталоге (опционально)")
+    product_id: Optional[str] = Field(None, description="ID товара в каталоге (опционально)")
     name: str = Field(..., description="Название ингредиента")
-    qty_per_portion_g: float = Field(..., ge=0,
-                                     description="Граммов на порцию")
+    qty_per_portion_g: float = Field(..., ge=0, description="Граммов на порцию")
     unit: str = Field("g", description="Единица измерения")
 
 
 class DishCreate(BaseModel):
     """Создание блюда."""
 
-    name: str = Field(..., min_length=2, max_length=200,
-                      description="Название блюда")
-    category: str = Field(...,
-                          description="Категория: гарнир, суп, салат, второе, напиток, выпечка")
+    name: str = Field(..., min_length=2, max_length=200, description="Название блюда")
+    category: str = Field(..., description="Категория: гарнир, суп, салат, второе, напиток, выпечка")
     description: Optional[str] = Field(None, description="Описание")
     ingredients: list[DishIngredientSchema] = Field(default_factory=list)
     portion_weight_g: float = Field(..., ge=0, description="Вес порции (г)")

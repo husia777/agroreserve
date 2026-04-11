@@ -103,7 +103,7 @@ async def sync_payments_from_1c(data: list[dict]) -> dict:
     for payment in data:
         order_id = payment.get("order_id")
         amount = float(payment.get("amount", 0))
-        payment_date_str = payment.get("date")
+        payment.get("date")
 
         if not order_id or amount <= 0:
             errors.append(f"Неполные данные об оплате: {payment}")
@@ -115,7 +115,6 @@ async def sync_payments_from_1c(data: list[dict]) -> dict:
                 errors.append(f"Заказ не найден: {order_id}")
                 continue
 
-            old_paid = order.paid_amount
             order.paid_amount = round(order.paid_amount + amount, 2)
 
             # Определяем статус оплаты

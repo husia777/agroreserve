@@ -2,7 +2,7 @@
 Утилиты безопасности — JWT токены, хэширование паролей, зависимости FastAPI.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Optional
 
 import bcrypt
@@ -59,13 +59,13 @@ def create_access_token(
     Returns:
         Подписанный JWT токен
     """
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(UTC) + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
 
     payload = {
         "sub": subject,
         "role": role,
         "type": "access",
-        "iat": datetime.now(timezone.utc),
+        "iat": datetime.now(UTC),
         "exp": expire,
     }
 
@@ -85,12 +85,12 @@ def create_refresh_token(subject: str) -> str:
     Returns:
         Подписанный JWT refresh токен
     """
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now(UTC) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
 
     payload = {
         "sub": subject,
         "type": "refresh",
-        "iat": datetime.now(timezone.utc),
+        "iat": datetime.now(UTC),
         "exp": expire,
     }
 
@@ -143,7 +143,7 @@ def verify_token(token: str, expected_type: str = "access") -> dict:
 
     except JWTError as e:
         logger.warning("Ошибка валидации JWT", error=str(e))
-        raise credentials_exception
+        raise credentials_exception from e
 
 
 # ── FastAPI Dependencies ──────────────────────────────────────

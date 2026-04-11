@@ -9,8 +9,8 @@
 - Интеграция со складом и финансами
 """
 
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
+from typing import Optional
 
 import structlog
 
@@ -39,7 +39,7 @@ async def get_next_order_number() -> str:
     """
     Генерирует следующий номер заказа в формате ORD-YYYY-NNNNN.
     """
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     prefix = f"ORD-{year}-"
 
     last_order = await Order.find({"order_number": {"$regex": f"^{prefix}"}}).sort(-Order.order_number).first_or_none()
@@ -56,7 +56,7 @@ async def get_next_order_number() -> str:
     return f"{prefix}{next_num:05d}"
 
 
-def calculate_order_total(items: List[OrderItem]) -> tuple[float, float]:
+def calculate_order_total(items: list[OrderItem]) -> tuple[float, float]:
     """
     Рассчитывает подытог и итог заказа.
 
@@ -98,7 +98,7 @@ async def create_order(user, cart_items: list, delivery_info: dict) -> Order:
     from app.services import stock_service
 
     # ── Шаг 1: Валидация товаров ───────────────────────────────
-    order_items: List[OrderItem] = []
+    order_items: list[OrderItem] = []
     order_total = 0.0
 
     for cart_item in cart_items:
@@ -122,10 +122,7 @@ async def create_order(user, cart_items: list, delivery_info: dict) -> Order:
             raise ValueError(f"Минимальный заказ для «{product.name}»: " f"{product.min_order_qty:.1f} {product.unit}")
 
         # Определяем цену: B2B — оптовая, остальные — розничная
-        if user.client_type == ClientType.B2B:
-            price = product.price_wholesale
-        else:
-            price = product.price_retail
+        price = product.price_wholesale if user.client_type == ClientType.B2B else product.price_retail
 
         item_total = round(qty * price, 2)
         order_total += item_total
@@ -195,7 +192,7 @@ async def create_order(user, cart_items: list, delivery_info: dict) -> Order:
     # ── Шаг 4: Резервирование остатков ────────────────────────
     try:
         await stock_service.reserve_stock(order_items)
-    except ValueError as e:
+    except ValueError:
         # Откатываем заказ если резервирование не удалось
         await order.delete()
         raise
@@ -219,7 +216,7 @@ async def create_order(user, cart_items: list, delivery_info: dict) -> Order:
         cart.items = []
         cart.total = 0.0
         cart.items_count = 0
-        cart.updated_at = datetime.now(timezone.utc)
+        cart.updated_at = datetime.now(UTC)
         await cart.save()
 
     # ── Шаг 7: Уведомление администратору ─────────────────────
@@ -350,7 +347,7 @@ async def update_order_status(
             comment=comment,
         )
     )
-    order.updated_at = datetime.now(timezone.utc)
+    order.updated_at = datetime.now(UTC)
     await order.save()
 
     logger.info(
@@ -399,7 +396,7 @@ async def update_actual_quantities(order_id: str, items_update: list) -> Order:
 
     # Пересчитываем итоги по фактическим весам
     order.recalculate_by_actual_qty()
-    order.updated_at = datetime.now(timezone.utc)
+    order.updated_at = datetime.now(UTC)
     await order.save()
 
     logger.info(

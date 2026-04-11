@@ -132,7 +132,11 @@ async def get_cart(
                 item.stock_qty = product.stock_qty
                 updated = True
         except Exception:
-            pass
+            logger.warning(
+                "Ошибка получения товара для актуализации корзины",
+                product_id=item.product_id,
+                user_id=str(current_user.id),
+            )
 
     if updated:
         cart.recalculate()
@@ -204,10 +208,7 @@ async def add_to_cart(
             )
 
     # Определяем цену
-    if current_user.client_type == ClientType.B2B:
-        price = product.price_wholesale
-    else:
-        price = product.price_retail
+    price = product.price_wholesale if current_user.client_type == ClientType.B2B else product.price_retail
 
     # Получаем или создаём корзину
     cart = await _get_or_create_cart(str(current_user.id))

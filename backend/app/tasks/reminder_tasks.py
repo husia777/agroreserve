@@ -5,7 +5,7 @@ UC-53: Ежечасная проверка напоминаний и отпра�
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -51,11 +51,11 @@ def check_reminders(self) -> dict:
 
         await connect_to_mongo()
 
-        from app.models.reminder import Reminder
         from app.config import settings
+        from app.models.reminder import Reminder
         from app.utils.telegram_bot import send_message
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         result: dict[str, Any] = {
             "status": "ok",
             "checked_at": now.isoformat(),
@@ -82,15 +82,13 @@ def check_reminders(self) -> dict:
 
         # Проверяем, что есть Telegram администратора
         if not settings.TELEGRAM_ADMIN_CHAT_ID:
-            logger.warning(
-                "TELEGRAM_ADMIN_CHAT_ID не настроен, уведомления не отправлены")
+            logger.warning("TELEGRAM_ADMIN_CHAT_ID не настроен, уведомления не отправлены")
             return result
 
         for reminder in due_reminders:
             try:
                 # Формируем сообщение
-                overdue_minutes = int(
-                    (now - reminder.remind_at).total_seconds() / 60)
+                overdue_minutes = int((now - reminder.remind_at).total_seconds() / 60)
 
                 if overdue_minutes < 60:
                     overdue_text = f"{overdue_minutes} мин. назад"
@@ -115,8 +113,7 @@ def check_reminders(self) -> dict:
                         "tender": "Тендер",
                         "payment": "Оплата",
                     }
-                    label = type_labels.get(
-                        reminder.related_type, reminder.related_type)
+                    label = type_labels.get(reminder.related_type, reminder.related_type)
                     lines.append(f"\n📎 Связано с: {label}")
 
                 if reminder.is_recurring and reminder.recurrence_rule:
@@ -125,8 +122,7 @@ def check_reminders(self) -> dict:
                         "weekly": "еженедельно",
                         "monthly": "ежемесячно",
                     }
-                    rule_label = rule_labels.get(
-                        reminder.recurrence_rule, reminder.recurrence_rule)
+                    rule_label = rule_labels.get(reminder.recurrence_rule, reminder.recurrence_rule)
                     lines.append(f"🔁 Повтор: {rule_label}")
 
                 message = "\n".join(lines)
@@ -135,8 +131,7 @@ def check_reminders(self) -> dict:
                 success = await send_message(settings.TELEGRAM_ADMIN_CHAT_ID, message)
 
                 if success:
-                    result["notifications_sent"] = int(
-                        result["notifications_sent"]) + 1
+                    result["notifications_sent"] = int(result["notifications_sent"]) + 1
                     logger.info(
                         "Уведомление о напоминании отправлено",
                         reminder_id=str(reminder.id),
@@ -178,4 +173,4 @@ def check_reminders(self) -> dict:
         return dict(_run_async(_execute()))
     except Exception as exc:
         logger.error("Ошибка задачи check_reminders", error=str(exc))
-        raise self.retry(exc=exc)
+        return {"status": "error", "error": str(exc)}

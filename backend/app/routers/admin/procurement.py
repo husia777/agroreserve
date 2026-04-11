@@ -75,7 +75,7 @@ async def get_purchase_recommendations(
         recommendations = [r for r in recommendations if r["urgency"] == urgency]
 
     # Суммарная стоимость рекомендованных закупок
-    total_estimated_cost = sum(r["estimated_purchase_cost"] for r in recommendations)
+    sum(r["estimated_purchase_cost"] for r in recommendations)
 
     return recommendations
 
@@ -110,7 +110,7 @@ async def create_purchase_order(
     try:
         content = await generate_purchase_order_pdf(data.supplier_id, items)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     # Определяем тип контента
     content_type = "application/pdf" if content[:4] == b"%PDF" else "text/html; charset=utf-8"
@@ -160,22 +160,22 @@ async def get_price_logs(
     if product_id:
         try:
             query["product_id"] = PydanticObjectId(product_id)
-        except Exception:
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Неверный формат product_id",
-            )
+            ) from e
 
     if supplier_id:
         try:
             query["supplier_id"] = PydanticObjectId(supplier_id)
-        except Exception:
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Неверный формат supplier_id",
-            )
+            ) from e
 
-    logs = await PriceLog.find(query).sort(-PriceLog.logged_at).to_list()
+    logs = await PriceLog.find(query).sort(PriceLog.logged_at).to_list()
 
     # Группируем по товарам для анализа трендов
     by_product: dict[str, Any] = {}
@@ -208,7 +208,7 @@ async def get_price_logs(
 
     # Финализируем агрегацию
     result_by_product = []
-    for pid, data in by_product.items():
+    for _, data in by_product.items():
         prices = [p["price"] for p in data["price_points"]]
         data["avg_price"] = round(sum(prices) / len(prices), 2) if prices else 0.0
         data["suppliers"] = list(data["suppliers"])

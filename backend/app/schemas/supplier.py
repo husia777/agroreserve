@@ -10,16 +10,13 @@ from pydantic import BaseModel, Field
 class SupplierCreate(BaseModel):
     """Создание нового поставщика."""
 
-    name: str = Field(..., min_length=2, max_length=200,
-                      description="Название поставщика")
-    contact_person: str = Field(..., min_length=2,
-                                description="Контактное лицо")
+    name: str = Field(..., min_length=2, max_length=200, description="Название поставщика")
+    contact_person: str = Field(..., min_length=2, description="Контактное лицо")
     phone: str = Field(..., description="Телефон")
     email: Optional[str] = Field(None, description="Email")
     address: Optional[str] = Field(None, description="Адрес")
     inn: Optional[str] = Field(None, description="ИНН")
-    product_ids: list[str] = Field(
-        default_factory=list, description="ID товаров поставщика")
+    product_ids: list[str] = Field(default_factory=list, description="ID товаров поставщика")
     rating: float = Field(5.0, ge=1.0, le=5.0, description="Рейтинг (1-5)")
     notes: Optional[str] = Field(None, description="Заметки")
     is_active: bool = Field(True, description="Активен")

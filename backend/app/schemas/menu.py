@@ -14,8 +14,7 @@ class MenuItemSchema(BaseModel):
     dish_id: str = Field(..., description="ID блюда")
     dish_name: str = Field(..., description="Название блюда")
     portions: int = Field(..., ge=1, description="Количество порций")
-    meal_type: str = Field(...,
-                           description="Тип приёма пищи: breakfast, lunch, snack")
+    meal_type: str = Field(..., description="Тип приёма пищи: breakfast, lunch, snack")
 
 
 class MenuDaySchema(BaseModel):

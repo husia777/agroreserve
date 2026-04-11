@@ -136,10 +136,7 @@ async def notify_client_status_change(order, new_status: str) -> None:
     Уведомление клиенту об изменении статуса заказа.
     """
     # Получаем ID клиента (может быть Link или строка)
-    if hasattr(order.client_id, "id"):
-        client_id = str(order.client_id.id)
-    else:
-        client_id = str(order.client_id)
+    client_id = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
 
     # Человекочитаемые статусы
     status_names = {

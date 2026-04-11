@@ -7,7 +7,7 @@ UC-26: Ежедневная проверка сроков сертификато
 """
 
 import asyncio
-from datetime import date, timedelta
+from datetime import UTC, date, timedelta
 from typing import Any
 
 import structlog
@@ -81,9 +81,9 @@ def check_expiring_certificates(self) -> dict:
                 # Обновляем статус на EXPIRED
                 if cert.status != CertificateStatus.EXPIRED:
                     cert.status = CertificateStatus.EXPIRED
-                    from datetime import datetime, timezone
+                    from datetime import datetime
 
-                    cert.updated_at = datetime.now(timezone.utc)
+                    cert.updated_at = datetime.now(UTC)
                     await cert.save()
                     logger.info(
                         "Статус сертификата обновлён на EXPIRED",
@@ -96,9 +96,9 @@ def check_expiring_certificates(self) -> dict:
                 # Обновляем статус на EXPIRING_SOON
                 if cert.status != CertificateStatus.EXPIRING_SOON:
                     cert.status = CertificateStatus.EXPIRING_SOON
-                    from datetime import datetime, timezone
+                    from datetime import datetime
 
-                    cert.updated_at = datetime.now(timezone.utc)
+                    cert.updated_at = datetime.now(UTC)
                     await cert.save()
 
         result["expiring_soon"] = [
@@ -137,9 +137,9 @@ def check_expiring_certificates(self) -> dict:
                 product = await Product.get(PydanticObjectId(pid))
                 if product and product.is_active:
                     product.is_active = False
-                    from datetime import datetime, timezone
+                    from datetime import datetime
 
-                    product.updated_at = datetime.now(timezone.utc)
+                    product.updated_at = datetime.now(UTC)
                     await product.save()
                     blocked_count += 1
                     blocked_products.append(
@@ -182,9 +182,8 @@ def check_expiring_certificates(self) -> dict:
     try:
         return dict(_run_async(_execute()))
     except Exception as exc:
-        logger.error("Ошибка задачи check_expiring_certificates",
-                     error=str(exc))
-        raise self.retry(exc=exc)
+        logger.error("Ошибка задачи check_expiring_certificates", error=str(exc))
+        return {"status": "error", "error": str(exc)}
 
 
 async def _send_admin_certificate_notification(
@@ -204,8 +203,7 @@ async def _send_admin_certificate_notification(
     from app.utils.telegram_bot import send_message
 
     if not settings.TELEGRAM_ADMIN_CHAT_ID:
-        logger.warning(
-            "TELEGRAM_ADMIN_CHAT_ID не настроен, уведомление не отправлено")
+        logger.warning("TELEGRAM_ADMIN_CHAT_ID не настроен, уведомление не отправлено")
         return
 
     today = date.today()
@@ -213,12 +211,10 @@ async def _send_admin_certificate_notification(
     lines = ["<b>🔔 Ежедневный отчёт по сертификатам</b>\n"]
 
     if expiring_certs:
-        lines.append(
-            f"<b>⚠️ Истекают в ближайшие 30 дней ({len(expiring_certs)} шт.):</b>")
+        lines.append(f"<b>⚠️ Истекают в ближайшие 30 дней ({len(expiring_certs)} шт.):</b>")
         for cert in expiring_certs[:5]:  # Максимум 5 в сообщении
             days_left = (cert.expiry_date - today).days
-            lines.append(
-                f"  • {cert.number} — через {days_left} дн. ({cert.expiry_date})")
+            lines.append(f"  • {cert.number} — через {days_left} дн. ({cert.expiry_date})")
         if len(expiring_certs) > 5:
             lines.append(f"  ... и ещё {len(expiring_certs) - 5} сертификатов")
         lines.append("")
@@ -227,8 +223,7 @@ async def _send_admin_certificate_notification(
         lines.append(f"<b>❌ Просрочены ({len(expired_certs)} шт.):</b>")
         for cert in expired_certs[:5]:
             days_overdue = (today - cert.expiry_date).days
-            lines.append(
-                f"  • {cert.number} — просрочен {days_overdue} дн. назад")
+            lines.append(f"  • {cert.number} — просрочен {days_overdue} дн. назад")
         if len(expired_certs) > 5:
             lines.append(f"  ... и ещё {len(expired_certs) - 5} сертификатов")
         lines.append("")
@@ -247,5 +242,4 @@ async def _send_admin_certificate_notification(
             expired_count=len(expired_certs),
         )
     except Exception as e:
-        logger.error(
-            "Ошибка отправки уведомления о сертификатах", error=str(e))
+        logger.error("Ошибка отправки уведомления о сертификатах", error=str(e))

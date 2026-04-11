@@ -12,8 +12,7 @@ class OrderItemCreate(BaseModel):
     """Позиция при создании заказа."""
 
     product_id: str = Field(..., description="ID товара")
-    qty: float = Field(..., gt=0,
-                       description="Количество (должно соответствовать шагу товара)")
+    qty: float = Field(..., gt=0, description="Количество (должно соответствовать шагу товара)")
 
 
 class OrderCreate(BaseModel):
@@ -23,15 +22,11 @@ class OrderCreate(BaseModel):
         None, description="Позиции заказа (опционально, если используется корзина)"
     )
     delivery_date: DateType = Field(..., description="Желаемая дата доставки")
-    delivery_slot: str = Field(...,
-                               description="Временной слот: '08:00-11:00'")
-    delivery_address: str = Field(..., min_length=5,
-                                  max_length=500, description="Адрес доставки")
+    delivery_slot: str = Field(..., description="Временной слот: '08:00-11:00'")
+    delivery_address: str = Field(..., min_length=5, max_length=500, description="Адрес доставки")
     payment_method: str = Field("bank_transfer", description="Способ оплаты")
-    note: Optional[str] = Field(
-        None, max_length=1000, description="Примечание к заказу")
-    delivery_priority: str = Field(
-        "normal", description="Приоритет: urgent, normal, flexible")
+    note: Optional[str] = Field(None, max_length=1000, description="Примечание к заказу")
+    delivery_priority: str = Field("normal", description="Приоритет: urgent, normal, flexible")
 
     @field_validator("delivery_date")
     @classmethod
@@ -43,8 +38,7 @@ class OrderCreate(BaseModel):
         if v < today:
             raise ValueError("Дата доставки не может быть в прошлом")
         if v > today + timedelta(days=14):
-            raise ValueError(
-                "Дата доставки не может быть позже чем через 14 дней")
+            raise ValueError("Дата доставки не может быть позже чем через 14 дней")
         return v
 
     @field_validator("delivery_slot")
@@ -52,8 +46,7 @@ class OrderCreate(BaseModel):
     def validate_delivery_slot(cls, v: str) -> str:
         valid_slots = ["08:00-11:00", "11:00-14:00", "14:00-17:00"]
         if v not in valid_slots:
-            raise ValueError(
-                f"Доступные слоты доставки: {', '.join(valid_slots)}")
+            raise ValueError(f"Доступные слоты доставки: {', '.join(valid_slots)}")
         return v
 
     @field_validator("payment_method")
@@ -160,14 +153,12 @@ class OrderStatusUpdate(BaseModel):
     """Запрос на смену статуса заказа (от администратора)."""
 
     status: str = Field(..., description="Новый статус")
-    comment: Optional[str] = Field(
-        None, max_length=500, description="Комментарий к смене статуса")
+    comment: Optional[str] = Field(None, max_length=500, description="Комментарий к смене статуса")
 
     @field_validator("status")
     @classmethod
     def validate_status(cls, v: str) -> str:
-        valid = ["new", "confirmed", "assembling", "assembled",
-                 "delivering", "delivered", "cancelled"]
+        valid = ["new", "confirmed", "assembling", "assembled", "delivering", "delivered", "cancelled"]
         if v not in valid:
             raise ValueError(f"Допустимые статусы: {', '.join(valid)}")
         return v
@@ -176,5 +167,4 @@ class OrderStatusUpdate(BaseModel):
 class ActualQtyUpdate(BaseModel):
     """Запрос на обновление фактического веса позиций (при отгрузке)."""
 
-    items: list[dict] = Field(
-        ..., description="Список: [{'product_id': '...', 'actual_qty': 48.5}]")
+    items: list[dict] = Field(..., description="Список: [{'product_id': '...', 'actual_qty': 48.5}]")

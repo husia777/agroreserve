@@ -28,8 +28,7 @@ class TenderCreate(BaseModel):
     max_price: float = Field(..., ge=0, description="НМЦК (₽)")
     items: list[TenderItemSchema] = Field(default_factory=list)
     deadline: datetime = Field(..., description="Срок подачи заявки")
-    delivery_deadline: Optional[DateType] = Field(
-        None, description="Срок поставки")
+    delivery_deadline: Optional[DateType] = Field(None, description="Срок поставки")
     source_url: str = Field(..., description="URL на ЕИС")
     notes: Optional[str] = None
     is_relevant: bool = Field(True)
@@ -38,8 +37,7 @@ class TenderCreate(BaseModel):
 class TenderUpdate(BaseModel):
     """Обновление тендера."""
 
-    status: Optional[str] = Field(
-        None, description="Статус: new, analyzing, bid_submitted, won, lost, skipped")
+    status: Optional[str] = Field(None, description="Статус: new, analyzing, bid_submitted, won, lost, skipped")
     our_price: Optional[float] = Field(None, ge=0)
     margin_estimate: Optional[float] = None
     notes: Optional[str] = None

@@ -4,9 +4,9 @@
 """
 
 import math
-import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Optional
 
 import structlog
@@ -56,8 +56,7 @@ def _to_response(wo: WriteOff) -> WriteOffResponse:
     summary="Список списаний",
 )
 async def get_write_offs(
-    reason: Optional[str] = Query(
-        None, description="Причина: spoilage, expired, damage, other"),
+    reason: Optional[str] = Query(None, description="Причина: spoilage, expired, damage, other"),
     product_id: Optional[str] = Query(None, description="Фильтр по товару"),
     date_from: Optional[str] = Query(None, description="С даты (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="По дату (YYYY-MM-DD)"),
@@ -69,7 +68,6 @@ async def get_write_offs(
     Список актов списания с возможностью фильтрации.
     Сортировка: по дате создания (новые первые).
     """
-    from datetime import date
 
     query: dict = {}
 
@@ -84,33 +82,32 @@ async def get_write_offs(
     if product_id:
         try:
             query["product_id"] = PydanticObjectId(product_id)
-        except Exception:
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Неверный формат product_id",
-            )
+            ) from e
 
     # Фильтрация по дате
     date_filter: dict = {}
     if date_from:
         try:
             date_filter["$gte"] = datetime.fromisoformat(date_from)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Неверный формат date_from. Используйте YYYY-MM-DD",
-            )
+            ) from e
     if date_to:
         try:
             # До конца указанного дня
-            dt_to = datetime.fromisoformat(date_to).replace(
-                hour=23, minute=59, second=59)
+            dt_to = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59)
             date_filter["$lte"] = dt_to
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Неверный формат date_to. Используйте YYYY-MM-DD",
-            )
+            ) from e
     if date_filter:
         query["created_at"] = date_filter
 
@@ -182,7 +179,7 @@ async def create_write_off(
 
     cost_price = product.cost_price
     total_loss = round(data.qty * cost_price, 2)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Если указана конкретная партия — списываем из неё (FIFO)
     batch_id_obj = None
@@ -297,7 +294,7 @@ async def get_write_off_analytics(
     """
     from datetime import timedelta
 
-    since = datetime.now(timezone.utc) - timedelta(days=days)
+    since = datetime.now(UTC) - timedelta(days=days)
     write_offs = await WriteOff.find({"created_at": {"$gte": since}}).to_list()
 
     total_loss = sum(wo.total_loss for wo in write_offs)
@@ -308,13 +305,10 @@ async def get_write_off_analytics(
     for wo in write_offs:
         key = wo.reason
         if key not in by_reason:
-            by_reason[key] = {"reason": key, "count": 0,
-                              "total_loss": 0.0, "total_qty": 0.0}
+            by_reason[key] = {"reason": key, "count": 0, "total_loss": 0.0, "total_qty": 0.0}
         by_reason[key]["count"] += 1
-        by_reason[key]["total_loss"] = round(
-            by_reason[key]["total_loss"] + wo.total_loss, 2)
-        by_reason[key]["total_qty"] = round(
-            by_reason[key]["total_qty"] + wo.qty, 3)
+        by_reason[key]["total_loss"] = round(by_reason[key]["total_loss"] + wo.total_loss, 2)
+        by_reason[key]["total_qty"] = round(by_reason[key]["total_qty"] + wo.qty, 3)
 
     # Группировка по товарам (топ-10 по убыткам)
     by_product: dict = {}
@@ -328,24 +322,19 @@ async def get_write_off_analytics(
                 "total_qty": 0.0,
                 "count": 0,
             }
-        by_product[key]["total_loss"] = round(
-            by_product[key]["total_loss"] + wo.total_loss, 2)
-        by_product[key]["total_qty"] = round(
-            by_product[key]["total_qty"] + wo.qty, 3)
+        by_product[key]["total_loss"] = round(by_product[key]["total_loss"] + wo.total_loss, 2)
+        by_product[key]["total_qty"] = round(by_product[key]["total_qty"] + wo.qty, 3)
         by_product[key]["count"] += 1
 
-    top_products = sorted(by_product.values(),
-                          key=lambda x: x["total_loss"], reverse=True)[:10]
+    top_products = sorted(by_product.values(), key=lambda x: x["total_loss"], reverse=True)[:10]
 
     # Динамика по месяцам
     by_month: dict = {}
     for wo in write_offs:
         month_key = wo.created_at.strftime("%Y-%m")
         if month_key not in by_month:
-            by_month[month_key] = {"month": month_key,
-                                   "total_loss": 0.0, "count": 0}
-        by_month[month_key]["total_loss"] = round(
-            by_month[month_key]["total_loss"] + wo.total_loss, 2)
+            by_month[month_key] = {"month": month_key, "total_loss": 0.0, "count": 0}
+        by_month[month_key]["total_loss"] = round(by_month[month_key]["total_loss"] + wo.total_loss, 2)
         by_month[month_key]["count"] += 1
 
     by_month_list = sorted(by_month.values(), key=lambda x: x["month"])
@@ -378,13 +367,13 @@ async def upload_write_off_photo(
         raise HTTPException(400, detail="Максимальный размер: 5 МБ")
 
     # Сохранение
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
     _filename = file.filename or ""
     ext = _filename.rsplit(".", 1)[-1] if "." in _filename else "jpg"
     filename = f"{uuid.uuid4().hex}.{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
+    filepath = Path(UPLOAD_DIR) / filename
 
-    with open(filepath, "wb") as f:
+    with Path.open(filepath, "wb") as f:
         f.write(content)
 
     url = f"/uploads/write_offs/{filename}"

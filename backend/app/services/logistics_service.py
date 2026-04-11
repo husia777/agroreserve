@@ -7,16 +7,15 @@
 - Генерацию PDF маршрутного листа
 """
 
-from datetime import date, datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, date, datetime
+from typing import Any
 
 import structlog
-from beanie import PydanticObjectId
 
 logger = structlog.get_logger(__name__)
 
 
-async def get_route_sheet(delivery_date: date) -> Dict[str, Any]:
+async def get_route_sheet(delivery_date: date) -> dict[str, Any]:
     """
     Формирует маршрутный лист на указанную дату.
 
@@ -52,11 +51,11 @@ async def get_route_sheet(delivery_date: date) -> Dict[str, Any]:
             "total_weight_kg": 0.0,
             "total_amount": 0.0,
             "by_slot": [],
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }
 
     # Агрегируем по слотам
-    slots: Dict[str, List[Dict[str, Any]]] = {}
+    slots: dict[str, list[dict[str, Any]]] = {}
     total_weight = 0.0
     total_amount = 0.0
 
@@ -158,7 +157,7 @@ async def get_route_sheet(delivery_date: date) -> Dict[str, Any]:
         "total_weight_kg": round(total_weight, 2),
         "total_amount": round(total_amount, 2),
         "by_slot": by_slot,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -274,7 +273,7 @@ async def generate_route_sheet_pdf(delivery_date: date) -> bytes:
         {slots_html}
 
         <p style="margin-top: 20px; font-size: 10px;">
-            Сформирован: {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')} UTC
+            Сформирован: {datetime.now(UTC).strftime('%d.%m.%Y %H:%M')} UTC
         </p>
     </body>
     </html>

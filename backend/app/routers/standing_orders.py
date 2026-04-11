@@ -3,15 +3,13 @@
 Эндпоинты: /api/v1/standing-orders/
 """
 
-import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 
 import structlog
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.models.order import Order
 from app.models.standing_order import StandingOrder, StandingOrderItem
 from app.schemas.standing_order import (
     StandingOrderCreate,
@@ -24,8 +22,7 @@ from app.utils.security import require_approved_client
 
 logger = structlog.get_logger(__name__)
 
-router = APIRouter(prefix="/api/v1/standing-orders",
-                   tags=["Регулярные заказы"])
+router = APIRouter(prefix="/api/v1/standing-orders", tags=["Регулярные заказы"])
 
 # Допустимые расписания
 VALID_SCHEDULES = {
@@ -65,8 +62,7 @@ def _to_response(so: StandingOrder) -> StandingOrderResponse:
         delivery_address=so.delivery_address,
         is_active=so.is_active,
         last_generated_at=so.last_generated_at.isoformat() if so.last_generated_at else None,
-        next_generation_at=so.next_generation_at.isoformat(
-        ) if so.next_generation_at else None,
+        next_generation_at=so.next_generation_at.isoformat() if so.next_generation_at else None,
         note=so.note,
         created_at=so.created_at.isoformat(),
     )
@@ -85,7 +81,7 @@ def _calculate_next_generation(schedule: str, from_now: Optional[datetime] = Non
     """
     from datetime import timedelta
 
-    now = from_now or datetime.now(timezone.utc)
+    now = from_now or datetime.now(UTC)
 
     if schedule.startswith("weekly_"):
         day_map = {
@@ -104,10 +100,10 @@ def _calculate_next_generation(schedule: str, from_now: Optional[datetime] = Non
             days_ahead += 7
         return now + timedelta(days=days_ahead)
 
-    elif schedule == "biweekly":
+    if schedule == "biweekly":
         return now + timedelta(weeks=2)
 
-    elif schedule.startswith("monthly_"):
+    if schedule.startswith("monthly_"):
         day_num = int(schedule.split("_")[1])
         # Следующий месяц, указанное число
         next_month = now.month + 1 if now.month < 12 else 1
@@ -137,8 +133,7 @@ async def get_my_standing_orders(
     Список регулярных заказов текущего клиента.
     По умолчанию возвращает только активные подписки.
     """
-    query: dict[str, object] = {
-        "client_id": PydanticObjectId(str(current_user.id))}
+    query: dict[str, object] = {"client_id": PydanticObjectId(str(current_user.id))}
     if only_active:
         query["is_active"] = True
 
@@ -224,7 +219,7 @@ async def create_standing_order(
         is_active=True,
         next_generation_at=next_gen,
         note=data.note,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     await standing_order.insert()
 
@@ -254,18 +249,15 @@ async def update_standing_order(
     """
     try:
         so = await StandingOrder.get(PydanticObjectId(order_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Регулярный заказ не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден") from e
 
     if not so:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Регулярный заказ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
 
     # Проверяем владельца
     if str(so.client_id) != str(current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
 
     # Обновляем поля
     if data.items is not None:
@@ -345,18 +337,15 @@ async def delete_standing_order(
     """
     try:
         so = await StandingOrder.get(PydanticObjectId(order_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Регулярный заказ не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден") from e
 
     if not so:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Регулярный заказ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
 
     # Проверяем владельца
     if str(so.client_id) != str(current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
 
     so.is_active = False
     await so.save()
@@ -386,17 +375,15 @@ async def confirm_generated_order(
     try:
         so = await StandingOrder.get(PydanticObjectId(order_id))
     except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Регулярный заказ не найден")
+        logger.warning("Подтверждение заказа из регулярного заказа — заказ не найден", order_id=order_id)
 
     if not so:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Регулярный заказ не найден")
+        logger.warning("Подтверждение заказа из регулярного заказа — заказ не найден", order_id=order_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
 
     # Проверяем владельца
     if str(so.client_id) != str(current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
 
     if not so.is_active:
         raise HTTPException(
@@ -405,7 +392,7 @@ async def confirm_generated_order(
         )
 
     # Генерируем заказ из подписки
-    from app.models.cart import Cart, CartItem
+    from app.models.cart import CartItem
     from app.models.product import Product
     from app.services.order_service import create_order as svc_create_order
 
@@ -435,11 +422,9 @@ async def confirm_generated_order(
                 product_slug=product.slug or "",
                 qty=item.qty,
                 unit=item.unit,
-                price=product.get_price_for_client(
-                    current_user.client_type == "b2b"),
+                price=product.get_price_for_client(current_user.client_type == "b2b"),
                 cost_price=product.cost_price,
-                total=round(
-                    item.qty * product.get_price_for_client(current_user.client_type == "b2b"), 2),
+                total=round(item.qty * product.get_price_for_client(current_user.client_type == "b2b"), 2),
                 min_order_qty=product.min_order_qty,
                 order_step=product.order_step,
                 stock_qty=product.stock_qty,
@@ -456,9 +441,7 @@ async def confirm_generated_order(
     from datetime import timedelta
 
     next_delivery = (
-        so.next_generation_at.date()
-        if so.next_generation_at
-        else (datetime.now(timezone.utc).date() + timedelta(days=1))
+        so.next_generation_at.date() if so.next_generation_at else (datetime.now(UTC).date() + timedelta(days=1))
     )
 
     delivery_info = {
@@ -477,11 +460,10 @@ async def confirm_generated_order(
             delivery_info=delivery_info,
         )
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     # Обновляем дату последней генерации и следующей
-    so.last_generated_at = datetime.now(timezone.utc)
+    so.last_generated_at = datetime.now(UTC)
     so.next_generation_at = _calculate_next_generation(so.schedule)
     await so.save()
 

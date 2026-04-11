@@ -4,9 +4,9 @@
 """
 
 import math
-import os
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Optional
 
 import structlog
@@ -30,7 +30,7 @@ logger = structlog.get_logger(__name__)
 
 # Директория для хранения фото товаров
 PRODUCT_IMAGES_DIR = "/app/media/products"
-os.makedirs(PRODUCT_IMAGES_DIR, exist_ok=True)
+Path(PRODUCT_IMAGES_DIR).mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 МБ
@@ -86,7 +86,7 @@ async def upload_product_image(
     if not file.filename:
         raise HTTPException(status_code=400, detail="Файл не выбран")
 
-    ext = os.path.splitext(file.filename)[1].lower()
+    ext = Path(file.filename).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail=f"Допустимые форматы: {', '.join(ALLOWED_EXTENSIONS)}")
 
@@ -95,9 +95,9 @@ async def upload_product_image(
         raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 5 МБ)")
 
     filename = f"{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(PRODUCT_IMAGES_DIR, filename)
+    filepath = Path(PRODUCT_IMAGES_DIR) / filename
 
-    with open(filepath, "wb") as f:
+    with Path(filepath).open("wb") as f:
         f.write(contents)
 
     url = f"/media/products/{filename}"

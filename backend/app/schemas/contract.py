@@ -39,8 +39,7 @@ class ContractCreate(BaseModel):
     end_date: DateType = Field(..., description="Дата окончания")
     total_amount: float = Field(..., ge=0, description="Общая сумма (₽)")
     items: list[ContractItemSchema] = Field(default_factory=list)
-    delivery_schedule: list[DeliveryScheduleSchema] = Field(
-        default_factory=list)
+    delivery_schedule: list[DeliveryScheduleSchema] = Field(default_factory=list)
     notes: Optional[str] = None
 
 
@@ -61,8 +60,7 @@ class ContractUpdate(BaseModel):
 class DeliveryMarkRequest(BaseModel):
     """Запрос отметки выполнения поставки по графику."""
 
-    schedule_index: int = Field(..., ge=0,
-                                description="Индекс записи в графике")
+    schedule_index: int = Field(..., ge=0, description="Индекс записи в графике")
     order_id: Optional[str] = Field(None, description="ID связанного заказа")
 
 

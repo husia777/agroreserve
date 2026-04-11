@@ -6,8 +6,7 @@ UC-42: Калькулятор тендера — расчёт нашей ста�
 """
 
 import random
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from datetime import UTC, datetime, timedelta
 
 import structlog
 
@@ -54,7 +53,7 @@ _SAMPLE_CATEGORIES = {
 
 
 def _generate_mock_tender(
-    keywords: List[str],
+    keywords: list[str],
     region: str,
     max_price: float,
     index: int = 0,
@@ -71,7 +70,7 @@ def _generate_mock_tender(
     Returns:
         Словарь с данными тендера
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     deadline = now + timedelta(days=random.randint(3, 21))
     delivery_date = (now + timedelta(days=random.randint(30, 90))).date()
 
@@ -90,8 +89,7 @@ def _generate_mock_tender(
         all_items = _SAMPLE_CATEGORIES["Овощи"]
 
     # Берём случайные 3-6 позиций
-    selected = random.sample(all_items, min(
-        random.randint(3, 6), len(all_items)))
+    selected = random.sample(all_items, min(random.randint(3, 6), len(all_items)))
     total_max_price = 0.0
 
     for name, unit in selected:
@@ -136,10 +134,10 @@ def _generate_mock_tender(
 
 
 async def search_eis_tenders(
-    keywords: List[str],
+    keywords: list[str],
     region: str,
     max_price: float,
-) -> List[dict]:
+) -> list[dict]:
     """
     UC-13: Поиск тендеров (заглушка — имитация ЕИС).
 
@@ -163,8 +161,7 @@ async def search_eis_tenders(
 
     # Генерируем 3-7 тестовых тендеров
     count = random.randint(3, 7)
-    mock_tenders = [_generate_mock_tender(
-        keywords, region, max_price, i) for i in range(count)]
+    mock_tenders = [_generate_mock_tender(keywords, region, max_price, i) for i in range(count)]
 
     # Сохраняем в БД (пропускаем дубликаты по eis_number)
     saved = []
@@ -248,12 +245,13 @@ async def calculate_tender_bid(
         Словарь с расчётом ставки
     """
     from beanie import PydanticObjectId
+
     from app.models.product import Product
 
     try:
         tender = await Tender.get(PydanticObjectId(tender_id))
-    except Exception:
-        raise ValueError(f"Тендер с ID {tender_id} не найден")
+    except Exception as e:
+        raise ValueError(f"Тендер с ID {tender_id} не найден") from e
 
     if not tender:
         raise ValueError(f"Тендер с ID {tender_id} не найден")
@@ -285,27 +283,23 @@ async def calculate_tender_bid(
             matched_product_name = products[0].name
         else:
             # Используем примерную себестоимость (50% от НМЦК позиции)
-            if item.max_price and item.qty > 0:
-                cost_price = round(item.max_price / item.qty * 0.5, 2)
-            else:
-                cost_price = 50.0  # ₽/кг по умолчанию
+            cost_price = (
+                round(item.max_price / item.qty * 0.5, 2) if item.max_price and item.qty > 0 else 50.0
+            )  # ₽/кг по умолчанию
 
         # Стоимость логистики на единицу
-        logistics_per_unit = round(
-            total_logistics / max(sum(i.qty for i in tender.items), 1), 4)
+        logistics_per_unit = round(total_logistics / max(sum(i.qty for i in tender.items), 1), 4)
 
         # Себестоимость с логистикой
         cost_with_logistics = round(cost_price + logistics_per_unit, 2)
 
         # Наша цена = себестоимость × (1 + наценка%)
-        our_unit_price = round(cost_with_logistics *
-                               (1 + margin_percent / 100), 2)
+        our_unit_price = round(cost_with_logistics * (1 + margin_percent / 100), 2)
         our_total = round(our_unit_price * item.qty, 2)
         item_cost = round(cost_with_logistics * item.qty, 2)
 
         item_margin = round(our_total - item_cost, 2)
-        item_margin_pct = round(
-            item_margin / our_total * 100, 1) if our_total > 0 else 0.0
+        item_margin_pct = round(item_margin / our_total * 100, 1) if our_total > 0 else 0.0
 
         total_cost += item_cost
         total_our_price += our_total
@@ -313,8 +307,7 @@ async def calculate_tender_bid(
         # Сравнение с НМЦК позиции
         reduction_from_nmck = 0.0
         if item.max_price and item.max_price > 0:
-            reduction_from_nmck = round(
-                (1 - our_total / item.max_price) * 100, 1)
+            reduction_from_nmck = round((1 - our_total / item.max_price) * 100, 1)
 
         bid_items.append(
             {
@@ -335,10 +328,8 @@ async def calculate_tender_bid(
         )
 
     total_margin = round(total_our_price - total_cost, 2)
-    total_margin_pct = round(
-        total_margin / total_our_price * 100, 1) if total_our_price > 0 else 0.0
-    reduction_from_nmck = round(
-        (1 - total_our_price / tender.max_price) * 100, 1) if tender.max_price > 0 else 0.0
+    total_margin_pct = round(total_margin / total_our_price * 100, 1) if total_our_price > 0 else 0.0
+    reduction_from_nmck = round((1 - total_our_price / tender.max_price) * 100, 1) if tender.max_price > 0 else 0.0
 
     # Проверяем рентабельность
     is_profitable = total_margin_pct >= 10.0  # Минимум 10% маржи
@@ -411,8 +402,7 @@ async def get_tender_analytics() -> dict:
     won_amount = sum(t.our_price or t.max_price for t in won)
     won_margin = sum(t.margin_estimate or 0 for t in won)
 
-    win_rate = round(len(won) / max(len(won) +
-                     len([t for t in all_tenders if t.status == "lost"]), 1) * 100, 1)
+    win_rate = round(len(won) / max(len(won) + len([t for t in all_tenders if t.status == "lost"]), 1) * 100, 1)
 
     today = date.today()
     upcoming_deadlines = [

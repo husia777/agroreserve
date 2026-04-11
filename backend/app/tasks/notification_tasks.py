@@ -4,6 +4,8 @@ Celery задачи уведомлений.
 """
 
 import asyncio
+from datetime import UTC
+
 import structlog
 from celery import Task
 
@@ -39,11 +41,12 @@ def send_notification_task(self: Task, notification_id: str) -> dict:
     """
 
     async def _execute():
+        from datetime import datetime
+
         from beanie import PydanticObjectId
 
         from app.models.notification import Notification, NotificationChannel
         from app.models.user import User
-        from datetime import datetime, timezone
 
         notification = await Notification.get(PydanticObjectId(notification_id))
         if not notification:
@@ -89,7 +92,7 @@ def send_notification_task(self: Task, notification_id: str) -> dict:
 
         # Обновляем статус уведомления
         notification.is_sent = success
-        notification.sent_at = datetime.now(timezone.utc) if success else None
+        notification.sent_at = datetime.now(UTC) if success else None
         notification.send_error = error_msg if not success else None
         await notification.save()
 
@@ -162,7 +165,7 @@ def update_certificate_statuses() -> dict:
                 message_parts.append(f"Истекают скоро:\n{certs_text}")
 
             if expired_list:
-                message_parts.append(f"Просрочены:\n" + "\n".join(f"• {n}" for n in expired_list))
+                message_parts.append("Просрочены:\n" + "\n".join(f"• {n}" for n in expired_list))
 
             notification_message = "\n\n".join(message_parts)
 
@@ -230,10 +233,11 @@ def check_overdue_debts() -> dict:
         notified = 0
         for client in clients_with_debt:
             # Ищем давно неоплаченные заказы
-            from app.models.order import Order, OrderStatus, PaymentStatus
-            from datetime import datetime, timedelta, timezone
+            from datetime import datetime, timedelta
 
-            cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+            from app.models.order import Order, OrderStatus, PaymentStatus
+
+            cutoff = datetime.now(UTC) - timedelta(days=30)
             overdue_orders = await Order.find(
                 {"client_id.$id": client.id},
                 Order.payment_status == PaymentStatus.PENDING,

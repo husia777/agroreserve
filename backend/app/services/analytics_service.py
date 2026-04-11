@@ -4,8 +4,7 @@
 UC-12: Аналитика продаж — выручка, маржа, топ товаров/клиентов, тренды.
 """
 
-from datetime import date, datetime, timedelta, timezone
-from typing import List, Optional
+from datetime import UTC, date, datetime, timedelta
 
 import structlog
 
@@ -16,12 +15,12 @@ logger = structlog.get_logger(__name__)
 
 def _to_start_dt(d: date) -> datetime:
     """Конвертирует date в datetime (начало дня, UTC)."""
-    return datetime(d.year, d.month, d.day, 0, 0, 0, tzinfo=timezone.utc)
+    return datetime(d.year, d.month, d.day, 0, 0, 0, tzinfo=UTC)
 
 
 def _to_end_dt(d: date) -> datetime:
     """Конвертирует date в datetime (конец дня, UTC)."""
-    return datetime(d.year, d.month, d.day, 23, 59, 59, tzinfo=timezone.utc)
+    return datetime(d.year, d.month, d.day, 23, 59, 59, tzinfo=UTC)
 
 
 async def get_overview(start: date, end: date) -> dict:

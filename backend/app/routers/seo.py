@@ -2,7 +2,7 @@
 SEO эндпоинты (UC-46): /sitemap.xml, /robots.txt
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 from fastapi import APIRouter, Response
@@ -42,7 +42,7 @@ Host: {SITE_URL}
 
 @router.get("/sitemap.xml", response_class=Response)
 async def sitemap_xml():
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    now = datetime.now(UTC).strftime("%Y-%m-%d")
     urls = []
 
     static_pages = [
@@ -64,7 +64,7 @@ async def sitemap_xml():
         )
 
     try:
-        categories = await Category.find(Category.is_active == True).to_list()
+        categories = await Category.find(Category.is_active is True).to_list()
         for cat in categories:
             urls.append(
                 {
@@ -78,7 +78,7 @@ async def sitemap_xml():
         logger.warning("Ошибка категорий для sitemap", error=str(e))
 
     try:
-        products = await Product.find(Product.is_active == True).to_list()
+        products = await Product.find(Product.is_active is True).to_list()
         for prod in products:
             cat_slug = ""
             if prod.category_id:
@@ -87,7 +87,11 @@ async def sitemap_xml():
                     if prod_cat is not None:
                         cat_slug = prod_cat.slug
                 except Exception:
-                    pass
+                    logger.warning(
+                        "Ошибка получения категории для товара в sitemap",
+                        product_id=str(prod.id),
+                        category_id=str(prod.category_id),
+                    )
             updated = now
             if hasattr(prod, "updated_at") and prod.updated_at:
                 updated = prod.updated_at.strftime("%Y-%m-%d")

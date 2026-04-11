@@ -7,7 +7,6 @@
 - Получение реквизитов ИП из настроек
 """
 
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -45,7 +44,7 @@ def get_content_type(filepath: Path) -> str:
     suffix = filepath.suffix.lower()
     if suffix == ".pdf":
         return "application/pdf"
-    elif suffix == ".html":
+    if suffix == ".html":
         return "text/html; charset=utf-8"
     return "application/octet-stream"
 
@@ -65,7 +64,7 @@ async def read_document_bytes(filename: str) -> Optional[bytes]:
         return None
 
     try:
-        with open(filepath, "rb") as f:
+        with Path.open(filepath, "rb") as f:
             return f.read()
     except Exception as e:
         logger.error("Ошибка чтения файла документа", filename=filename, error=str(e))
@@ -108,5 +107,5 @@ def get_base_styles() -> str:
 
 async def ensure_documents_dir() -> None:
     """Создаёт директорию для документов если не существует."""
-    os.makedirs(DOCUMENTS_DIR, exist_ok=True)
+    Path(DOCUMENTS_DIR).mkdir(exist_ok=True)
     logger.debug("Директория документов проверена", path=DOCUMENTS_DIR)

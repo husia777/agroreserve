@@ -5,7 +5,7 @@ UC-29: Ежедневная генерация заказов по распис�
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 
@@ -91,13 +91,12 @@ def generate_standing_orders(self) -> dict:
 
         today = date.today()
 
-        from app.models.standing_order import StandingOrder
-        from app.models.order import Order, OrderStatus, PaymentMethod, OrderItem
-        from app.models.user import User
-        from app.models.product import Product
         from app.config import settings
+        from app.models.order import Order, OrderItem, OrderStatus, PaymentMethod
+        from app.models.product import Product
+        from app.models.standing_order import StandingOrder
+        from app.models.user import User
         from app.utils.telegram_bot import send_message
-        from beanie import PydanticObjectId
 
         result: dict[str, object] = {
             "status": "ok",
@@ -226,8 +225,7 @@ def generate_standing_orders(self) -> dict:
 
                 delivery_date = today + timedelta(days=1)
                 if delivery_date.weekday() >= 5:  # Суббота или воскресенье
-                    delivery_date = today + \
-                        timedelta(days=(7 - today.weekday()))
+                    delivery_date = today + timedelta(days=(7 - today.weekday()))
 
                 # Создаём заказ
                 new_order = Order(
@@ -244,13 +242,12 @@ def generate_standing_orders(self) -> dict:
                     delivery_slot=so.delivery_slot,
                     delivery_address=so.delivery_address,
                     payment_method=PaymentMethod.BANK_TRANSFER,
-                    note=f"Регулярный заказ (автогенерация). {so.note or ''}".strip(
-                    ),
+                    note=f"Регулярный заказ (автогенерация). {so.note or ''}".strip(),
                 )
                 await new_order.insert()
 
                 # Обновляем дату последней генерации в регулярном заказе
-                so.last_generated_at = datetime.now(timezone.utc)
+                so.last_generated_at = datetime.now(UTC)
                 await so.save()
 
                 generated_orders.append(
@@ -305,8 +302,7 @@ def generate_standing_orders(self) -> dict:
                     try:
                         await send_message(settings.TELEGRAM_ADMIN_CHAT_ID, admin_msg)
                     except Exception as e:
-                        logger.warning(
-                            "Не удалось уведомить администратора", error=str(e))
+                        logger.warning("Не удалось уведомить администратора", error=str(e))
 
             except Exception as e:
                 logger.error(
@@ -341,4 +337,4 @@ def generate_standing_orders(self) -> dict:
         return dict(_run_async(_execute()))
     except Exception as exc:
         logger.error("Ошибка задачи generate_standing_orders", error=str(exc))
-        raise self.retry(exc=exc)
+        return {"status": "error", "error": str(exc)}

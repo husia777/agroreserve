@@ -11,12 +11,12 @@
 - UC-36: Автосверка оплат
 """
 
-from datetime import date, datetime, timezone
-from typing import List, Optional
+from datetime import UTC, date, datetime
+from typing import Optional
 
 import structlog
 
-from app.models.finance import Expense, ExpenseCategory
+from app.models.finance import Expense
 from app.models.order import Order, OrderStatus, PaymentStatus
 
 logger = structlog.get_logger(__name__)
@@ -36,8 +36,8 @@ async def get_revenue(start: date, end: date) -> float:
     Returns:
         Выручка в рублях
     """
-    start_dt = datetime(start.year, start.month, start.day, 0, 0, 0, tzinfo=timezone.utc)
-    end_dt = datetime(end.year, end.month, end.day, 23, 59, 59, tzinfo=timezone.utc)
+    start_dt = datetime(start.year, start.month, start.day, 0, 0, 0, tzinfo=UTC)
+    end_dt = datetime(end.year, end.month, end.day, 23, 59, 59, tzinfo=UTC)
 
     orders = await Order.find(
         Order.status == OrderStatus.DELIVERED,
@@ -61,8 +61,8 @@ async def get_cogs(start: date, end: date) -> float:
     Returns:
         Себестоимость в рублях
     """
-    start_dt = datetime(start.year, start.month, start.day, 0, 0, 0, tzinfo=timezone.utc)
-    end_dt = datetime(end.year, end.month, end.day, 23, 59, 59, tzinfo=timezone.utc)
+    start_dt = datetime(start.year, start.month, start.day, 0, 0, 0, tzinfo=UTC)
+    end_dt = datetime(end.year, end.month, end.day, 23, 59, 59, tzinfo=UTC)
 
     orders = await Order.find(
         Order.status == OrderStatus.DELIVERED,
@@ -134,8 +134,8 @@ async def calculate_pnl(period_start: date, period_end: date) -> dict:
     Returns:
         Словарь с показателями P&L
     """
-    start_dt = datetime(period_start.year, period_start.month, period_start.day, 0, 0, 0, tzinfo=timezone.utc)
-    end_dt = datetime(period_end.year, period_end.month, period_end.day, 23, 59, 59, tzinfo=timezone.utc)
+    start_dt = datetime(period_start.year, period_start.month, period_start.day, 0, 0, 0, tzinfo=UTC)
+    end_dt = datetime(period_end.year, period_end.month, period_end.day, 23, 59, 59, tzinfo=UTC)
 
     # Получаем все доставленные заказы
     orders = await Order.find(
@@ -260,7 +260,7 @@ class PaymentInput:
         self.description = description
 
 
-async def auto_reconcile_payments(payments: List[dict]) -> dict:
+async def auto_reconcile_payments(payments: list[dict]) -> dict:
     """
     UC-36: Автосверка оплат.
 
@@ -279,7 +279,6 @@ async def auto_reconcile_payments(payments: List[dict]) -> dict:
         Словарь {matched: [...], partial: [...], unmatched: [...]}
     """
     from beanie import PydanticObjectId
-    from app.models.user import User
 
     matched = []
     partial = []
@@ -290,7 +289,7 @@ async def auto_reconcile_payments(payments: List[dict]) -> dict:
         order_number = payment.get("order_number")
         client_id = payment.get("client_id")
         payment_date = payment.get("date")
-        description = payment.get("description", "")
+        payment.get("description", "")
 
         if amount <= 0:
             unmatched.append(
@@ -355,13 +354,13 @@ async def auto_reconcile_payments(payments: List[dict]) -> dict:
                     try:
                         from datetime import datetime
 
-                        matched_order.paid_at = datetime.fromisoformat(payment_date).replace(tzinfo=timezone.utc)
+                        matched_order.paid_at = datetime.fromisoformat(payment_date).replace(tzinfo=UTC)
                     except Exception:
-                        matched_order.paid_at = datetime.now(timezone.utc)
+                        matched_order.paid_at = datetime.now(UTC)
                 else:
-                    matched_order.paid_at = datetime.now(timezone.utc)
+                    matched_order.paid_at = datetime.now(UTC)
 
-                matched_order.updated_at = datetime.now(timezone.utc)
+                matched_order.updated_at = datetime.now(UTC)
                 await matched_order.save()
 
                 # Уменьшаем текущий долг клиента
@@ -388,7 +387,7 @@ async def auto_reconcile_payments(payments: List[dict]) -> dict:
                 # Частичная оплата
                 matched_order.payment_status = PaymentStatus.PARTIAL
                 matched_order.paid_amount = new_paid
-                matched_order.updated_at = datetime.now(timezone.utc)
+                matched_order.updated_at = datetime.now(UTC)
                 await matched_order.save()
 
                 # Уменьшаем текущий долг клиента
@@ -467,6 +466,7 @@ async def _decrease_client_debt(order: Order, amount: float) -> None:
     """
     try:
         from beanie import PydanticObjectId
+
         from app.models.user import User
 
         client_id = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
@@ -474,7 +474,7 @@ async def _decrease_client_debt(order: Order, amount: float) -> None:
 
         if client:
             client.current_debt = max(0.0, round(client.current_debt - amount, 2))
-            client.updated_at = datetime.now(timezone.utc)
+            client.updated_at = datetime.now(UTC)
             await client.save()
 
             logger.info(

@@ -7,8 +7,8 @@
 - Генерацию заявки поставщику (PDF)
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import structlog
 from beanie import PydanticObjectId
@@ -33,7 +33,7 @@ async def calculate_avg_consumption(product_id: str, days: int = 30) -> float:
     """
     from app.models.order import Order
 
-    since = datetime.now(timezone.utc) - timedelta(days=days)
+    since = datetime.now(UTC) - timedelta(days=days)
 
     # Получаем все доставленные заказы за период
     delivered_orders = await Order.find(
@@ -63,7 +63,7 @@ async def calculate_avg_consumption(product_id: str, days: int = 30) -> float:
     return round(avg_daily, 3)
 
 
-async def get_purchase_recommendations() -> List[Dict[str, Any]]:
+async def get_purchase_recommendations() -> list[dict[str, Any]]:
     """
     Формирует рекомендации по закупке товаров (UC-27).
 
@@ -89,7 +89,7 @@ async def get_purchase_recommendations() -> List[Dict[str, Any]]:
     active_orders = await Order.find({"status": {"$in": active_statuses}}).to_list()
 
     # Агрегируем зарезервированное количество по product_id
-    reserved_by_product: Dict[str, float] = {}
+    reserved_by_product: dict[str, float] = {}
     for order in active_orders:
         for item in order.items:
             pid = item.product_id
@@ -155,7 +155,7 @@ async def get_purchase_recommendations() -> List[Dict[str, Any]]:
     return recommendations
 
 
-async def generate_purchase_order_pdf(supplier_id: str, items: List[Dict[str, Any]]) -> bytes:
+async def generate_purchase_order_pdf(supplier_id: str, items: list[dict[str, Any]]) -> bytes:
     """
     Генерирует PDF заявки поставщику.
 
@@ -192,7 +192,7 @@ async def generate_purchase_order_pdf(supplier_id: str, items: List[Dict[str, An
         company_inn = ""
         company_phone = ""
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Генерируем HTML заявки
     items_rows = ""

@@ -39,25 +39,24 @@ def _get_period_dates(
 
     if period == "today":
         return today, today
-    elif period == "week":
+    if period == "week":
         start = today - timedelta(days=today.weekday())
         return start, today
-    elif period == "month":
+    if period == "month":
         return today.replace(day=1), today
-    elif period == "quarter":
+    if period == "quarter":
         quarter_month = ((today.month - 1) // 3) * 3 + 1
         start = today.replace(month=quarter_month, day=1)
         return start, today
-    elif period == "year":
+    if period == "year":
         return today.replace(month=1, day=1), today
-    elif period == "custom":
+    if period == "custom":
         if not date_from or not date_to:
             raise ValueError("Для периода 'custom' необходимо указать date_from и date_to")
         if date_from > date_to:
             raise ValueError("Дата начала периода должна быть меньше или равна дате окончания")
         return date_from, date_to
-    else:
-        raise ValueError("Допустимые периоды: today, week, month, quarter, year, custom")
+    raise ValueError("Допустимые периоды: today, week, month, quarter, year, custom")
 
 
 @router.get(
@@ -82,7 +81,7 @@ async def get_overview(
     try:
         start, end = _get_period_dates(period, date_from, date_to)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     from app.services.analytics_service import get_overview
 
@@ -158,7 +157,7 @@ async def get_revenue_chart(
     try:
         start, end = _get_period_dates(period, date_from, date_to)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     valid_granularities = ["day", "week", "month"]
     if granularity not in valid_granularities:
@@ -199,7 +198,7 @@ async def get_top_products(
     try:
         start, end = _get_period_dates(period, date_from, date_to)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     from app.services.analytics_service import get_top_products
 
@@ -231,7 +230,7 @@ async def get_top_clients(
     try:
         start, end = _get_period_dates(period, date_from, date_to)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     from app.services.analytics_service import get_top_clients
 
@@ -263,7 +262,7 @@ async def get_margins(
     try:
         start, end = _get_period_dates(period, date_from, date_to)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     from app.services.analytics_service import get_margin_by_products
 

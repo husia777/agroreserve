@@ -4,11 +4,12 @@
 """
 
 import math
-import os
 import shutil
 import uuid
-from datetime import date as DateType, datetime, timezone, timedelta
-from typing import Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from datetime import date as DateType
+from pathlib import Path
+from typing import Optional
 
 import structlog
 from beanie import PydanticObjectId
@@ -37,7 +38,7 @@ ALLOWED_CONTENT_TYPES = {
 EXPIRY_WARNING_DAYS = 30
 
 # Маппинг значений cert_type: фронтенд → бэкенд
-CERT_TYPE_MAP: Dict[str, str] = {
+CERT_TYPE_MAP: dict[str, str] = {
     "declaration": "declaration_tr_ts",
     "certificate": "certificate",
     "vet_cert": "vet_certificate",
@@ -50,7 +51,7 @@ CERT_TYPE_MAP: Dict[str, str] = {
 }
 
 # Обратный маппинг: бэкенд → фронтенд
-CERT_TYPE_REVERSE: Dict[str, str] = {
+CERT_TYPE_REVERSE: dict[str, str] = {
     "declaration_tr_ts": "declaration",
     "certificate": "certificate",
     "vet_certificate": "vet_cert",
@@ -59,7 +60,7 @@ CERT_TYPE_REVERSE: Dict[str, str] = {
 }
 
 # Маппинг статусов: бэкенд → фронтенд
-STATUS_MAP: Dict[str, str] = {
+STATUS_MAP: dict[str, str] = {
     "active": "valid",
     "expiring_soon": "expiring_soon",
     "expired": "expired",
@@ -74,7 +75,7 @@ class CertificateUpdate(BaseModel):
     issuing_authority: Optional[str] = Field(None, max_length=300)
     issued_at: Optional[str] = Field(None, description="Дата выдачи (YYYY-MM-DD)")
     expires_at: Optional[str] = Field(None, description="Дата истечения (YYYY-MM-DD)")
-    product_ids: Optional[List[str]] = Field(None, description="ID товаров")
+    product_ids: Optional[list[str]] = Field(None, description="ID товаров")
     notes: Optional[str] = Field(None, max_length=1000)
 
 
@@ -258,18 +259,18 @@ async def upload_certificate(
     # Парсим даты
     try:
         issued_date = DateType.fromisoformat(issued_at)
-    except ValueError:
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Неверный формат даты выдачи (ожидается YYYY-MM-DD)",
-        )
+        ) from e
     try:
         expiry_date = DateType.fromisoformat(expires_at)
-    except ValueError:
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Неверный формат даты истечения (ожидается YYYY-MM-DD)",
-        )
+        ) from e
 
     # Проверяем уникальность номера
     existing = await Certificate.find_one(Certificate.number == cert_number)
@@ -280,7 +281,7 @@ async def upload_certificate(
         )
 
     # Обрабатываем список товаров
-    product_id_list: List[str] = []
+    product_id_list: list[str] = []
     if product_ids:
         product_id_list = [pid.strip() for pid in product_ids.split(",") if pid.strip()]
 
@@ -294,23 +295,19 @@ async def upload_certificate(
                 detail="Допустимые форматы: PDF, JPG, PNG",
             )
 
-        os.makedirs(CERTIFICATES_DIR, exist_ok=True)
-        ext = os.path.splitext(file.filename)[1]
+        Path(CERTIFICATES_DIR).mkdir(parents=True, exist_ok=True)
+        ext = Path(file.filename).suffix
         unique_filename = f"cert_{uuid.uuid4().hex}{ext}"
-        filepath = os.path.join(CERTIFICATES_DIR, unique_filename)
+        filepath = Path(CERTIFICATES_DIR) / unique_filename
 
         try:
-            with open(filepath, "wb") as f_out:
+            with Path.open(filepath, "wb") as f_out:
                 shutil.copyfileobj(file.file, f_out)
             file_name = unique_filename
             file_url = f"/api/v1/admin/certificates/files/{unique_filename}"
             logger.info("Файл сертификата сохранён", filename=unique_filename)
         except Exception as e:
             logger.error("Ошибка сохранения файла сертификата", error=str(e))
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Ошибка сохранения файла",
-            )
 
     # Определяем начальный статус
     today = DateType.today()
@@ -361,8 +358,8 @@ async def update_certificate(
     """
     try:
         cert = await Certificate.get(PydanticObjectId(cert_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Сертификат не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Сертификат не найден") from e
 
     if not cert:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Сертификат не найден")
@@ -380,27 +377,27 @@ async def update_certificate(
     if data.issued_at is not None:
         try:
             cert.issued_date = DateType.fromisoformat(data.issued_at)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Неверный формат даты выдачи",
-            )
+            ) from e
 
     if data.expires_at is not None:
         try:
             cert.expiry_date = DateType.fromisoformat(data.expires_at)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Неверный формат даты истечения",
-            )
+            ) from e
 
     if data.notes is not None:
         cert.notes = data.notes
 
     # Пересчитываем статус
     cert.status = cert.recalculate_status()
-    cert.updated_at = datetime.now(timezone.utc)
+    cert.updated_at = datetime.now(UTC)
     await cert.save()
 
     # Обновляем certificate_ids у привязанных товаров
@@ -427,7 +424,7 @@ async def update_certificate(
 
         cert.product_ids = data.product_ids
 
-        cert.updated_at = datetime.now(timezone.utc)
+        cert.updated_at = datetime.now(UTC)
         await cert.save()
 
     logger.info(
@@ -464,18 +461,18 @@ async def delete_certificate(
     """Удаляет сертификат и его файл."""
     try:
         cert = await Certificate.get(PydanticObjectId(cert_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Сертификат не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Сертификат не найден") from e
 
     if not cert:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Сертификат не найден")
 
     # Удаляем файл
     if cert.file_name:
-        filepath = os.path.join(CERTIFICATES_DIR, cert.file_name)
-        if os.path.exists(filepath):
+        filepath = Path(CERTIFICATES_DIR) / cert.file_name
+        if filepath.exists():
             try:
-                os.remove(filepath)
+                filepath.unlink()
             except Exception as e:
                 logger.warning("Не удалось удалить файл сертификата", error=str(e))
 
@@ -507,8 +504,8 @@ async def download_certificate_file(filename: str):
     """Отдача файла сертификата."""
     from fastapi.responses import FileResponse
 
-    filepath = os.path.join(CERTIFICATES_DIR, filename)
-    if not os.path.exists(filepath):
+    filepath = Path(CERTIFICATES_DIR) / filename
+    if not filepath.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
 
     if filename.endswith(".pdf"):

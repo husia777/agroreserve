@@ -3,7 +3,7 @@
 Эндпоинты: /api/v1/auth/
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -97,7 +97,7 @@ def _build_tokens(user: User) -> TokenResponse:
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        token_type="bearer",
+        token_type="bearer",  # nosec B106
         expires_in=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
@@ -229,7 +229,7 @@ async def login(data: UserLogin):
             detail="Аккаунт заблокирован. Обратитесь в службу поддержки.",
         )
 
-    user.last_login_at = datetime.now(timezone.utc)
+    user.last_login_at = datetime.now(UTC)
     await user.save()
 
     logger.info("Успешный вход в систему", user_id=str(user.id), role=user.role.value)

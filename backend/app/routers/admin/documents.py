@@ -4,9 +4,9 @@
 """
 
 import math
-import os
 from datetime import UTC
 from datetime import date as DateType
+from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
 
@@ -73,8 +73,8 @@ async def generate_documents(
 
     try:
         order = await Order.get(PydanticObjectId(order_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден") from e
 
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
@@ -228,7 +228,7 @@ async def generate_reconciliation_act(
             date_to=data.date_to,
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except Exception as e:
         logger.error(
             "Ошибка генерации акта сверки",
@@ -238,7 +238,7 @@ async def generate_reconciliation_act(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка при генерации акта сверки",
-        )
+        ) from e
 
     logger.info(
         "Акт сверки запрошен",
@@ -296,7 +296,7 @@ async def generate_contract(
             client_id=data.client_id,
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except Exception as e:
         logger.error(
             "Ошибка генерации договора",
@@ -307,7 +307,7 @@ async def generate_contract(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка при генерации договора",
-        )
+        ) from e
 
     logger.info(
         "Договор сгенерирован и отдан",
@@ -391,8 +391,8 @@ async def download_document(
     """Скачивает документ по ID (для администратора)."""
     try:
         doc = await DocumentRecord.get(PydanticObjectId(document_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден") from e
 
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
@@ -403,12 +403,12 @@ async def download_document(
             detail="Файл документа не найден",
         )
 
-    filepath = os.path.join(DOCUMENTS_DIR, doc.file_name)
+    filepath = Path(DOCUMENTS_DIR) / doc.file_name
 
-    if not os.path.exists(filepath):
+    if not filepath.exists():
         # Пробуем HTML версию
         html_path = filepath.replace(".pdf", ".html")
-        if os.path.exists(html_path):
+        if Path(html_path).exists():
             filepath = html_path
         else:
             raise HTTPException(
@@ -434,8 +434,8 @@ async def download_document(
 )
 async def download_document_file(filename: str):
     """Отдача файла документа по имени."""
-    filepath = os.path.join(DOCUMENTS_DIR, filename)
-    if not os.path.exists(filepath):
+    filepath = Path(DOCUMENTS_DIR) / filename
+    if not filepath.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
 
     if filename.endswith(".pdf"):

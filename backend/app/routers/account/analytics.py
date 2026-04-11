@@ -47,7 +47,7 @@ async def get_client_analytics(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка при получении аналитики",
-        )
+        ) from e
 
     logger.info(
         "Аналитика клиента получена",

@@ -3,11 +3,11 @@
 Коллекция: notifications
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Optional
 
-from beanie import Document, Indexed
+from beanie import Document
 from pydantic import Field
 
 
@@ -52,26 +52,20 @@ class Notification(Document):
     user_id: str = Field(..., description="ID получателя (пользователь)")
 
     # ── Тип и канал ───────────────────────────────────────────
-    notification_type: NotificationType = Field(
-        ..., description="Тип уведомления")
+    notification_type: NotificationType = Field(..., description="Тип уведомления")
     channel: NotificationChannel = Field(..., description="Канал доставки")
 
     # ── Содержание ────────────────────────────────────────────
-    title: str = Field(..., max_length=200,
-                       description="Заголовок уведомления")
+    title: str = Field(..., max_length=200, description="Заголовок уведомления")
     message: str = Field(..., max_length=2000, description="Текст уведомления")
 
     # ── Ссылка (если нужно перейти к объекту) ────────────────
-    action_url: Optional[str] = Field(
-        None, description="URL для перехода (например, /orders/123)")
-    action_label: Optional[str] = Field(
-        None, description="Текст кнопки действия")
+    action_url: Optional[str] = Field(None, description="URL для перехода (например, /orders/123)")
+    action_label: Optional[str] = Field(None, description="Текст кнопки действия")
 
     # ── Связанный объект ──────────────────────────────────────
-    related_id: Optional[str] = Field(
-        None, description="ID связанного объекта (заказ, товар и т.д.)")
-    related_type: Optional[str] = Field(
-        None, description="Тип связанного объекта: order, product")
+    related_id: Optional[str] = Field(None, description="ID связанного объекта (заказ, товар и т.д.)")
+    related_type: Optional[str] = Field(None, description="Тип связанного объекта: order, product")
 
     # ── Статус прочтения ──────────────────────────────────────
     is_read: bool = Field(False, description="Прочитано ли уведомление")
@@ -80,12 +74,10 @@ class Notification(Document):
     # ── Статус доставки ───────────────────────────────────────
     is_sent: bool = Field(False, description="Отправлено ли в канал доставки")
     sent_at: Optional[datetime] = Field(None, description="Дата отправки")
-    send_error: Optional[str] = Field(
-        None, description="Ошибка отправки (если есть)")
+    send_error: Optional[str] = Field(None, description="Ошибка отправки (если есть)")
 
     # ── Метаданные ────────────────────────────────────────────
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "notifications"

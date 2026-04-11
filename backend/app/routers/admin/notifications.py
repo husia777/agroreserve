@@ -91,11 +91,11 @@ async def mark_as_read(
     """Отмечает уведомление как прочитанное."""
     try:
         notification = await Notification.get(PydanticObjectId(notification_id))
-    except Exception:
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Уведомление не найдено",
-        )
+        ) from e
 
     if not notification:
         raise HTTPException(

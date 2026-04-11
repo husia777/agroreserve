@@ -11,24 +11,20 @@ from pydantic import BaseModel, Field, field_validator
 class CertificateCreate(BaseModel):
     """Запрос на создание сертификата."""
 
-    number: str = Field(..., min_length=3, max_length=100,
-                        description="Номер сертификата/декларации")
+    number: str = Field(..., min_length=3, max_length=100, description="Номер сертификата/декларации")
     cert_type: str = Field(
         ..., description="Тип: declaration_tr_ts, certificate, vet_certificate, quality_certificate, other"
     )
     issued_date: DateType = Field(..., description="Дата выдачи")
     expiry_date: DateType = Field(..., description="Дата окончания действия")
-    issuing_authority: Optional[str] = Field(
-        None, max_length=300, description="Орган выдачи")
-    product_ids: list[str] = Field(
-        default_factory=list, description="ID товаров")
+    issuing_authority: Optional[str] = Field(None, max_length=300, description="Орган выдачи")
+    product_ids: list[str] = Field(default_factory=list, description="ID товаров")
     notes: Optional[str] = Field(None, max_length=1000)
 
     @field_validator("cert_type")
     @classmethod
     def validate_cert_type(cls, v: str) -> str:
-        valid = ["declaration_tr_ts", "certificate",
-                 "vet_certificate", "quality_certificate", "other"]
+        valid = ["declaration_tr_ts", "certificate", "vet_certificate", "quality_certificate", "other"]
         if v not in valid:
             raise ValueError(f"Допустимые типы: {', '.join(valid)}")
         return v
@@ -36,10 +32,8 @@ class CertificateCreate(BaseModel):
     @field_validator("expiry_date")
     @classmethod
     def validate_expiry_date(cls, v: DateType, info) -> DateType:
-        if "issued_date" in (info.data or {}):
-            if v <= info.data["issued_date"]:
-                raise ValueError(
-                    "Дата окончания должна быть позже даты выдачи")
+        if "issued_date" in (info.data or {}) and v <= info.data["issued_date"]:
+            raise ValueError("Дата окончания должна быть позже даты выдачи")
         return v
 
 
@@ -62,13 +56,11 @@ class CertificateResponse(BaseModel):
     expiry_date: str
     issuing_authority: Optional[str] = None
     product_ids: list[str] = Field(default_factory=list)
-    product_names: list[str] = Field(
-        default_factory=list, description="Названия товаров (денормализовано)")
+    product_names: list[str] = Field(default_factory=list, description="Названия товаров (денормализовано)")
     file_url: Optional[str] = None
     file_name: Optional[str] = None
     status: str
-    days_until_expiry: Optional[int] = Field(
-        None, description="Дней до истечения (null если просрочен)")
+    days_until_expiry: Optional[int] = Field(None, description="Дней до истечения (null если просрочен)")
     notes: Optional[str] = None
     created_at: str
     updated_at: str

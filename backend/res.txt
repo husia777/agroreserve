@@ -1,0 +1,238 @@
+uv run ruff check app/ tests/
+app/main.py:82:9: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+app/main.py:293:1: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+app/routers/account/analytics.py:47:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/analytics.py:42:5: RET505 Unnecessary `elif` after `return` statement
+app/routers/admin/analytics.py:85:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/analytics.py:161:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/analytics.py:202:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/analytics.py:234:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/analytics.py:266:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/backups.py:80:5: RET505 Unnecessary `elif` after `return` statement
+app/routers/admin/backups.py:90:5: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+app/routers/admin/backups.py:163:17: PTH107 `os.remove()` should be replaced by `Path.unlink()`
+app/routers/admin/backups.py:195:19: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/admin/backups.py:196:5: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+app/routers/admin/backups.py:206:16: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+app/routers/admin/backups.py:224:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/backups.py:236:19: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/admin/backups.py:237:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/admin/backups.py:250:19: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/admin/backups.py:251:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/admin/backups.py:285:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/backups.py:295:19: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/admin/backups.py:296:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/admin/backups.py:300:9: PTH107 `os.remove()` should be replaced by `Path.unlink()`
+app/routers/admin/backups.py:303:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/calendar.py:62:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/certificates.py:263:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/certificates.py:270:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/certificates.py:298:9: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+app/routers/admin/certificates.py:299:15: PTH122 `os.path.splitext()` should be replaced by `Path.suffix`, `Path.stem`, and `Path.parent`
+app/routers/admin/certificates.py:301:20: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/admin/certificates.py:304:18: PTH123 `open()` should be replaced by `Path.open()`
+app/routers/admin/certificates.py:311:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/certificates.py:366:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/certificates.py:385:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/certificates.py:394:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/certificates.py:469:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/certificates.py:476:20: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/admin/certificates.py:477:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/admin/certificates.py:479:17: PTH107 `os.remove()` should be replaced by `Path.unlink()`
+app/routers/admin/certificates.py:511:16: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/admin/certificates.py:512:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/admin/contracts.py:106:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/contracts.py:227:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/contracts.py:251:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/contracts.py:371:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/contracts.py:403:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/crm.py:104:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/crm.py:132:13: F841 Local variable `qty` is assigned to but never used
+app/routers/admin/crm.py:248:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/crm.py:294:5: F841 Local variable `total` is assigned to but never used
+app/routers/admin/crm.py:320:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/dashboard.py:36:5: F841 Local variable `yesterday` is assigned to but never used
+app/routers/admin/dashboard.py:37:5: F841 Local variable `now` is assigned to but never used
+app/routers/admin/dishes.py:172:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/dishes.py:196:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/dishes.py:269:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/documents.py:77:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/documents.py:231:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/documents.py:238:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/documents.py:299:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/documents.py:307:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/documents.py:395:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/documents.py:406:16: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/admin/documents.py:408:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/admin/documents.py:411:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/admin/documents.py:437:16: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/admin/documents.py:438:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/admin/finance.py:252:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/finance.py:288:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/finance.py:413:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/labels.py:99:9: S112 `try`-`except`-`continue` detected, consider logging the exception
+app/routers/admin/labels.py:271:9: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+app/routers/admin/labels.py:273:9: S110 `try`-`except`-`pass` detected, consider logging the exception
+app/routers/admin/labels.py:309:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/labels.py:431:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/notifications.py:95:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/orders.py:122:5: F841 Local variable `sort_field` is assigned to but never used
+app/routers/admin/orders.py:180:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/orders.py:219:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/orders.py:253:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/orders.py:272:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/orders.py:301:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/orders.py:342:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/orders.py:378:5: S110 `try`-`except`-`pass` detected, consider logging the exception
+app/routers/admin/procurement.py:78:5: F841 Local variable `total_estimated_cost` is assigned to but never used
+app/routers/admin/procurement.py:113:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/procurement.py:164:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/procurement.py:173:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/procurement.py:211:9: B007 Loop control variable `pid` not used within loop body
+app/routers/admin/products.py:33:1: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+app/routers/admin/products.py:89:11: PTH122 `os.path.splitext()` should be replaced by `Path.suffix`, `Path.stem`, and `Path.parent`
+app/routers/admin/products.py:98:16: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/admin/products.py:100:10: PTH123 `open()` should be replaced by `Path.open()`
+app/routers/admin/reminders.py:57:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/reminders.py:187:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/reminders.py:206:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/reminders.py:261:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/reminders.py:275:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/reminders.py:292:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/reminders.py:323:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/reminders.py:386:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/stock.py:71:9: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+app/routers/admin/stock.py:73:9: S110 `try`-`except`-`pass` detected, consider logging the exception
+app/routers/admin/stock.py:198:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/stock.py:237:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/suppliers.py:74:5: F841 Local variable `total` is assigned to but never used
+app/routers/admin/suppliers.py:133:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/suppliers.py:157:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/suppliers.py:210:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/suppliers.py:243:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/suppliers.py:253:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/suppliers.py:294:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/tenders.py:229:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/tenders.py:266:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/tenders.py:297:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/tenders.py:348:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/tenders.py:395:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/tenders.py:402:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/tenders.py:436:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/write_offs.py:86:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/write_offs.py:97:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/write_offs.py:107:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/admin/write_offs.py:370:5: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+app/routers/admin/write_offs.py:374:16: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/admin/write_offs.py:376:10: PTH123 `open()` should be replaced by `Path.open()`
+app/routers/cart.py:134:9: S110 `try`-`except`-`pass` detected, consider logging the exception
+app/routers/cart.py:207:5: SIM108 Use ternary operator `price = product.price_wholesale if current_user.client_type == ClientType.B2B else product.price_retail` instead of `if`-`else`-block
+app/routers/catalog.py:137:13: S110 `try`-`except`-`pass` detected, consider logging the exception
+app/routers/catalog.py:231:9: S110 `try`-`except`-`pass` detected, consider logging the exception
+app/routers/catalog_certificates.py:97:9: S112 `try`-`except`-`continue` detected, consider logging the exception
+app/routers/catalog_certificates.py:115:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/catalog_certificates.py:126:16: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/catalog_certificates.py:127:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/catalog_certificates.py:141:11: PTH122 `os.path.splitext()` should be replaced by `Path.suffix`, `Path.stem`, and `Path.parent`
+app/routers/catalog_certificates.py:165:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/catalog_certificates.py:185:9: S112 `try`-`except`-`continue` detected, consider logging the exception
+app/routers/catalog_certificates.py:202:28: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/catalog_certificates.py:203:24: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/catalog_certificates.py:208:23: PTH122 `os.path.splitext()` should be replaced by `Path.suffix`, `Path.stem`, and `Path.parent`
+app/routers/catalog_certificates.py:212:13: S112 `try`-`except`-`continue` detected, consider logging the exception
+app/routers/documents.py:102:16: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/documents.py:103:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/documents.py:136:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/documents.py:155:16: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/documents.py:158:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/documents.py:160:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/documents.py:235:24: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/routers/documents.py:236:16: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/routers/orders.py:206:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/orders.py:289:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/orders.py:338:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/orders.py:437:13: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/orders.py:465:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/orders.py:652:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:274:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:321:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:335:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:415:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:435:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:472:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:534:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:543:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:569:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:608:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:619:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:624:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:649:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/schools.py:662:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/seo.py:67:42: E712 Avoid equality comparisons to `True`; use `if Category.is_active:` for truth checks
+app/routers/seo.py:81:39: E712 Avoid equality comparisons to `True`; use `if Product.is_active:` for truth checks
+app/routers/seo.py:89:17: S110 `try`-`except`-`pass` detected, consider logging the exception
+app/routers/standing_orders.py:103:5: RET505 Unnecessary `elif` after `return` statement
+app/routers/standing_orders.py:253:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/standing_orders.py:341:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/standing_orders.py:378:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/routers/standing_orders.py:462:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/schemas/certificate.py:35:9: SIM102 Use a single `if` statement instead of nested `if` statements
+app/services/calendar_service.py:57:5: F841 Local variable `range_start` is assigned to but never used
+app/services/calendar_service.py:58:5: F841 Local variable `range_end` is assigned to but never used
+app/services/contract_service.py:39:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/services/contract_service.py:130:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/services/contract_service.py:223:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/services/document_service.py:333:5: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+app/services/document_service.py:334:16: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/services/document_service.py:345:14: PTH123 `open()` should be replaced by `Path.open()`
+app/services/document_service.py:349:27: PTH119 `os.path.basename()` should be replaced by `Path.name`
+app/services/document_service.py:378:17: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+app/services/document_service.py:378:59: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/services/document_service.py:422:17: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+app/services/document_service.py:422:59: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/services/document_service.py:504:17: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+app/services/document_service.py:504:59: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/services/document_service.py:722:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/services/document_service.py:828:17: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+app/services/document_service.py:828:59: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/services/document_service.py:852:21: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/services/document_service.py:853:14: PTH123 `open()` should be replaced by `Path.open()`
+app/services/document_service.py:1189:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/services/document_service.py:1252:17: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+app/services/document_service.py:1252:59: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/services/document_service.py:1275:21: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/services/document_service.py:1276:14: PTH123 `open()` should be replaced by `Path.open()`
+app/services/export_service.py:136:16: UP038 Use `X | Y` in `isinstance` call instead of `(X, Y)`
+app/services/finance_service.py:292:9: F841 Local variable `description` is assigned to but never used
+app/services/menu_service.py:154:9: B007 Loop control variable `key` not used within loop body
+app/services/menu_service.py:476:9: B007 Loop control variable `key` not used within loop body
+app/services/menu_service.py:479:13: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+app/services/menu_service.py:481:13: S110 `try`-`except`-`pass` detected, consider logging the exception
+app/services/notification_service.py:139:5: SIM108 Use ternary operator `client_id = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)` instead of `if`-`else`-block
+app/services/order_service.py:125:9: SIM108 Use ternary operator `price = product.price_wholesale if user.client_type == ClientType.B2B else product.price_retail` instead of `if`-`else`-block
+app/services/stock_service.py:330:24: N814 Camelcase `PydanticObjectId` imported as constant `PO_ID`
+app/services/stock_service.py:378:24: N814 Camelcase `PydanticObjectId` imported as constant `PO_ID`
+app/services/sync_1c_service.py:106:9: F841 Local variable `payment_date_str` is assigned to but never used
+app/services/sync_1c_service.py:118:13: F841 Local variable `old_paid` is assigned to but never used
+app/services/tender_service.py:254:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/services/tender_service.py:286:13: SIM108 Use ternary operator `cost_price = round(item.max_price / item.qty * 0.5, 2) if item.max_price and item.qty > 0 else 50.0` instead of `if`-`else`-block
+app/tasks/autoprice_tasks.py:239:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/tasks/backup_tasks.py:122:19: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tasks/backup_tasks.py:123:5: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+app/tasks/backup_tasks.py:154:16: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+app/tasks/backup_tasks.py:204:16: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/tasks/backup_tasks.py:207:19: B007 Loop control variable `dirs` not used within loop body
+app/tasks/backup_tasks.py:209:30: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tasks/backup_tasks.py:216:34: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+app/tasks/backup_tasks.py:243:13: PTH107 `os.remove()` should be replaced by `Path.unlink()`
+app/tasks/certificate_tasks.py:186:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/tasks/reminder_tasks.py:176:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/tasks/standing_order_tasks.py:340:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/utils/pdf_generator.py:48:5: RET505 Unnecessary `elif` after `return` statement
+app/utils/pdf_generator.py:68:14: PTH123 `open()` should be replaced by `Path.open()`
+app/utils/pdf_generator.py:111:5: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+app/utils/security.py:146:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+app/utils/telegram_bot.py:59:13: RET505 Unnecessary `else` after `return` statement
+app/utils/telegram_bot.py:206:5: RET505 Unnecessary `elif` after `return` statement
+Found 235 errors.
+No fixes available (25 hidden fixes can be enabled with the `--unsafe-fixes` option).

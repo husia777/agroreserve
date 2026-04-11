@@ -4,8 +4,8 @@
 """
 
 import math
-import os
 from datetime import UTC, date
+from pathlib import Path
 from typing import Optional
 
 import structlog
@@ -99,8 +99,8 @@ async def get_my_documents(
 )
 async def download_file_by_name(filename: str):
     """Внутренний эндпоинт для отдачи PDF файлов."""
-    filepath = os.path.join(DOCUMENTS_DIR, filename)
-    if not os.path.exists(filepath):
+    filepath = Path(DOCUMENTS_DIR) / filename
+    if not filepath.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
 
     # Определяем content-type
@@ -132,8 +132,8 @@ async def download_document(
     """
     try:
         doc = await DocumentRecord.get(PydanticObjectId(document_id))
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден") from e
 
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
@@ -152,12 +152,12 @@ async def download_document(
             detail="Файл документа не найден",
         )
 
-    filepath = os.path.join(DOCUMENTS_DIR, doc.file_name)
+    filepath = Path(DOCUMENTS_DIR) / doc.file_name
 
     # Пробуем HTML если PDF нет
-    if not os.path.exists(filepath):
+    if not filepath.exists():
         html_path = filepath.replace(".pdf", ".html")
-        if os.path.exists(html_path):
+        if Path(html_path).exists():
             filepath = html_path
         else:
             raise HTTPException(
@@ -232,8 +232,8 @@ async def download_documents_zip(
         for doc in documents:
             if not doc.file_name:
                 continue
-            filepath = os.path.join(DOCUMENTS_DIR, doc.file_name)
-            if os.path.exists(filepath):
+            filepath = Path(DOCUMENTS_DIR) / doc.file_name
+            if filepath.exists():
                 zf.write(filepath, doc.file_name)
 
     zip_buffer.seek(0)

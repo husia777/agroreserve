@@ -6,9 +6,9 @@ UC-23: Просмотр сертификатов клиентом.
 """
 
 import io
-import os
 import zipfile
 from datetime import date as DateType
+from pathlib import Path
 from urllib.parse import quote
 
 import structlog
@@ -95,7 +95,7 @@ async def get_product_certificates(product_id: str):
             if cert and cert.is_valid():
                 certs.append(_public_cert_dict(cert))
         except Exception:
-            continue
+            logger.warning("Ошибка при загрузке сертификата для товара", product_id=product_id, cert_ref=str(cert_ref))
 
     return {"certificates": certs, "count": len(certs)}
 
@@ -111,8 +111,9 @@ async def download_certificate(cert_id: str):
     """
     try:
         cert = await Certificate.get(PydanticObjectId(cert_id))
-    except Exception:
-        raise HTTPException(status_code=404, detail="Сертификат не найден")
+    except Exception as e:
+        logger.error("Ошибка при получении сертификата", cert_id=cert_id, error=str(e))
+        raise HTTPException(status_code=404, detail="Сертификат не найден") from e
 
     if not cert:
         raise HTTPException(status_code=404, detail="Сертификат не найден")
@@ -123,8 +124,8 @@ async def download_certificate(cert_id: str):
     if not cert.file_name:
         raise HTTPException(status_code=404, detail="Файл сертификата не загружен")
 
-    filepath = os.path.join(CERTIFICATES_DIR, cert.file_name)
-    if not os.path.exists(filepath):
+    filepath = Path(CERTIFICATES_DIR) / cert.file_name
+    if not filepath.exists():
         raise HTTPException(status_code=404, detail="Файл не найден на сервере")
 
     if cert.file_name.endswith(".pdf"):
@@ -138,7 +139,7 @@ async def download_certificate(cert_id: str):
 
     raw_type = cert.cert_type.value if hasattr(cert.cert_type, "value") else cert.cert_type
     type_label = CERT_TYPE_LABELS.get(raw_type, "cert")
-    ext = os.path.splitext(cert.file_name)[1]
+    ext = Path(cert.file_name).suffix
     download_name = f"{type_label}_{cert.number}{ext}"
 
     safe_name = quote(download_name)
@@ -161,8 +162,9 @@ async def download_order_certificates_zip(order_id: str):
 
     try:
         order = await Order.get(PydanticObjectId(order_id))
-    except Exception:
-        raise HTTPException(status_code=404, detail="Заказ не найден")
+    except Exception as e:
+        logger.error("Ошибка при получении заказа", order_id=order_id, error=str(e))
+        raise HTTPException(status_code=404, detail="Заказ не найден") from e
 
     if not order:
         raise HTTPException(status_code=404, detail="Заказ не найден")
@@ -183,7 +185,7 @@ async def download_order_certificates_zip(order_id: str):
         try:
             product = await Product.get(PydanticObjectId(pid))
         except Exception:
-            continue
+            logger.warning("Товар из заказа не найден при сборе сертификатов", product_id=pid, order_id=order_id)
 
         if not product or not product.certificate_ids:
             continue
@@ -199,18 +201,23 @@ async def download_order_certificates_zip(order_id: str):
                 if not cert or not cert.is_valid() or not cert.file_name:
                     continue
 
-                filepath = os.path.join(CERTIFICATES_DIR, cert.file_name)
-                if not os.path.exists(filepath):
+                filepath = Path(CERTIFICATES_DIR) / cert.file_name
+                if not filepath.exists():
                     continue
 
                 raw_type = cert.cert_type.value if hasattr(cert.cert_type, "value") else cert.cert_type
                 type_label = CERT_TYPE_LABELS.get(raw_type, "cert")
-                ext = os.path.splitext(cert.file_name)[1]
+                ext = Path(cert.file_name).suffix
                 zip_name = f"{type_label}_{cert.number}{ext}"
 
                 cert_files.append((zip_name, filepath))
             except Exception:
-                continue
+                logger.warning(
+                    "Ошибка при обработке сертификата для товара из заказа",
+                    product_id=pid,
+                    cert_ref=str(cert_ref),
+                    order_id=order_id,
+                )
 
     if not cert_files:
         raise HTTPException(

@@ -4,13 +4,12 @@
 """
 
 import math
-from datetime import date, datetime, timezone
-from typing import List, Optional
+from datetime import UTC, date, datetime
+from typing import Optional
 
 import structlog
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
 
 from app.models.order import Order, OrderStatus
 from app.schemas.order import (
@@ -32,8 +31,7 @@ router = APIRouter(prefix="/api/v1/admin/orders", tags=["Админ: Заказ�
 
 def _order_to_response(order: Order) -> OrderResponse:
     """Конвертирует Order в ответ API."""
-    client_id_str = str(order.client_id.id) if hasattr(
-        order.client_id, "id") else str(order.client_id)
+    client_id_str = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
 
     return OrderResponse(
         id=str(order.id),
@@ -42,43 +40,35 @@ def _order_to_response(order: Order) -> OrderResponse:
         client_name=order.client_name,
         client_phone=order.client_phone,
         status=order.status.value,
-        items=[OrderItemResponse(
-            product_id=item.product_id,
-            product_name=item.product_name,
-            ordered_qty=item.ordered_qty,
-            actual_qty=item.actual_qty,
-            unit=item.unit,
-            price=item.price,
-            total=item.total)
+        items=[
+            OrderItemResponse(
+                product_id=item.product_id,
+                product_name=item.product_name,
+                ordered_qty=item.ordered_qty,
+                actual_qty=item.actual_qty,
+                unit=item.unit,
+                price=item.price,
+                total=item.total,
+            )
             for item in order.items
         ],
         subtotal=order.subtotal,
         discount=order.discount,
         total=order.total,
-        delivery_date=str(
-            order.delivery_date) if order.delivery_date else None,
+        delivery_date=str(order.delivery_date) if order.delivery_date else None,
         delivery_slot=order.delivery_slot,
         delivery_address=order.delivery_address,
         delivery_priority=order.delivery_priority.value
         if hasattr(order.delivery_priority, "value")
         else order.delivery_priority,
-        payment_method=order.payment_method.value
-        if hasattr(order.payment_method, "value")
-        else order.payment_method,
-        payment_status=order.payment_status.value
-        if hasattr(order.payment_status, "value")
-        else order.payment_status,
+        payment_method=order.payment_method.value if hasattr(order.payment_method, "value") else order.payment_method,
+        payment_status=order.payment_status.value if hasattr(order.payment_status, "value") else order.payment_status,
         paid_amount=order.paid_amount,
         note=order.note,
-        documents=[
-            OrderDocumentResponse(doc_type=d.doc_type,
-                                  url=d.url, doc_id=d.doc_id)
-            for d in order.documents
-        ],
+        documents=[OrderDocumentResponse(doc_type=d.doc_type, url=d.url, doc_id=d.doc_id) for d in order.documents],
         status_history=[
             StatusHistoryResponse(
-                status=h.status.value if hasattr(
-                    h.status, "value") else h.status,
+                status=h.status.value if hasattr(h.status, "value") else h.status,
                 timestamp=h.timestamp.isoformat(),
                 by=h.by,
                 comment=h.comment,
@@ -87,7 +77,6 @@ def _order_to_response(order: Order) -> OrderResponse:
         ],
         created_at=order.created_at.isoformat(),
         updated_at=order.updated_at.isoformat(),
-
     )
 
 
@@ -97,14 +86,12 @@ def _order_to_response(order: Order) -> OrderResponse:
     summary="Все заказы",
 )
 async def get_all_orders(
-    order_status: Optional[str] = Query(
-        None, alias="status", description="Фильтр по статусу"),
+    order_status: Optional[str] = Query(None, alias="status", description="Фильтр по статусу"),
     date_from: Optional[date] = Query(None, description="С даты (YYYY-MM-DD)"),
     date_to: Optional[date] = Query(None, description="По дату (YYYY-MM-DD)"),
     client_id: Optional[str] = Query(None, description="Фильтр по ID клиента"),
     priority: Optional[str] = Query(None, description="Фильтр по приоритету"),
-    sort: str = Query(
-        "-created_at", description="Сортировка: created_at, -created_at, total, delivery_date"),
+    sort: str = Query("-created_at", description="Сортировка: created_at, -created_at, total, delivery_date"),
     page: int = Query(1, ge=1),
     limit: int = Query(30, ge=1, le=200),
     admin=Depends(require_admin),
@@ -118,13 +105,11 @@ async def get_all_orders(
         query_filter["status"] = order_status
 
     if date_from:
-        dt_from = datetime(date_from.year, date_from.month,
-                           date_from.day, tzinfo=timezone.utc)
+        dt_from = datetime(date_from.year, date_from.month, date_from.day, tzinfo=UTC)
         query_filter.setdefault("created_at", {})["$gte"] = dt_from
 
     if date_to:
-        dt_to = datetime(date_to.year, date_to.month,
-                         date_to.day, 23, 59, 59, tzinfo=timezone.utc)
+        dt_to = datetime(date_to.year, date_to.month, date_to.day, 23, 59, 59, tzinfo=UTC)
         query_filter.setdefault("created_at", {})["$lte"] = dt_to
 
     if client_id:
@@ -134,7 +119,6 @@ async def get_all_orders(
         query_filter["delivery_priority"] = priority
 
     # Определяем сортировку
-    sort_field = Order.created_at
     sort_asc = True
     if sort.startswith("-"):
         sort_asc = False
@@ -156,18 +140,16 @@ async def get_all_orders(
 
     items = [
         OrderListItem(
-            **{
-                "_id": str(o.id),
-                "order_number": o.order_number,
-                "client_name": o.client_name,
-                "status": o.status.value,
-                "total": o.total,
-                "delivery_date": str(o.delivery_date) if o.delivery_date else None,
-                "delivery_slot": o.delivery_slot,
-                "payment_status": o.payment_status.value if hasattr(o.payment_status, "value") else o.payment_status,
-                "items_count": len(o.items),
-                "created_at": o.created_at.isoformat(),
-            }
+            id=str(o.id),
+            order_number=o.order_number,
+            client_name=o.client_name,
+            status=o.status.value,
+            total=o.total,
+            delivery_date=str(o.delivery_date) if o.delivery_date else None,
+            delivery_slot=o.delivery_slot,
+            payment_status=o.payment_status.value if hasattr(o.payment_status, "value") else o.payment_status,
+            items_count=len(o.items),
+            created_at=o.created_at.isoformat(),
         )
         for o in orders
     ]
@@ -193,13 +175,11 @@ async def get_order(
     """Детальная информация о заказе (для администратора)."""
     try:
         order = await Order.get(PydanticObjectId(order_id))
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден") from e
 
     if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     return _order_to_response(order)
 
@@ -231,14 +211,14 @@ async def update_order_status(
         order = await svc_update_status(
             order_id=order_id,
             new_status=data.status,
-            changed_by=f"admin:{str(admin.id)}",
+            changed_by=f"admin:{admin.id!s}",
             comment=data.comment,
         )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     logger.info(
         "Статус заказа изменён администратором",
@@ -268,13 +248,11 @@ async def update_actual_qty(
     """
     try:
         order = await Order.get(PydanticObjectId(order_id))
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден") from e
 
     if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     # Только для заказов в статусе assembling или assembled
     if order.status not in (OrderStatus.ASSEMBLING, OrderStatus.ASSEMBLED, OrderStatus.DELIVERING):
@@ -290,8 +268,7 @@ async def update_actual_qty(
     try:
         order = await update_actual_quantities(order_id, data.items)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     logger.info(
         "Фактические количества обновлены",
@@ -319,13 +296,11 @@ async def confirm_payment(
 
     try:
         order = await Order.get(PydanticObjectId(order_id))
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден") from e
 
     if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     if order.payment_status == PaymentStatus.PAID:
         raise HTTPException(
@@ -335,7 +310,7 @@ async def confirm_payment(
 
     order.payment_status = PaymentStatus.PAID
     order.paid_amount = order.total
-    order.updated_at = datetime.now(timezone.utc)
+    order.updated_at = datetime.now(UTC)
     await order.save()
 
     logger.info(
@@ -362,14 +337,14 @@ async def confirm_order_payment(
 
     try:
         order = await Order.get(PydanticObjectId(order_id))
-    except Exception:
-        raise HTTPException(status_code=404, detail="Заказ не найден")
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Заказ не найден") from e
 
     if not order:
         raise HTTPException(status_code=404, detail="Заказ не найден")
 
     order.payment_status = "paid"
-    order.paid_at = datetime.now(timezone.utc)
+    order.paid_at = datetime.now(UTC)
 
     # Добавляем в историю статусов
     from app.models.order import StatusHistoryEntry
@@ -379,7 +354,7 @@ async def confirm_order_payment(
             status=OrderStatus.CONFIRMED,  # payment_confirmed maps to confirmed
             by=str(admin.id),
             comment="Оплата подтверждена администратором",
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
     )
 
@@ -400,7 +375,7 @@ async def confirm_order_payment(
 
         await notify_client_status_change(order, "payment_confirmed")
     except Exception:
-        pass  # Не блокируем при ошибке уведомления
+        logger.error("Ошибка при отправке уведомления о подтверждении оплаты", order_id=order.id)
 
     return {
         "success": True,

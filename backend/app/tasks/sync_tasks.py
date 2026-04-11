@@ -3,6 +3,7 @@ Celery задачи синхронизации с 1С и периодическ�
 """
 
 import asyncio
+
 import structlog
 from celery import Task
 
@@ -76,13 +77,11 @@ def create_recurring_expenses() -> dict:
     """
 
     async def _execute():
-        from datetime import date, datetime, timezone
-
-        from app.database import get_database
+        from datetime import date
 
         # Инициализация Beanie для работы в Celery контексте
         try:
-            from app.models.finance import Expense, ExpenseCategory
+            from app.models.finance import Expense
         except Exception as e:
             logger.error("Ошибка импорта моделей в Celery", error=str(e))
             return {"status": "error", "error": str(e)}

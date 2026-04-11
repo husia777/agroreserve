@@ -6,7 +6,8 @@ Celery задачи резервного копирования (UC-51).
 import gzip
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from pathlib import Path
 
 import structlog
 from bson import json_util
@@ -37,7 +38,7 @@ def _get_s3_client():
     )
 
 
-def _upload_to_s3(file_path: str, s3_key: str) -> bool:
+def _upload_to_s3(file_path: Path, s3_key: str) -> bool:
     """Загружает файл в S3 бакет."""
     from app.config import settings
 
@@ -117,10 +118,10 @@ def create_mongodb_backup():
     """
     from app.config import settings
 
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     backup_name = f"backup_{timestamp}.json.gz"
-    backup_path = os.path.join(BACKUP_DIR, backup_name)
-    os.makedirs(BACKUP_DIR, exist_ok=True)
+    backup_path = Path(BACKUP_DIR, backup_name)
+    Path.mkdir(Path(BACKUP_DIR), exist_ok=True, parents=True)
 
     logger.info("Запуск автоматического бэкапа", backup_name=backup_name)
 
@@ -138,7 +139,7 @@ def create_mongodb_backup():
 
         backup = {
             "meta": {
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
                 "collections": len(dump_data),
                 "documents": total_docs,
                 "version": "1.0",
@@ -151,7 +152,7 @@ def create_mongodb_backup():
         with gzip.open(backup_path, "wb") as f:
             f.write(json_bytes)
 
-        size = os.path.getsize(backup_path)
+        size = Path.stat(backup_path).st_size
         client.close()
 
         # Шаг 3: Загрузка в S3
@@ -201,19 +202,19 @@ def backup_media_files():
     errors = 0
 
     for base_dir in media_dirs:
-        if not os.path.exists(base_dir):
+        if not Path.exists(Path(base_dir)):
             continue
 
-        for root, dirs, files in os.walk(base_dir):
+        for root, _dirs, files in os.walk(base_dir):
             for file_name in files:
-                local_path = os.path.join(root, file_name)
+                local_path = Path(root, file_name)
                 # S3 ключ: media/uploads/certificates/file.pdf
                 relative = os.path.relpath(local_path, "/app")
                 s3_key = f"media/{relative}"
 
                 try:
                     # Проверяем, нужно ли загружать (по размеру)
-                    local_size = os.path.getsize(local_path)
+                    local_size = Path.stat(local_path).st_size
                     try:
                         head = s3.head_object(Bucket=bucket, Key=s3_key)
                         if head["ContentLength"] == local_size:
@@ -240,7 +241,7 @@ def _rotate_backups(max_count=7):
             reverse=True,
         )
         for old in entries[max_count:]:
-            os.remove(old.path)
+            Path.unlink(Path(old.path))
             logger.info("Старый бэкап удалён", path=old.path)
     except Exception as e:
         logger.warning("Ошибка ротации", error=str(e))

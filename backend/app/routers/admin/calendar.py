@@ -58,11 +58,11 @@ async def get_calendar_events(
             month_num = int(parts[1])
             if not (1 <= month_num <= 12) or not (2000 <= year <= 2100):
                 raise ValueError("Неверные значения")
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Неверный формат параметра month. Используйте YYYY-MM (например, 2026-03)",
-            )
+            ) from e
     else:
         year = today.year
         month_num = today.month
