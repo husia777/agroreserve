@@ -21,7 +21,10 @@ const DOC_TYPE_OPTIONS = [
   { value: DocType.ACT, label: 'Акт сверки' },
 ]
 
-const docTypeLabels: Record<string, { label: string; variant: 'blue' | 'purple' | 'green' | 'orange' | 'gray' }> = {
+const docTypeLabels: Record<
+  string,
+  { label: string; variant: 'blue' | 'purple' | 'green' | 'orange' | 'gray' }
+> = {
   [DocType.INVOICE]: { label: 'Счёт', variant: 'blue' },
   [DocType.TORG12]: { label: 'ТОРГ-12', variant: 'green' },
   [DocType.UPD]: { label: 'УПД', variant: 'purple' },
@@ -36,11 +39,12 @@ export const DocumentsPage: React.FC = () => {
 
   const { data, isLoading } = useQuery({
     queryKey: ['myDocuments', { page, docType }],
-    queryFn: () => getDocuments({
-      page,
-      per_page: 20,
-      doc_type: docType || undefined,
-    }),
+    queryFn: () =>
+      getDocuments({
+        page,
+        per_page: 20,
+        doc_type: docType || undefined,
+      }),
   })
 
   const handleDownload = async (docId: string, docNumber: string) => {
@@ -80,38 +84,51 @@ export const DocumentsPage: React.FC = () => {
         <PageSpinner />
       ) : data?.items.length === 0 ? (
         <EmptyState
-          icon={<FileText className="w-8 h-8" />}
+          icon={<FileText className="h-8 w-8" />}
           title="Документов нет"
           description="Документы появятся после оформления заказов"
         />
       ) : (
         <>
           {/* Таблица (desktop) */}
-          <div className="hidden sm:block bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="hidden overflow-hidden rounded-xl border border-gray-200 bg-white sm:block">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className="border-b border-gray-100 bg-gray-50">
                 <tr>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Документ</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Тип</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Дата</th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Действие</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Документ
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Тип
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Дата
+                  </th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Действие
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {data?.items.map((doc) => {
-                  const typeConfig = docTypeLabels[doc.doc_type] || { label: doc.doc_type, variant: 'gray' as const }
+                  const typeConfig = docTypeLabels[doc.doc_type] || {
+                    label: doc.doc_type,
+                    variant: 'gray' as const,
+                  }
                   return (
-                    <tr key={doc.id} className="hover:bg-gray-50/50 transition-colors">
+                    <tr key={doc.id} className="transition-colors hover:bg-gray-50/50">
                       <td className="px-5 py-3 font-medium text-gray-900">{doc.doc_number}</td>
                       <td className="px-5 py-3">
-                        <Badge variant={typeConfig.variant} size="sm">{typeConfig.label}</Badge>
+                        <Badge variant={typeConfig.variant} size="sm">
+                          {typeConfig.label}
+                        </Badge>
                       </td>
                       <td className="px-5 py-3 text-gray-500">{formatDate(doc.created_at)}</td>
                       <td className="px-5 py-3 text-right">
                         <Button
                           variant="ghost"
                           size="sm"
-                          icon={<FileDown className="w-4 h-4" />}
+                          icon={<FileDown className="h-4 w-4" />}
                           loading={downloading === doc.id}
                           onClick={() => handleDownload(doc.id, doc.doc_number)}
                         >
@@ -126,20 +143,25 @@ export const DocumentsPage: React.FC = () => {
           </div>
 
           {/* Mobile */}
-          <div className="sm:hidden space-y-3">
+          <div className="space-y-3 sm:hidden">
             {data?.items.map((doc) => {
-              const typeConfig = docTypeLabels[doc.doc_type] || { label: doc.doc_type, variant: 'gray' as const }
+              const typeConfig = docTypeLabels[doc.doc_type] || {
+                label: doc.doc_type,
+                variant: 'gray' as const,
+              }
               return (
-                <div key={doc.id} className="bg-white rounded-xl border border-gray-200 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-gray-900 text-sm">{doc.doc_number}</span>
-                    <Badge variant={typeConfig.variant} size="sm">{typeConfig.label}</Badge>
+                <div key={doc.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-900">{doc.doc_number}</span>
+                    <Badge variant={typeConfig.variant} size="sm">
+                      {typeConfig.label}
+                    </Badge>
                   </div>
-                  <div className="text-xs text-gray-400 mb-3">{formatDate(doc.created_at)}</div>
+                  <div className="mb-3 text-xs text-gray-400">{formatDate(doc.created_at)}</div>
                   <Button
                     variant="outline"
                     size="sm"
-                    icon={<FileDown className="w-4 h-4" />}
+                    icon={<FileDown className="h-4 w-4" />}
                     loading={downloading === doc.id}
                     onClick={() => handleDownload(doc.id, doc.doc_number)}
                     fullWidth
@@ -151,11 +173,7 @@ export const DocumentsPage: React.FC = () => {
             })}
           </div>
 
-          <Pagination
-            page={page}
-            totalPages={data?.pages || 1}
-            onPageChange={setPage}
-          />
+          <Pagination page={page} totalPages={data?.pages || 1} onPageChange={setPage} />
         </>
       )}
     </div>

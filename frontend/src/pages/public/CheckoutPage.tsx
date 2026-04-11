@@ -28,7 +28,10 @@ const checkoutSchema = z.object({
   delivery_date: z
     .string()
     .min(1, 'Выберите дату')
-    .refine((d) => new Date(d) >= new Date(new Date().toDateString()), 'Дата не может быть в прошлом'),
+    .refine(
+      (d) => new Date(d) >= new Date(new Date().toDateString()),
+      'Дата не может быть в прошлом',
+    ),
   delivery_slot: z.string().min(1, 'Выберите временной слот'),
   delivery_priority: z.nativeEnum(DeliveryPriority),
   payment_method: z.nativeEnum(PaymentMethod),
@@ -77,9 +80,9 @@ export const CheckoutPage: React.FC = () => {
   const onSubmit = async (data: CheckoutFormData) => {
     try {
       const order = await createOrder({
-          ...data,
-          items: items.map(i => ({ product_id: i.product.id, qty: i.quantity })),
-        })
+        ...data,
+        items: items.map((i) => ({ product_id: i.product.id, qty: i.quantity })),
+      })
       clearCart()
       showToast.success(`Заказ ${order.order_number} оформлен!`)
       navigate(`/account/orders/${order.id}`)
@@ -95,24 +98,24 @@ export const CheckoutPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Оформление заказа</h1>
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+      <h1 className="mb-6 text-2xl font-bold text-gray-900">Оформление заказа</h1>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Форма */}
-          <div className="lg:col-span-2 space-y-5">
+          <div className="space-y-5 lg:col-span-2">
             {/* Доставка */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Truck className="w-5 h-5 text-primary-600" />
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Truck className="h-5 w-5 text-primary-600" />
                 <h2 className="font-semibold text-gray-900">Доставка</h2>
               </div>
               <div className="space-y-4">
                 <Input
                   label="Адрес доставки"
                   placeholder="г. Тобольск, ул. Ленина, д. 1"
-                  leftIcon={<MapPin className="w-4 h-4" />}
+                  leftIcon={<MapPin className="h-4 w-4" />}
                   error={errors.delivery_address?.message}
                   required
                   {...register('delivery_address')}
@@ -148,9 +151,9 @@ export const CheckoutPage: React.FC = () => {
             </div>
 
             {/* Оплата */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <CreditCard className="w-5 h-5 text-primary-600" />
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary-600" />
                 <h2 className="font-semibold text-gray-900">Оплата</h2>
               </div>
               <Select
@@ -163,20 +166,20 @@ export const CheckoutPage: React.FC = () => {
             </div>
 
             {/* Примечание */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Clock className="w-5 h-5 text-primary-600" />
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary-600" />
                 <h2 className="font-semibold text-gray-900">Дополнительно</h2>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Примечание к заказу
                 </label>
                 <textarea
                   {...register('note')}
                   rows={3}
                   placeholder="Особые пожелания, инструкции для курьера..."
-                  className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400"
+                  className="w-full resize-none rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-300"
                 />
               </div>
             </div>
@@ -184,44 +187,39 @@ export const CheckoutPage: React.FC = () => {
 
           {/* Состав заказа */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl border border-gray-200 p-5 sticky top-20">
-              <h2 className="font-semibold text-gray-900 mb-4">Ваш заказ</h2>
+            <div className="sticky top-20 rounded-xl border border-gray-200 bg-white p-5">
+              <h2 className="mb-4 font-semibold text-gray-900">Ваш заказ</h2>
 
-              <div className="space-y-3 mb-4">
+              <div className="mb-4 space-y-3">
                 {items.map((item) => (
                   <div key={item.product.id} className="flex justify-between text-sm">
-                    <div className="text-gray-600 min-w-0 mr-2">
-                      <div className="font-medium text-gray-900 truncate">{item.product.name}</div>
+                    <div className="mr-2 min-w-0 text-gray-600">
+                      <div className="truncate font-medium text-gray-900">{item.product.name}</div>
                       <div className="text-gray-400">
-                        {formatQuantity(item.quantity, item.product.unit)} × {formatPrice(item.price)}
+                        {formatQuantity(item.quantity, item.product.unit)} ×{' '}
+                        {formatPrice(item.price)}
                       </div>
                     </div>
-                    <span className="font-semibold text-gray-900 flex-shrink-0">
+                    <span className="flex-shrink-0 font-semibold text-gray-900">
                       {formatPrice(item.subtotal)}
                     </span>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t border-gray-100 pt-3 mb-5">
-                <div className="flex justify-between items-center">
+              <div className="mb-5 border-t border-gray-100 pt-3">
+                <div className="flex items-center justify-between">
                   <span className="font-semibold text-gray-900">Итого</span>
                   <span className="text-xl font-bold text-gray-900">{formatPrice(total)}</span>
                 </div>
-                <div className="text-xs text-gray-400 mt-1">+ бесплатная доставка</div>
+                <div className="mt-1 text-xs text-gray-400">+ бесплатная доставка</div>
               </div>
 
-              <Button
-                type="submit"
-                variant="primary"
-                fullWidth
-                size="lg"
-                loading={isSubmitting}
-              >
+              <Button type="submit" variant="primary" fullWidth size="lg" loading={isSubmitting}>
                 Подтвердить заказ
               </Button>
 
-              <p className="text-xs text-gray-400 text-center mt-3">
+              <p className="mt-3 text-center text-xs text-gray-400">
                 Нажимая «Подтвердить», вы соглашаетесь с условиями заказа
               </p>
             </div>

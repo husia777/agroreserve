@@ -54,7 +54,7 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const parsed = parseFloat(e.target.value)
     if (!isNaN(parsed)) {
-      const clamped = Math.min(max, Math.max(min, +(parsed).toFixed(2)))
+      const clamped = Math.min(max, Math.max(min, +parsed.toFixed(2)))
       onChange(clamped)
     }
   }
@@ -68,10 +68,10 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
         disabled={disabled || value <= min}
         className={cn(
           'rounded-lg border border-gray-200 bg-white text-gray-600',
-          'hover:bg-gray-50 hover:border-gray-300 transition-colors',
-          'flex items-center justify-center flex-shrink-0',
-          'disabled:opacity-40 disabled:cursor-not-allowed',
-          classes.button
+          'transition-colors hover:border-gray-300 hover:bg-gray-50',
+          'flex flex-shrink-0 items-center justify-center',
+          'disabled:cursor-not-allowed disabled:opacity-40',
+          classes.button,
         )}
         aria-label="Уменьшить"
       >
@@ -89,16 +89,14 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
           step={step}
           disabled={disabled}
           className={cn(
-            'text-center border border-gray-200 rounded-lg font-semibold text-gray-900',
-            'focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400',
-            'disabled:bg-gray-100 disabled:cursor-not-allowed',
-            '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
-            classes.input
+            'rounded-lg border border-gray-200 text-center font-semibold text-gray-900',
+            'focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-300',
+            'disabled:cursor-not-allowed disabled:bg-gray-100',
+            '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+            classes.input,
           )}
         />
-        {unit && (
-          <span className="ml-1 text-sm text-gray-400">{unit}</span>
-        )}
+        {unit && <span className="ml-1 text-sm text-gray-400">{unit}</span>}
       </div>
 
       {/* Кнопка увеличения */}
@@ -108,10 +106,10 @@ export const QuantityInput: React.FC<QuantityInputProps> = ({
         disabled={disabled || value >= max}
         className={cn(
           'rounded-lg border border-gray-200 bg-white text-gray-600',
-          'hover:bg-gray-50 hover:border-gray-300 transition-colors',
-          'flex items-center justify-center flex-shrink-0',
-          'disabled:opacity-40 disabled:cursor-not-allowed',
-          classes.button
+          'transition-colors hover:border-gray-300 hover:bg-gray-50',
+          'flex flex-shrink-0 items-center justify-center',
+          'disabled:cursor-not-allowed disabled:opacity-40',
+          classes.button,
         )}
         aria-label="Увеличить"
       >

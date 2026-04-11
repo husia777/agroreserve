@@ -1,5 +1,5 @@
 // Страница корзины
-import React, { useState, useCallback } from 'react'
+import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Trash2, ShoppingBag, AlertCircle, ImageOff } from 'lucide-react'
 import { useCartStore } from '@/stores/cartStore'
@@ -19,39 +19,39 @@ const CartItemCard: React.FC<{
   const [imageError, setImageError] = useState(false)
 
   return (
-    <div className="flex gap-4 p-4 bg-white rounded-xl border border-gray-200">
+    <div className="flex gap-4 rounded-xl border border-gray-200 bg-white p-4">
       {/* Фото */}
       <Link to={`/catalog/${item.product.category?.slug || 'products'}/${item.product.slug}`}>
-        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
+        <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-50 sm:h-24 sm:w-24">
           {!imageError && item.product.images?.[0] ? (
             <img
               src={item.product.images[0]}
               alt={item.product.name}
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
               onError={() => setImageError(true)}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <ImageOff className="w-8 h-8 text-gray-300" />
+            <div className="flex h-full w-full items-center justify-center">
+              <ImageOff className="h-8 w-8 text-gray-300" />
             </div>
           )}
         </div>
       </Link>
 
       {/* Информация */}
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <Link
           to={`/catalog/${item.product.category?.slug || 'products'}/${item.product.slug}`}
-          className="text-sm font-semibold text-gray-900 hover:text-primary-700 line-clamp-2"
+          className="line-clamp-2 text-sm font-semibold text-gray-900 hover:text-primary-700"
         >
           {item.product.name}
         </Link>
-        <div className="text-xs text-gray-400 mt-0.5">{item.product.country_of_origin}</div>
-        <div className="text-xs text-gray-500 mt-1">
+        <div className="mt-0.5 text-xs text-gray-400">{item.product.country_of_origin}</div>
+        <div className="mt-1 text-xs text-gray-500">
           {formatPrice(item.price)} / {item.product.unit === 'kg' ? 'кг' : 'шт'}
         </div>
 
-        <div className="flex items-center justify-between mt-3">
+        <div className="mt-3 flex items-center justify-between">
           <QuantityInput
             value={item.quantity}
             onChange={(qty) => onUpdateQty(item.product.id, qty)}
@@ -62,15 +62,13 @@ const CartItemCard: React.FC<{
           />
 
           <div className="flex items-center gap-3">
-            <span className="font-bold text-gray-900">
-              {formatPrice(item.subtotal)}
-            </span>
+            <span className="font-bold text-gray-900">{formatPrice(item.subtotal)}</span>
             <button
               onClick={() => onRemove(item.product.id)}
-              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
               aria-label="Удалить"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -86,9 +84,9 @@ export const CartPage: React.FC = () => {
 
   if (items.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16">
+      <div className="mx-auto max-w-4xl px-4 py-16">
         <EmptyState
-          icon={<ShoppingBag className="w-8 h-8" />}
+          icon={<ShoppingBag className="h-8 w-8" />}
           title="Корзина пуста"
           description="Добавьте товары из каталога для оформления заказа"
           action={{
@@ -107,10 +105,11 @@ export const CartPage: React.FC = () => {
   const isOverCredit = isAuthenticated && creditLimit > 0 && total > availableCredit
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">
-          Корзина <span className="text-gray-400 font-normal text-base ml-2">{items.length} товаров</span>
+          Корзина{' '}
+          <span className="ml-2 text-base font-normal text-gray-400">{items.length} товаров</span>
         </h1>
         <button
           onClick={clearCart}
@@ -120,9 +119,9 @@ export const CartPage: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Список товаров */}
-        <div className="lg:col-span-2 space-y-3">
+        <div className="space-y-3 lg:col-span-2">
           {items.map((item) => (
             <CartItemCard
               key={item.product.id}
@@ -135,48 +134,52 @@ export const CartPage: React.FC = () => {
 
         {/* Итого */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl border border-gray-200 p-5 sticky top-20">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">Итого по заказу</h2>
+          <div className="sticky top-20 rounded-xl border border-gray-200 bg-white p-5">
+            <h2 className="mb-4 text-base font-semibold text-gray-900">Итого по заказу</h2>
 
             {/* Позиции */}
-            <div className="space-y-2 mb-4">
+            <div className="mb-4 space-y-2">
               {items.map((item) => (
                 <div key={item.product.id} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 truncate mr-2 max-w-[180px]">
+                  <span className="mr-2 max-w-[180px] truncate text-gray-600">
                     {item.product.name} × {formatQuantity(item.quantity, item.product.unit)}
                   </span>
-                  <span className="text-gray-900 font-medium flex-shrink-0">
+                  <span className="flex-shrink-0 font-medium text-gray-900">
                     {formatPrice(item.subtotal)}
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="border-t border-gray-100 pt-3 mb-4">
+            <div className="mb-4 border-t border-gray-100 pt-3">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-gray-900">Итого</span>
                 <span className="text-xl font-bold text-gray-900">{formatPrice(total)}</span>
               </div>
-              <div className="text-xs text-gray-400 mt-1">Доставка — бесплатно</div>
+              <div className="mt-1 text-xs text-gray-400">Доставка — бесплатно</div>
             </div>
 
             {/* Кредитный лимит для B2B */}
             {isAuthenticated && isApproved && creditLimit > 0 && (
-              <div className={cn(
-                'rounded-lg p-3 mb-4 text-sm',
-                isOverCredit ? 'bg-red-50 border border-red-200' : 'bg-gray-50'
-              )}>
-                <div className="flex items-center gap-2 mb-1">
-                  {isOverCredit && <AlertCircle className="w-4 h-4 text-red-500" />}
+              <div
+                className={cn(
+                  'mb-4 rounded-lg p-3 text-sm',
+                  isOverCredit ? 'border border-red-200 bg-red-50' : 'bg-gray-50',
+                )}
+              >
+                <div className="mb-1 flex items-center gap-2">
+                  {isOverCredit && <AlertCircle className="h-4 w-4 text-red-500" />}
                   <span className="font-medium text-gray-700">Кредитный лимит</span>
                 </div>
                 <div className="text-gray-600">Лимит: {formatPrice(creditLimit)}</div>
                 <div className="text-gray-600">Задолженность: {formatPrice(debt)}</div>
-                <div className={cn('font-semibold', isOverCredit ? 'text-red-600' : 'text-gray-900')}>
+                <div
+                  className={cn('font-semibold', isOverCredit ? 'text-red-600' : 'text-gray-900')}
+                >
                   Доступно: {formatPrice(availableCredit)}
                 </div>
                 {isOverCredit && (
-                  <p className="text-red-600 text-xs mt-1">
+                  <p className="mt-1 text-xs text-red-600">
                     Сумма заказа превышает доступный лимит
                   </p>
                 )}
@@ -188,19 +191,19 @@ export const CartPage: React.FC = () => {
               <div className="space-y-2">
                 <Link
                   to="/login"
-                  className="block w-full text-center py-3 px-4 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors"
+                  className="block w-full rounded-xl bg-primary-600 px-4 py-3 text-center font-semibold text-white transition-colors hover:bg-primary-700"
                 >
                   Войти для оформления
                 </Link>
                 <Link
                   to="/register"
-                  className="block w-full text-center py-3 px-4 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors text-sm"
+                  className="block w-full rounded-xl bg-gray-100 px-4 py-3 text-center text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200"
                 >
                   Создать аккаунт
                 </Link>
               </div>
             ) : !isApproved ? (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+              <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
                 Ваш аккаунт находится на проверке. После одобрения вы сможете оформлять заказы.
               </div>
             ) : (

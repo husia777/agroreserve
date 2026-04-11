@@ -11,14 +11,32 @@ const EVENT_TYPES: Record<string, { label: string; bgColor: string; dotColor: st
   delivery: { label: 'Доставка', bgColor: 'bg-blue-100 text-blue-800', dotColor: 'bg-blue-500' },
   tender: { label: 'Тендер', bgColor: 'bg-red-100 text-red-800', dotColor: 'bg-red-500' },
   payment: { label: 'Оплата', bgColor: 'bg-green-100 text-green-800', dotColor: 'bg-green-500' },
-  reminder: { label: 'Напоминание', bgColor: 'bg-amber-100 text-amber-800', dotColor: 'bg-amber-400' },
-  certificate: { label: 'Сертификат', bgColor: 'bg-orange-100 text-orange-800', dotColor: 'bg-orange-500' },
+  reminder: {
+    label: 'Напоминание',
+    bgColor: 'bg-amber-100 text-amber-800',
+    dotColor: 'bg-amber-400',
+  },
+  certificate: {
+    label: 'Сертификат',
+    bgColor: 'bg-orange-100 text-orange-800',
+    dotColor: 'bg-orange-500',
+  },
 }
 
 // Русские названия месяцев
 const MONTHS_RU = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+  'Январь',
+  'Февраль',
+  'Март',
+  'Апрель',
+  'Май',
+  'Июнь',
+  'Июль',
+  'Август',
+  'Сентябрь',
+  'Октябрь',
+  'Ноябрь',
+  'Декабрь',
 ]
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
@@ -97,19 +115,19 @@ export const AdminCalendarPage: React.FC = () => {
   const selectedEvents = selectedDate ? eventsByDate[selectedDate] || [] : []
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="space-y-5 p-6">
       {/* Заголовок */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Calendar className="w-6 h-6 text-primary-600" />
+          <Calendar className="h-6 w-6 text-primary-600" />
           <h1 className="text-2xl font-bold text-gray-900">Календарь</h1>
         </div>
 
         {/* Легенда */}
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-wrap items-center gap-3">
           {Object.entries(EVENT_TYPES).map(([type, config]) => (
             <div key={type} className="flex items-center gap-1.5">
-              <div className={`w-2.5 h-2.5 rounded-full ${config.dotColor}`} />
+              <div className={`h-2.5 w-2.5 rounded-full ${config.dotColor}`} />
               <span className="text-xs text-gray-500">{config.label}</span>
             </div>
           ))}
@@ -117,21 +135,21 @@ export const AdminCalendarPage: React.FC = () => {
       </div>
 
       {/* Навигация */}
-      <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200 px-5 py-3">
+      <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-3">
         <button
           onClick={prevMonth}
-          className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+          className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="h-5 w-5" />
         </button>
         <h2 className="text-lg font-bold text-gray-900">
           {MONTHS_RU[currentDate.month - 1]} {currentDate.year}
         </h2>
         <button
           onClick={nextMonth}
-          className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+          className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100"
         >
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="h-5 w-5" />
         </button>
       </div>
 
@@ -139,13 +157,13 @@ export const AdminCalendarPage: React.FC = () => {
       {isLoading ? (
         <PageSpinner />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           {/* Дни недели */}
           <div className="grid grid-cols-7 border-b border-gray-100">
             {WEEKDAYS.map((day) => (
               <div
                 key={day}
-                className="py-2 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider"
+                className="py-2 text-center text-xs font-semibold uppercase tracking-wider text-gray-400"
               >
                 {day}
               </div>
@@ -163,37 +181,37 @@ export const AdminCalendarPage: React.FC = () => {
               const dayEvents = eventsByDate[key] || []
               const isToday = key === todayKey
               const isSelected = key === selectedDate
-              const isWeekend = (idx % 7) >= 5
+              const isWeekend = idx % 7 >= 5
 
               return (
                 <button
                   key={idx}
                   onClick={() => setSelectedDate(isSelected ? null : key)}
-                  className={`min-h-[90px] p-2 border-b border-r border-gray-50 text-left hover:bg-gray-50 transition-colors ${
-                    isSelected ? 'bg-primary-50 border-primary-200' : ''
+                  className={`min-h-[90px] border-b border-r border-gray-50 p-2 text-left transition-colors hover:bg-gray-50 ${
+                    isSelected ? 'border-primary-200 bg-primary-50' : ''
                   } ${isWeekend ? 'bg-gray-50/50' : ''}`}
                 >
                   {/* Номер дня */}
                   <div
-                    className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium mb-1 ${
+                    className={`mb-1 inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
                       isToday
                         ? 'bg-primary-600 text-white'
                         : isWeekend
-                        ? 'text-gray-400'
-                        : 'text-gray-700'
+                          ? 'text-gray-400'
+                          : 'text-gray-700'
                     }`}
                   >
                     {day}
                   </div>
 
                   {/* Цветные точки событий */}
-                  <div className="flex flex-wrap gap-0.5 mt-0.5">
+                  <div className="mt-0.5 flex flex-wrap gap-0.5">
                     {dayEvents.slice(0, 4).map((ev, i) => {
                       const config = EVENT_TYPES[ev.type] || EVENT_TYPES.reminder
                       return (
                         <div
                           key={i}
-                          className={`w-2 h-2 rounded-full ${config.dotColor}`}
+                          className={`h-2 w-2 rounded-full ${config.dotColor}`}
                           title={ev.title}
                         />
                       )
@@ -211,8 +229,8 @@ export const AdminCalendarPage: React.FC = () => {
 
       {/* Панель событий выбранного дня */}
       {selectedDate && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="mb-4 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">
               {new Date(selectedDate).toLocaleDateString('ru-RU', {
                 weekday: 'long',
@@ -223,30 +241,39 @@ export const AdminCalendarPage: React.FC = () => {
             </h3>
             <button
               onClick={() => setSelectedDate(null)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </button>
           </div>
 
           {selectedEvents.length > 0 ? (
             <div className="space-y-2">
               {selectedEvents.map((ev, i) => {
-                const config = EVENT_TYPES[ev.type] || { label: ev.type, bgColor: 'bg-gray-100 text-gray-700', dotColor: 'bg-gray-400' }
+                const config = EVENT_TYPES[ev.type] || {
+                  label: ev.type,
+                  bgColor: 'bg-gray-100 text-gray-700',
+                  dotColor: 'bg-gray-400',
+                }
                 return (
-                  <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${config.bgColor}`}>
-                    <div className={`w-2.5 h-2.5 rounded-full ${config.dotColor} mt-1.5 flex-shrink-0`} />
+                  <div
+                    key={i}
+                    className={`flex items-start gap-3 rounded-lg p-3 ${config.bgColor}`}
+                  >
+                    <div
+                      className={`h-2.5 w-2.5 rounded-full ${config.dotColor} mt-1.5 flex-shrink-0`}
+                    />
                     <div className="min-w-0">
                       <div className="text-sm font-semibold">{ev.title}</div>
                       {ev.description && (
-                        <div className="text-xs opacity-80 mt-0.5">{ev.description}</div>
+                        <div className="mt-0.5 text-xs opacity-80">{ev.description}</div>
                       )}
-                      <div className="text-xs opacity-60 mt-0.5">{config.label}</div>
+                      <div className="mt-0.5 text-xs opacity-60">{config.label}</div>
                     </div>
                     {ev.link && (
                       <a
                         href={ev.link}
-                        className="text-xs underline opacity-70 hover:opacity-100 flex-shrink-0"
+                        className="flex-shrink-0 text-xs underline opacity-70 hover:opacity-100"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -258,9 +285,7 @@ export const AdminCalendarPage: React.FC = () => {
               })}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 text-center py-4">
-              На этот день событий нет
-            </p>
+            <p className="py-4 text-center text-sm text-gray-400">На этот день событий нет</p>
           )}
         </div>
       )}

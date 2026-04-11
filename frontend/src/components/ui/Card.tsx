@@ -27,11 +27,11 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={cn(
-        'bg-white rounded-xl border border-gray-200 shadow-sm',
+        'rounded-xl border border-gray-200 bg-white shadow-sm',
         paddingClasses[padding],
-        hover && 'hover:shadow-md hover:border-gray-300 transition-all cursor-pointer',
+        hover && 'cursor-pointer transition-all hover:border-gray-300 hover:shadow-md',
         onClick && 'cursor-pointer',
-        className
+        className,
       )}
       onClick={onClick}
     >
@@ -59,10 +59,10 @@ export const CardSection: React.FC<CardSectionProps> = ({
   return (
     <div className={className}>
       {(title || headerAction) && (
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div>
             {title && <h3 className="text-base font-semibold text-gray-900">{title}</h3>}
-            {description && <p className="text-sm text-gray-500 mt-0.5">{description}</p>}
+            {description && <p className="mt-0.5 text-sm text-gray-500">{description}</p>}
           </div>
           {headerAction}
         </div>

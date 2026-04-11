@@ -1,7 +1,6 @@
 // Боковая навигация административной панели
 import React, { useState } from 'react'
-import {
-  NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -89,7 +88,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   }
 
   // Вспомогательная функция для рендера одного пункта навигации
-  const renderNavItem = (item: { to: string; label: string; icon: React.ElementType; exact?: boolean }) => {
+  const renderNavItem = (item: {
+    to: string
+    label: string
+    icon: React.ElementType
+    exact?: boolean
+  }) => {
     const Icon = item.icon
     return (
       <NavLink
@@ -98,16 +102,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         end={item.exact}
         className={({ isActive }) =>
           cn(
-            'flex items-center gap-3 px-2.5 py-2 rounded-lg transition-colors',
+            'flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors',
             'text-sm font-medium',
             isActive
-              ? 'bg-primary-600/20 text-primary-400 border border-primary-600/20'
-              : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              ? 'border border-primary-600/20 bg-primary-600/20 text-primary-400'
+              : 'text-gray-400 hover:bg-gray-800 hover:text-white',
           )
         }
         title={collapsed ? item.label : undefined}
       >
-        <Icon className="w-5 h-5 flex-shrink-0" />
+        <Icon className="h-5 w-5 flex-shrink-0" />
         {!collapsed && <span className="truncate">{item.label}</span>}
       </NavLink>
     )
@@ -116,16 +120,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   return (
     <aside
       className={cn(
-        'h-screen bg-gray-900 text-gray-300 flex flex-col flex-shrink-0',
+        'flex h-screen flex-shrink-0 flex-col bg-gray-900 text-gray-300',
         'transition-all duration-300 ease-in-out',
-        collapsed ? 'w-16' : 'w-60'
+        collapsed ? 'w-16' : 'w-60',
       )}
     >
       {/* Шапка */}
-      <div className={cn(
-        'flex items-center border-b border-gray-800 h-16 flex-shrink-0',
-        collapsed ? 'justify-center px-2' : 'justify-between px-4'
-      )}>
+      <div
+        className={cn(
+          'flex h-16 flex-shrink-0 items-center border-b border-gray-800',
+          collapsed ? 'justify-center px-2' : 'justify-between px-4',
+        )}
+      >
         {!collapsed && (
           <div>
             <div className="text-sm font-bold text-white">АГРОРЕЗЕРВ</div>
@@ -134,30 +140,27 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         )}
         <button
           onClick={handleToggle}
-          className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors flex-shrink-0"
+          className="flex-shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
           aria-label={collapsed ? 'Развернуть' : 'Свернуть'}
         >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
       </div>
 
       {/* Навигация с прокруткой */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-4">
         {/* Основные пункты */}
         {navItems.map(renderNavItem)}
 
         {/* Разделитель секции «РАСШИРЕННЫЕ» */}
-        <div className={cn(
-          'pt-3 pb-1',
-          collapsed ? 'px-1' : 'px-1'
-        )}>
+        <div className={cn('pb-1 pt-3', collapsed ? 'px-1' : 'px-1')}>
           {!collapsed ? (
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1.5 py-1 border-t border-gray-800">
+            <div className="border-t border-gray-800 px-1.5 py-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
               Расширенные
             </div>
           ) : (
             // В свёрнутом состоянии — просто горизонтальная линия
-            <div className="border-t border-gray-800 mx-1" />
+            <div className="mx-1 border-t border-gray-800" />
           )}
         </div>
 
@@ -166,28 +169,28 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </nav>
 
       {/* Нижняя часть */}
-      <div className="border-t border-gray-800 p-2 space-y-0.5">
+      <div className="space-y-0.5 border-t border-gray-800 p-2">
         {/* Ссылка на сайт */}
         <a
           href="/"
           target="_blank"
           rel="noopener noreferrer"
           className={cn(
-            'flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors',
+            'flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-gray-400 transition-colors hover:bg-gray-800 hover:text-white',
           )}
           title={collapsed ? 'Сайт' : undefined}
         >
-          <ExternalLink className="w-5 h-5 flex-shrink-0" />
+          <ExternalLink className="h-5 w-5 flex-shrink-0" />
           {!collapsed && <span>Открыть сайт</span>}
         </a>
 
         {/* Профиль */}
         {!collapsed && (
           <div className="px-2.5 py-2">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
+            <div className="truncate text-xs font-semibold uppercase tracking-wider text-gray-500">
               {user?.full_name}
             </div>
-            <div className="text-xs text-gray-600 truncate">{user?.email}</div>
+            <div className="truncate text-xs text-gray-600">{user?.email}</div>
           </div>
         )}
 
@@ -195,12 +198,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <button
           onClick={handleLogout}
           className={cn(
-            'w-full flex items-center gap-3 px-2.5 py-2 rounded-lg',
-            'text-sm text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors'
+            'flex w-full items-center gap-3 rounded-lg px-2.5 py-2',
+            'text-sm text-red-400 transition-colors hover:bg-red-900/20 hover:text-red-300',
           )}
           title={collapsed ? 'Выйти' : undefined}
         >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
+          <LogOut className="h-5 w-5 flex-shrink-0" />
           {!collapsed && <span>Выйти</span>}
         </button>
       </div>

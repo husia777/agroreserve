@@ -67,23 +67,22 @@ export const AdminProductForm: React.FC = () => {
   const existingProduct = existingProducts?.items.find((p) => p.id === id)
 
   const {
-		register,
-		handleSubmit,
-		setValue,
-		watch,
-		formState: { errors, isSubmitting },
-		reset,
-	} = useForm<ProductFormData>({
-		resolver: zodResolver(productSchema),
-		defaultValues: {
-			unit: UnitType.KG,
-			min_order_qty: 1,
-			order_step: 1,
-			min_stock_quantity: 5,
-			is_active: true,
-			country_of_origin: "Россия",
-		},
-	});
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      unit: UnitType.KG,
+      min_order_qty: 1,
+      order_step: 1,
+      min_stock_quantity: 5,
+      is_active: true,
+      country_of_origin: 'Россия',
+    },
+  })
 
   useEffect(() => {
     if (existingProduct) {
@@ -126,7 +125,7 @@ export const AdminProductForm: React.FC = () => {
         const res = await apiClient.post<{ url: string }>(
           '/admin/catalog/products/upload-image',
           formData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
+          { headers: { 'Content-Type': 'multipart/form-data' } },
         )
         setImages((prev) => [...prev, res.data.url])
       }
@@ -167,249 +166,238 @@ export const AdminProductForm: React.FC = () => {
   const watchUnit = watch('unit')
 
   return (
-		<div className="p-6 space-y-5 max-w-3xl">
-			<Breadcrumbs
-				items={[
-					{ label: "Каталог", href: "/admin/catalog" },
-					{ label: isEditing ? "Редактировать товар" : "Новый товар" },
-				]}
-				showHome={false}
-			/>
-			<h1 className="text-2xl font-bold text-gray-900">
-				{isEditing ? "Редактировать товар" : "Новый товар"}
-			</h1>
+    <div className="max-w-3xl space-y-5 p-6">
+      <Breadcrumbs
+        items={[
+          { label: 'Каталог', href: '/admin/catalog' },
+          { label: isEditing ? 'Редактировать товар' : 'Новый товар' },
+        ]}
+        showHome={false}
+      />
+      <h1 className="text-2xl font-bold text-gray-900">
+        {isEditing ? 'Редактировать товар' : 'Новый товар'}
+      </h1>
 
-			<form onSubmit={onSubmit} className="space-y-6">
-				{/* Фото товара */}
-				<div className="bg-white rounded-xl border border-gray-200 p-5">
-					<h2 className="text-base font-semibold text-gray-900 mb-4">
-						Фото товара
-					</h2>
-					<div className="flex flex-wrap gap-3">
-						{images.map((url, idx) => (
-							<div
-								key={idx}
-								className="relative group w-24 h-24 rounded-lg overflow-hidden border border-gray-200"
-							>
-								<img src={url} alt="" className="w-full h-full object-cover" />
-								<button
-									type="button"
-									onClick={() => removeImage(idx)}
-									className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-								>
-									<X className="w-3.5 h-3.5" />
-								</button>
-								{idx === 0 && (
-									<span className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center py-0.5">
-										Главное
-									</span>
-								)}
-							</div>
-						))}
+      <form onSubmit={onSubmit} className="space-y-6">
+        {/* Фото товара */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-4 text-base font-semibold text-gray-900">Фото товара</h2>
+          <div className="flex flex-wrap gap-3">
+            {images.map((url, idx) => (
+              <div
+                key={idx}
+                className="group relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200"
+              >
+                <img src={url} alt="" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(idx)}
+                  className="absolute right-1 top-1 rounded-full bg-red-500 p-0.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+                {idx === 0 && (
+                  <span className="absolute bottom-0 left-0 right-0 bg-black/50 py-0.5 text-center text-[10px] text-white">
+                    Главное
+                  </span>
+                )}
+              </div>
+            ))}
 
-						{/* Кнопка добавления */}
-						<button
-							type="button"
-							onClick={() => fileInputRef.current?.click()}
-							disabled={uploading}
-							className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 hover:border-green-400 flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-green-500 transition-colors disabled:opacity-50"
-						>
-							{uploading ? (
-								<Loader2 className="w-6 h-6 animate-spin" />
-							) : (
-								<>
-									<ImagePlus className="w-6 h-6" />
-									<span className="text-[10px]">Добавить</span>
-								</>
-							)}
-						</button>
-					</div>
-					<input
-						ref={fileInputRef}
-						type="file"
-						accept="image/jpeg,image/png,image/webp"
-						multiple
-						onChange={handleFileUpload}
-						className="hidden"
-					/>
-					<p className="text-xs text-gray-400 mt-2">
-						JPG, PNG или WebP. До 5 МБ. Первое фото — главное.
-					</p>
-				</div>
+            {/* Кнопка добавления */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 transition-colors hover:border-green-400 hover:text-green-500 disabled:opacity-50"
+            >
+              {uploading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <>
+                  <ImagePlus className="h-6 w-6" />
+                  <span className="text-[10px]">Добавить</span>
+                </>
+              )}
+            </button>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <p className="mt-2 text-xs text-gray-400">
+            JPG, PNG или WebP. До 5 МБ. Первое фото — главное.
+          </p>
+        </div>
 
-				{/* Основное */}
-				<div className="bg-white rounded-xl border border-gray-200 p-5">
-					<h2 className="text-base font-semibold text-gray-900 mb-4">
-						Основная информация
-					</h2>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						<div className="sm:col-span-2">
-							<Input
-								label="Название товара"
-								placeholder="Например: Томаты черри"
-								error={errors.name?.message}
-								required
-								{...register("name")}
-							/>
-						</div>
-						<Select
-							label="Категория"
-							options={categoryOptions}
-							placeholder="Выберите категорию"
-							error={errors.category_id?.message}
-							required
-							{...register("category_id")}
-						/>
-						<Input
-							label="Страна происхождения"
-							placeholder="Россия"
-							error={errors.country_of_origin?.message}
-							required
-							{...register("country_of_origin")}
-						/>
-						<div className="sm:col-span-2">
-							<label className="block text-sm font-medium text-gray-700 mb-1">
-								Описание
-							</label>
-							<textarea
-								{...register("description")}
-								rows={3}
-								placeholder="Описание товара..."
-								className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-300"
-							/>
-						</div>
-						<Input
-							label="Условия хранения"
-							placeholder="+2–6°C, без прямых солнечных лучей"
-							{...register("storage_conditions")}
-						/>
-						<div className="flex items-center gap-3 pt-6">
-							<input
-								type="checkbox"
-								id="is_active"
-								className="w-4 h-4 rounded text-primary-600"
-								{...register("is_active")}
-							/>
-							<label
-								htmlFor="is_active"
-								className="text-sm font-medium text-gray-700"
-							>
-								Товар активен (отображается в каталоге)
-							</label>
-						</div>
-					</div>
-				</div>
+        {/* Основное */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-4 text-base font-semibold text-gray-900">Основная информация</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Input
+                label="Название товара"
+                placeholder="Например: Томаты черри"
+                error={errors.name?.message}
+                required
+                {...register('name')}
+              />
+            </div>
+            <Select
+              label="Категория"
+              options={categoryOptions}
+              placeholder="Выберите категорию"
+              error={errors.category_id?.message}
+              required
+              {...register('category_id')}
+            />
+            <Input
+              label="Страна происхождения"
+              placeholder="Россия"
+              error={errors.country_of_origin?.message}
+              required
+              {...register('country_of_origin')}
+            />
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium text-gray-700">Описание</label>
+              <textarea
+                {...register('description')}
+                rows={3}
+                placeholder="Описание товара..."
+                className="w-full resize-none rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+              />
+            </div>
+            <Input
+              label="Условия хранения"
+              placeholder="+2–6°C, без прямых солнечных лучей"
+              {...register('storage_conditions')}
+            />
+            <div className="flex items-center gap-3 pt-6">
+              <input
+                type="checkbox"
+                id="is_active"
+                className="h-4 w-4 rounded text-primary-600"
+                {...register('is_active')}
+              />
+              <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+                Товар активен (отображается в каталоге)
+              </label>
+            </div>
+          </div>
+        </div>
 
-				{/* Цены */}
-				<div className="bg-white rounded-xl border border-gray-200 p-5">
-					<h2 className="text-base font-semibold text-gray-900 mb-4">Цены</h2>
-					<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-						<Input
-							label="Закупочная цена (₽/ед.)"
-							type="number"
-							step="0.01"
-							placeholder="0.00"
-							error={errors.price_purchase?.message}
-							required
-							{...register("price_purchase")}
-						/>
-						<Input
-							label="Оптовая цена (₽/ед.)"
-							type="number"
-							step="0.01"
-							placeholder="0.00"
-							error={errors.price_wholesale?.message}
-							required
-							{...register("price_wholesale")}
-						/>
-						<Input
-							label="Розничная цена (₽/ед.)"
-							type="number"
-							step="0.01"
-							placeholder="0.00"
-							error={errors.price_retail?.message}
-							required
-							{...register("price_retail")}
-						/>
-					</div>
-				</div>
+        {/* Цены */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-4 text-base font-semibold text-gray-900">Цены</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Input
+              label="Закупочная цена (₽/ед.)"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              error={errors.price_purchase?.message}
+              required
+              {...register('price_purchase')}
+            />
+            <Input
+              label="Оптовая цена (₽/ед.)"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              error={errors.price_wholesale?.message}
+              required
+              {...register('price_wholesale')}
+            />
+            <Input
+              label="Розничная цена (₽/ед.)"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              error={errors.price_retail?.message}
+              required
+              {...register('price_retail')}
+            />
+          </div>
+        </div>
 
-				{/* Единицы */}
-				<div className="bg-white rounded-xl border border-gray-200 p-5">
-					<h2 className="text-base font-semibold text-gray-900 mb-4">
-						Единицы и количество
-					</h2>
-					<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-						<Select
-							label="Единица измерения"
-							options={UNIT_OPTIONS}
-							error={errors.unit?.message}
-							required
-							{...register("unit")}
-						/>
-						{watchUnit === UnitType.PIECE && (
-							<Input
-								label="Средний вес штуки (кг)"
-								type="number"
-								step="0.001"
-								placeholder="0.15"
-								hint="Для поштучного калькулятора"
-								error={errors.unit_weight?.message}
-								{...register("unit_weight")}
-							/>
-						)}
-						<Input
-							label="Минимальный заказ"
-							type="number"
-							step="0.5"
-							placeholder="1"
-							error={errors.min_order_qty?.message}
-							required
-							{...register("min_order_qty")}
-						/>
-						<Input
-							label="Шаг изменения количества"
-							type="number"
-							step="0.1"
-							placeholder="1"
-							error={errors.order_step?.message}
-							required
-							{...register("order_step")}
-						/>
-						<Input
-							label="Минимальный остаток"
-							type="number"
-							step="1"
-							placeholder="5"
-							hint="При достижении — оповещение"
-							error={errors.min_stock_quantity?.message}
-							{...register("min_stock_quantity")}
-						/>
-					</div>
-				</div>
+        {/* Единицы */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-4 text-base font-semibold text-gray-900">Единицы и количество</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Select
+              label="Единица измерения"
+              options={UNIT_OPTIONS}
+              error={errors.unit?.message}
+              required
+              {...register('unit')}
+            />
+            {watchUnit === UnitType.PIECE && (
+              <Input
+                label="Средний вес штуки (кг)"
+                type="number"
+                step="0.001"
+                placeholder="0.15"
+                hint="Для поштучного калькулятора"
+                error={errors.unit_weight?.message}
+                {...register('unit_weight')}
+              />
+            )}
+            <Input
+              label="Минимальный заказ"
+              type="number"
+              step="0.5"
+              placeholder="1"
+              error={errors.min_order_qty?.message}
+              required
+              {...register('min_order_qty')}
+            />
+            <Input
+              label="Шаг изменения количества"
+              type="number"
+              step="0.1"
+              placeholder="1"
+              error={errors.order_step?.message}
+              required
+              {...register('order_step')}
+            />
+            <Input
+              label="Минимальный остаток"
+              type="number"
+              step="1"
+              placeholder="5"
+              hint="При достижении — оповещение"
+              error={errors.min_stock_quantity?.message}
+              {...register('min_stock_quantity')}
+            />
+          </div>
+        </div>
 
-				{/* Кнопки */}
-				<div className="flex items-center gap-3">
-					<Button
-						type="submit"
-						variant="primary"
-						loading={isSubmitting || saveMutation.isPending}
-						size="lg"
-					>
-						{isEditing ? "Сохранить изменения" : "Создать товар"}
-					</Button>
-					<Button
-						type="button"
-						variant="secondary"
-						size="lg"
-						onClick={() => navigate("/admin/catalog")}
-					>
-						Отмена
-					</Button>
-				</div>
-			</form>
-		</div>
-	);
+        {/* Кнопки */}
+        <div className="flex items-center gap-3">
+          <Button
+            type="submit"
+            variant="primary"
+            loading={isSubmitting || saveMutation.isPending}
+            size="lg"
+          >
+            {isEditing ? 'Сохранить изменения' : 'Создать товар'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            onClick={() => navigate('/admin/catalog')}
+          >
+            Отмена
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
 }
 
 export default AdminProductForm

@@ -24,23 +24,18 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   return (
     <div
-      className={cn(
-        'flex flex-col items-center justify-center py-16 px-4 text-center',
-        className
-      )}
+      className={cn('flex flex-col items-center justify-center px-4 py-16 text-center', className)}
     >
       {/* Иконка */}
-      <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4 text-gray-400">
-        {icon || <PackageOpen className="w-8 h-8" />}
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+        {icon || <PackageOpen className="h-8 w-8" />}
       </div>
 
       {/* Заголовок */}
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+      <h3 className="mb-2 text-lg font-semibold text-gray-900">{title}</h3>
 
       {/* Описание */}
-      {description && (
-        <p className="text-sm text-gray-500 max-w-sm mb-6">{description}</p>
-      )}
+      {description && <p className="mb-6 max-w-sm text-sm text-gray-500">{description}</p>}
 
       {/* Кнопка действия */}
       {action && (

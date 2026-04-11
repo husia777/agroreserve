@@ -27,37 +27,43 @@ export const Header: React.FC = () => {
   }
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-
+    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white shadow-sm">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
           {/* Логотип */}
-          <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group">
-            <div className="w-9 h-9 bg-primary-600 rounded-lg flex items-center justify-center shadow-sm group-hover:bg-primary-700 transition-colors">
-              <svg viewBox="0 0 36 36" fill="none" className="w-6 h-6" aria-hidden="true">
+          <Link to="/" className="group flex flex-shrink-0 items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 shadow-sm transition-colors group-hover:bg-primary-700">
+              <svg viewBox="0 0 36 36" fill="none" className="h-6 w-6" aria-hidden="true">
                 {/* Стилизованный листок */}
-                <path d="M18 4C10.268 4 4 10.268 4 18s6.268 14 14 14 14-6.268 14-14S25.732 4 18 4z" fill="white" fillOpacity="0.2"/>
-                <path d="M18 6C14 6 11 9 10 12c-1 3 0 7 2 10 1.5 2 4 3.5 6 4V14c2 1 4 3 5 6 1 2.5 0.5 6-1 8.5 3-1 5.5-3 7-6 1.5-3 1-7-1-10-2-3-5.5-5.5-10-6.5z" fill="white"/>
+                <path
+                  d="M18 4C10.268 4 4 10.268 4 18s6.268 14 14 14 14-6.268 14-14S25.732 4 18 4z"
+                  fill="white"
+                  fillOpacity="0.2"
+                />
+                <path
+                  d="M18 6C14 6 11 9 10 12c-1 3 0 7 2 10 1.5 2 4 3.5 6 4V14c2 1 4 3 5 6 1 2.5 0.5 6-1 8.5 3-1 5.5-3 7-6 1.5-3 1-7-1-10-2-3-5.5-5.5-10-6.5z"
+                  fill="white"
+                />
               </svg>
             </div>
             <div className="leading-tight">
-              <div className="text-base font-bold text-gray-900 tracking-tight">АГРОРЕЗЕРВ</div>
-              <div className="text-xs text-primary-600 font-medium -mt-0.5">Тобольск</div>
+              <div className="text-base font-bold tracking-tight text-gray-900">АГРОРЕЗЕРВ</div>
+              <div className="-mt-0.5 text-xs font-medium text-primary-600">Тобольск</div>
             </div>
           </Link>
 
           {/* Навигация (desktop) */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden items-center gap-1 md:flex">
             {navLinks.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
                 className={({ isActive }) =>
                   cn(
-                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                    'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
                     isActive
-                      ? 'text-primary-700 bg-primary-50'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
                   )
                 }
               >
@@ -71,12 +77,12 @@ export const Header: React.FC = () => {
             {/* Корзина */}
             <Link
               to="/cart"
-              className="relative p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              className="relative rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
               aria-label="Корзина"
             >
-              <ShoppingCart className="w-5 h-5" />
+              <ShoppingCart className="h-5 w-5" />
               {itemsCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-primary-600 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+                <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-xs font-bold leading-none text-white">
                   {itemsCount > 99 ? '99+' : itemsCount}
                 </span>
               )}
@@ -87,12 +93,12 @@ export const Header: React.FC = () => {
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+                  className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
                 >
-                  <div className="w-7 h-7 bg-primary-100 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-primary-700" />
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-100">
+                    <User className="h-4 w-4 text-primary-700" />
                   </div>
-                  <span className="hidden sm:block max-w-[100px] truncate">
+                  <span className="hidden max-w-[100px] truncate sm:block">
                     {user?.full_name.split(' ')[0]}
                   </span>
                 </button>
@@ -100,23 +106,20 @@ export const Header: React.FC = () => {
                 {/* Меню пользователя */}
                 {userMenuOpen && (
                   <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setUserMenuOpen(false)}
-                    />
-                    <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl border border-gray-200 shadow-lg z-20 py-1">
-                      <div className="px-4 py-2.5 border-b border-gray-100">
-                        <div className="text-sm font-semibold text-gray-900 truncate">
+                    <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
+                    <div className="absolute right-0 top-full z-20 mt-1 w-52 rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+                      <div className="border-b border-gray-100 px-4 py-2.5">
+                        <div className="truncate text-sm font-semibold text-gray-900">
                           {user?.full_name}
                         </div>
-                        <div className="text-xs text-gray-500 truncate">{user?.email}</div>
+                        <div className="truncate text-xs text-gray-500">{user?.email}</div>
                       </div>
                       <Link
                         to="/account"
                         onClick={() => setUserMenuOpen(false)}
                         className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       >
-                        <Package className="w-4 h-4 text-gray-400" />
+                        <Package className="h-4 w-4 text-gray-400" />
                         Мои заказы
                       </Link>
                       <Link
@@ -124,25 +127,25 @@ export const Header: React.FC = () => {
                         onClick={() => setUserMenuOpen(false)}
                         className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       >
-                        <Settings className="w-4 h-4 text-gray-400" />
+                        <Settings className="h-4 w-4 text-gray-400" />
                         Профиль
                       </Link>
                       {isAdmin && (
                         <Link
                           to="/admin"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-primary-700 hover:bg-primary-50 font-medium"
+                          className="flex items-center gap-2.5 px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50"
                         >
-                          <Settings className="w-4 h-4" />
+                          <Settings className="h-4 w-4" />
                           Панель управления
                         </Link>
                       )}
-                      <div className="border-t border-gray-100 mt-1">
+                      <div className="mt-1 border-t border-gray-100">
                         <button
                           onClick={handleLogout}
                           className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                         >
-                          <LogOut className="w-4 h-4" />
+                          <LogOut className="h-4 w-4" />
                           Выйти
                         </button>
                       </div>
@@ -153,7 +156,7 @@ export const Header: React.FC = () => {
             ) : (
               <Link
                 to="/login"
-                className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
+                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-700"
               >
                 Войти
               </Link>
@@ -162,10 +165,10 @@ export const Header: React.FC = () => {
             {/* Мобильное меню */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              className="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 md:hidden"
               aria-label="Меню"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
@@ -173,8 +176,8 @@ export const Header: React.FC = () => {
 
       {/* Мобильная навигация */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200 bg-white">
-          <div className="max-w-7xl mx-auto px-4 py-3 space-y-1">
+        <div className="border-t border-gray-200 bg-white md:hidden">
+          <div className="mx-auto max-w-7xl space-y-1 px-4 py-3">
             {navLinks.map((link) => (
               <NavLink
                 key={link.to}
@@ -182,10 +185,10 @@ export const Header: React.FC = () => {
                 onClick={() => setMobileMenuOpen(false)}
                 className={({ isActive }) =>
                   cn(
-                    'block px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'block rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                     isActive
-                      ? 'text-primary-700 bg-primary-50'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                   )
                 }
               >

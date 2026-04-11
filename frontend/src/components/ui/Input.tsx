@@ -12,32 +12,16 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  (
-    {
-      label,
-      error,
-      hint,
-      leftIcon,
-      rightIcon,
-      onRightIconClick,
-      className,
-      id,
-      ...props
-    },
-    ref
-  ) => {
+  ({ label, error, hint, leftIcon, rightIcon, onRightIconClick, className, id, ...props }, ref) => {
     const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`
 
     return (
       <div className="w-full">
         {/* Метка */}
         {label && (
-          <label
-            htmlFor={inputId}
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
+          <label htmlFor={inputId} className="mb-1 block text-sm font-medium text-gray-700">
             {label}
-            {props.required && <span className="text-red-500 ml-1">*</span>}
+            {props.required && <span className="ml-1 text-red-500">*</span>}
           </label>
         )}
 
@@ -45,7 +29,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <div className="relative">
           {/* Левая иконка */}
           {leftIcon && (
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
               {leftIcon}
             </div>
           )}
@@ -64,11 +48,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               'py-2.5',
               // Состояние ошибки
               error
-                ? 'border-red-300 bg-red-50 focus:ring-red-300 focus:border-red-400 text-red-900'
-                : 'border-gray-300 bg-white focus:ring-primary-300 focus:border-primary-400 text-gray-900',
+                ? 'border-red-300 bg-red-50 text-red-900 focus:border-red-400 focus:ring-red-300'
+                : 'border-gray-300 bg-white text-gray-900 focus:border-primary-400 focus:ring-primary-300',
               // Disabled
-              props.disabled && 'bg-gray-100 cursor-not-allowed text-gray-500',
-              className
+              props.disabled && 'cursor-not-allowed bg-gray-100 text-gray-500',
+              className,
             )}
             {...props}
           />
@@ -77,8 +61,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {rightIcon && (
             <div
               className={cn(
-                'absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400',
-                onRightIconClick && 'cursor-pointer hover:text-gray-600'
+                'absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400',
+                onRightIconClick && 'cursor-pointer hover:text-gray-600',
               )}
               onClick={onRightIconClick}
             >
@@ -88,17 +72,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         </div>
 
         {/* Сообщение об ошибке */}
-        {error && (
-          <p className="mt-1 text-xs text-red-600">{error}</p>
-        )}
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
 
         {/* Подсказка */}
-        {hint && !error && (
-          <p className="mt-1 text-xs text-gray-500">{hint}</p>
-        )}
+        {hint && !error && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
       </div>
     )
-  }
+  },
 )
 
 Input.displayName = 'Input'

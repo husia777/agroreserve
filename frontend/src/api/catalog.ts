@@ -36,7 +36,6 @@ export const searchProducts = async (query: string): Promise<Product[]> => {
   return response.data
 }
 
-
 // Сертификаты товара (UC-23)
 export interface ProductCertificate {
   _id: string
@@ -53,11 +52,12 @@ export interface ProductCertificate {
   file_name: string | null
 }
 
-export const getProductCertificates = async (productId: string): Promise<{ certificates: ProductCertificate[]; count: number }> => {
-  const response = await apiClient.get("/catalog/products/" + productId + "/certificates")
+export const getProductCertificates = async (
+  productId: string,
+): Promise<{ certificates: ProductCertificate[]; count: number }> => {
+  const response = await apiClient.get('/catalog/products/' + productId + '/certificates')
   return response.data
 }
-
 
 // UC-01: Подписка на уведомление о поступлении товара
 export interface StockNotifyResponse {
@@ -68,11 +68,11 @@ export interface StockNotifyResponse {
 
 export const subscribeStockNotify = async (
   productId: string,
-  email: string
+  email: string,
 ): Promise<StockNotifyResponse> => {
   const response = await apiClient.post<StockNotifyResponse>(
     `/catalog/products/${productId}/notify`,
-    { email }
+    { email },
   )
   return response.data
 }

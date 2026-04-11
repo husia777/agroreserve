@@ -26,14 +26,8 @@ import {
   Edit3,
   Calendar,
 } from 'lucide-react'
-import {
-  getPnLReport,
-  getExpenses,
-  createExpense,
-  updateExpense,
-  deleteExpense,
-} from '@/api/admin'
-import { Expense, ExpenseCategory } from '@/types'
+import { getPnLReport, getExpenses, createExpense, updateExpense, deleteExpense } from '@/api/admin'
+import { ExpenseCategory, type Expense } from '@/types'
 import { formatPrice, formatDate } from '@/utils/format'
 import { cn } from '@/utils/cn'
 import { PageSpinner } from '@/components/ui/Spinner'
@@ -51,9 +45,7 @@ import { ru } from 'date-fns/locale'
 const expenseSchema = z.object({
   category: z.nativeEnum(ExpenseCategory, { errorMap: () => ({ message: 'Выберите категорию' }) }),
   description: z.string().min(3, 'Описание минимум 3 символа'),
-  amount: z
-    .number({ invalid_type_error: 'Введите сумму' })
-    .positive('Сумма должна быть больше 0'),
+  amount: z.number({ invalid_type_error: 'Введите сумму' }).positive('Сумма должна быть больше 0'),
   date: z.string().min(1, 'Укажите дату'),
   is_recurring: z.boolean().optional(),
   recurrence_period: z.string().optional(),
@@ -93,33 +85,43 @@ const KpiCard: React.FC<{
 }> = ({ title, value, subValue, icon, trend, colorClass = 'bg-gray-50' }) => (
   <div className={cn('rounded-xl border border-gray-200 p-4', colorClass)}>
     <div className="flex items-start justify-between">
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{title}</div>
+      <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">{title}</div>
       <div className="text-gray-400">{icon}</div>
     </div>
     <div className="mt-2 text-2xl font-bold text-gray-900">{value}</div>
-    {subValue && <div className="text-xs text-gray-500 mt-0.5">{subValue}</div>}
+    {subValue && <div className="mt-0.5 text-xs text-gray-500">{subValue}</div>}
     {trend !== undefined && (
-      <div className={cn('flex items-center gap-1 mt-1 text-xs font-medium', trend >= 0 ? 'text-green-600' : 'text-red-500')}>
-        {trend >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-        {trend >= 0 ? '+' : ''}{trend.toFixed(1)}%
+      <div
+        className={cn(
+          'mt-1 flex items-center gap-1 text-xs font-medium',
+          trend >= 0 ? 'text-green-600' : 'text-red-500',
+        )}
+      >
+        {trend >= 0 ? (
+          <TrendingUp className="h-3.5 w-3.5" />
+        ) : (
+          <TrendingDown className="h-3.5 w-3.5" />
+        )}
+        {trend >= 0 ? '+' : ''}
+        {trend.toFixed(1)}%
       </div>
     )}
   </div>
 )
 
 // --- Тултип для графика ---
-const CustomTooltip: React.FC<{ active?: boolean; payload?: any[]; label?: string }> = ({
-  active,
-  payload,
-  label,
-}) => {
+const CustomTooltip: React.FC<{
+  active?: boolean
+  payload?: { color: string; name: string; value: number }[]
+  label?: string
+}> = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs">
-      <p className="font-semibold text-gray-700 mb-2">{label}</p>
-      {payload.map((entry: any, i: number) => (
+    <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-lg">
+      <p className="mb-2 font-semibold text-gray-700">{label}</p>
+      {payload.map((entry, i) => (
         <div key={i} className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
           <span className="text-gray-600">{entry.name}:</span>
           <span className="font-medium text-gray-900">{formatPrice(entry.value)}</span>
         </div>
@@ -172,8 +174,7 @@ const AdminFinancePage: React.FC = () => {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Expense> }) =>
-      updateExpense(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<Expense> }) => updateExpense(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] })
       queryClient.invalidateQueries({ queryKey: ['pnl'] })
@@ -263,30 +264,31 @@ const AdminFinancePage: React.FC = () => {
   const totalRevenue = pnlData?.reduce((s, r) => s + r.revenue, 0) ?? 0
   const totalGrossProfit = pnlData?.reduce((s, r) => s + r.gross_profit, 0) ?? 0
   const totalNetProfit = pnlData?.reduce((s, r) => s + r.net_profit, 0) ?? 0
-  const avgMargin =
-    pnlData?.length ? pnlData.reduce((s, r) => s + r.gross_margin, 0) / pnlData.length : 0
+  const avgMargin = pnlData?.length
+    ? pnlData.reduce((s, r) => s + r.gross_margin, 0) / pnlData.length
+    : 0
 
   return (
     <div className="space-y-6">
       {/* Заголовок */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Финансы</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <p className="mt-0.5 text-sm text-gray-500">
           P&L отчёт, динамика выручки и управление расходами
         </p>
       </div>
 
       {/* Выбор периода */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+      <div className="flex w-fit gap-1 rounded-lg bg-gray-100 p-1">
         {(Object.keys(periodLabels) as PnLPeriod[]).map((p) => (
           <button
             key={p}
             onClick={() => setPeriod(p)}
             className={cn(
-              'px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+              'rounded-md px-3 py-1.5 text-sm font-medium transition-all',
               period === p
                 ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                : 'text-gray-500 hover:text-gray-700',
             )}
           >
             {periodLabels[p]}
@@ -299,38 +301,38 @@ const AdminFinancePage: React.FC = () => {
       ) : (
         <>
           {/* KPI карточки */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiCard
               title="Выручка"
               value={formatPrice(totalRevenue)}
-              icon={<DollarSign className="w-4 h-4" />}
+              icon={<DollarSign className="h-4 w-4" />}
               colorClass="bg-blue-50"
             />
             <KpiCard
               title="Вал. прибыль"
               value={formatPrice(totalGrossProfit)}
               subValue={`Маржа: ${avgMargin.toFixed(1)}%`}
-              icon={<TrendingUp className="w-4 h-4" />}
+              icon={<TrendingUp className="h-4 w-4" />}
               colorClass="bg-green-50"
             />
             <KpiCard
               title="Чист. прибыль"
               value={formatPrice(totalNetProfit)}
-              icon={<TrendingUp className="w-4 h-4" />}
+              icon={<TrendingUp className="h-4 w-4" />}
               colorClass={totalNetProfit >= 0 ? 'bg-emerald-50' : 'bg-red-50'}
             />
             <KpiCard
               title="Заказов"
               value={String(pnlData?.reduce((s, r) => s + r.orders_count, 0) ?? 0)}
               subValue={`Ср. чек: ${formatPrice((pnlData?.reduce((s, r) => s + r.avg_order, 0) ?? 0) / (pnlData?.length || 1))}`}
-              icon={<Receipt className="w-4 h-4" />}
+              icon={<Receipt className="h-4 w-4" />}
             />
           </div>
 
           {/* График P&L */}
           {chartData.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <h2 className="text-sm font-semibold text-gray-700 mb-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <h2 className="mb-4 text-sm font-semibold text-gray-700">
                 Динамика выручки и прибыли
               </h2>
               <ResponsiveContainer width="100%" height={280}>
@@ -349,9 +351,7 @@ const AdminFinancePage: React.FC = () => {
                     tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend
-                    wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
-                  />
+                  <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
                   <Bar dataKey="Выручка" fill="#93c5fd" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="Вал. прибыль" fill="#16a34a" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="Чист. прибыль" fill="#059669" radius={[3, 3, 0, 0]} />
@@ -362,8 +362,8 @@ const AdminFinancePage: React.FC = () => {
 
           {/* График расходов */}
           {chartData.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <h2 className="text-sm font-semibold text-gray-700 mb-4">Расходы</h2>
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <h2 className="mb-4 text-sm font-semibold text-gray-700">Расходы</h2>
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={chartData} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -395,56 +395,88 @@ const AdminFinancePage: React.FC = () => {
 
           {/* P&L таблица */}
           {(pnlData?.length ?? 0) > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <div className="border-b border-gray-100 px-4 py-3">
                 <h2 className="text-sm font-semibold text-gray-700">Таблица P&L</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50/50 border-b border-gray-100">
-                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Период</th>
-                      <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Выручка</th>
-                      <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Себестоимость</th>
-                      <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Вал. прибыль</th>
-                      <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Маржа</th>
-                      <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Расходы</th>
-                      <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Чист. прибыль</th>
+                    <tr className="border-b border-gray-100 bg-gray-50/50">
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Период
+                      </th>
+                      <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Выручка
+                      </th>
+                      <th className="hidden px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 md:table-cell">
+                        Себестоимость
+                      </th>
+                      <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Вал. прибыль
+                      </th>
+                      <th className="hidden px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 sm:table-cell">
+                        Маржа
+                      </th>
+                      <th className="hidden px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 lg:table-cell">
+                        Расходы
+                      </th>
+                      <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Чист. прибыль
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {pnlData!.map((row, i) => (
                       <tr
                         key={i}
-                        className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
+                        className="border-b border-gray-50 transition-colors hover:bg-gray-50/50"
                       >
-                        <td className="px-4 py-2.5 text-gray-600 text-xs">
+                        <td className="px-4 py-2.5 text-xs text-gray-600">
                           {(() => {
-                            try { return format(parseISO(row.period_start), 'd MMM yyyy', { locale: ru }) }
-                            catch { return row.period_start }
+                            try {
+                              return format(parseISO(row.period_start), 'd MMM yyyy', {
+                                locale: ru,
+                              })
+                            } catch {
+                              return row.period_start
+                            }
                           })()}
                         </td>
-                        <td className="px-4 py-2.5 text-right font-medium text-gray-900">{formatPrice(row.revenue)}</td>
-                        <td className="px-4 py-2.5 text-right text-gray-600 hidden md:table-cell">{formatPrice(row.cost_of_goods)}</td>
-                        <td className="px-4 py-2.5 text-right text-green-700 font-medium">{formatPrice(row.gross_profit)}</td>
-                        <td className="px-4 py-2.5 text-right hidden sm:table-cell">
-                          <span className={cn(
-                            'text-xs font-semibold px-1.5 py-0.5 rounded',
-                            row.gross_margin >= 20
-                              ? 'bg-green-100 text-green-700'
-                              : row.gross_margin >= 10
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-red-100 text-red-700'
-                          )}>
+                        <td className="px-4 py-2.5 text-right font-medium text-gray-900">
+                          {formatPrice(row.revenue)}
+                        </td>
+                        <td className="hidden px-4 py-2.5 text-right text-gray-600 md:table-cell">
+                          {formatPrice(row.cost_of_goods)}
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-medium text-green-700">
+                          {formatPrice(row.gross_profit)}
+                        </td>
+                        <td className="hidden px-4 py-2.5 text-right sm:table-cell">
+                          <span
+                            className={cn(
+                              'rounded px-1.5 py-0.5 text-xs font-semibold',
+                              row.gross_margin >= 20
+                                ? 'bg-green-100 text-green-700'
+                                : row.gross_margin >= 10
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-red-100 text-red-700',
+                            )}
+                          >
                             {row.gross_margin.toFixed(1)}%
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 text-right text-red-600 hidden lg:table-cell">{formatPrice(row.expenses)}</td>
-                        <td className={cn(
-                          'px-4 py-2.5 text-right font-semibold',
-                          row.net_profit >= 0 ? 'text-emerald-700' : 'text-red-600'
-                        )}>
-                          {row.net_profit >= 0 ? '+' : ''}{formatPrice(row.net_profit)}
+                        <td className="hidden px-4 py-2.5 text-right text-red-600 lg:table-cell">
+                          {formatPrice(row.expenses)}
+                        </td>
+                        <td
+                          className={cn(
+                            'px-4 py-2.5 text-right font-semibold',
+                            row.net_profit >= 0 ? 'text-emerald-700' : 'text-red-600',
+                          )}
+                        >
+                          {row.net_profit >= 0 ? '+' : ''}
+                          {formatPrice(row.net_profit)}
                         </td>
                       </tr>
                     ))}
@@ -457,27 +489,32 @@ const AdminFinancePage: React.FC = () => {
       )}
 
       {/* Блок расходов */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
         {/* Шапка */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <h2 className="text-sm font-semibold text-gray-700">Расходы</h2>
           <div className="flex items-center gap-2">
             {/* Фильтр */}
             <select
               value={expenseCatFilter}
-              onChange={(e) => { setExpenseCatFilter(e.target.value); setExpensePage(1) }}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/20"
+              onChange={(e) => {
+                setExpenseCatFilter(e.target.value)
+                setExpensePage(1)
+              }}
+              className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-500/20"
             >
               <option value="">Все категории</option>
               {Object.entries(expenseCategoryLabels).map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
+                <option key={v} value={v}>
+                  {l}
+                </option>
               ))}
             </select>
             <Button
               variant="primary"
               size="sm"
               onClick={handleOpenCreate}
-              icon={<PlusCircle className="w-3.5 h-3.5" />}
+              icon={<PlusCircle className="h-3.5 w-3.5" />}
             >
               Добавить
             </Button>
@@ -487,8 +524,8 @@ const AdminFinancePage: React.FC = () => {
         {expensesLoading ? (
           <PageSpinner />
         ) : !expensesData?.items.length ? (
-          <div className="text-center py-12 text-gray-400">
-            <Receipt className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+          <div className="py-12 text-center text-gray-400">
+            <Receipt className="mx-auto mb-2 h-10 w-10 text-gray-300" />
             <p>Расходов не найдено</p>
           </div>
         ) : (
@@ -496,35 +533,43 @@ const AdminFinancePage: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50/50 border-b border-gray-100">
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Дата</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Описание</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Категория</th>
-                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Сумма</th>
-                    <th className="px-4 py-2.5 w-20" />
+                  <tr className="border-b border-gray-100 bg-gray-50/50">
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Дата
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Описание
+                    </th>
+                    <th className="hidden px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 sm:table-cell">
+                      Категория
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Сумма
+                    </th>
+                    <th className="w-20 px-4 py-2.5" />
                   </tr>
                 </thead>
                 <tbody>
                   {expensesData.items.map((expense) => (
                     <tr
                       key={expense.id}
-                      className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
+                      className="border-b border-gray-50 transition-colors hover:bg-gray-50/50"
                     >
-                      <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">
+                      <td className="whitespace-nowrap px-4 py-2.5 text-xs text-gray-500">
                         <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
+                          <Calendar className="h-3 w-3" />
                           {formatDate(expense.date)}
                         </div>
                       </td>
                       <td className="px-4 py-2.5 text-gray-900">
                         {expense.description}
                         {expense.is_recurring && (
-                          <span className="ml-1.5 text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                          <span className="ml-1.5 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600">
                             Повт.
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 hidden sm:table-cell">
+                      <td className="hidden px-4 py-2.5 sm:table-cell">
                         <Badge variant="gray" size="sm">
                           {expenseCategoryLabels[expense.category] ?? expense.category}
                         </Badge>
@@ -533,22 +578,22 @@ const AdminFinancePage: React.FC = () => {
                         −{formatPrice(expense.amount)}
                       </td>
                       <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-1 justify-end">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => handleOpenEdit(expense)}
-                            className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                            className="rounded p-1 text-gray-400 hover:text-gray-600"
                             title="Редактировать"
                           >
-                            <Edit3 className="w-3.5 h-3.5" />
+                            <Edit3 className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => {
                               if (confirm('Удалить расход?')) deleteMutation.mutate(expense.id)
                             }}
-                            className="p-1 text-gray-400 hover:text-red-500 rounded"
+                            className="rounded p-1 text-gray-400 hover:text-red-500"
                             title="Удалить"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </td>
@@ -574,23 +619,28 @@ const AdminFinancePage: React.FC = () => {
       {/* Модалка расхода */}
       <Modal
         isOpen={!!expenseModal}
-        onClose={() => { setExpenseModal(null); setEditingExpense(null) }}
+        onClose={() => {
+          setExpenseModal(null)
+          setEditingExpense(null)
+        }}
         title={expenseModal === 'edit' ? 'Редактировать расход' : 'Добавить расход'}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Категория */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Категория</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Категория</label>
             <select
               {...register('category')}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
             >
               {Object.entries(expenseCategoryLabels).map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
+                <option key={v} value={v}>
+                  {l}
+                </option>
               ))}
             </select>
             {errors.category && (
-              <p className="text-xs text-red-500 mt-1">{errors.category.message}</p>
+              <p className="mt-1 text-xs text-red-500">{errors.category.message}</p>
             )}
           </div>
 
@@ -604,37 +654,33 @@ const AdminFinancePage: React.FC = () => {
 
           {/* Сумма */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Сумма (₽)</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Сумма (₽)</label>
             <input
               type="number"
               step="100"
               min={0}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
               {...register('amount', { valueAsNumber: true })}
             />
-            {errors.amount && (
-              <p className="text-xs text-red-500 mt-1">{errors.amount.message}</p>
-            )}
+            {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>}
           </div>
 
           {/* Дата */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Дата</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Дата</label>
             <input
               type="date"
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
               {...register('date')}
             />
-            {errors.date && (
-              <p className="text-xs text-red-500 mt-1">{errors.date.message}</p>
-            )}
+            {errors.date && <p className="mt-1 text-xs text-red-500">{errors.date.message}</p>}
           </div>
 
           {/* Повторяющийся */}
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
-              className="w-4 h-4 rounded accent-green-600"
+              className="h-4 w-4 rounded accent-green-600"
               {...register('is_recurring')}
             />
             <span className="text-sm text-gray-700">Повторяющийся расход</span>
@@ -646,7 +692,10 @@ const AdminFinancePage: React.FC = () => {
               type="button"
               variant="ghost"
               className="flex-1"
-              onClick={() => { setExpenseModal(null); setEditingExpense(null) }}
+              onClick={() => {
+                setExpenseModal(null)
+                setEditingExpense(null)
+              }}
             >
               Отмена
             </Button>

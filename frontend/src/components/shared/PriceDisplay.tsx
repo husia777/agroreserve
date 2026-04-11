@@ -6,7 +6,7 @@ import { cn } from '@/utils/cn'
 interface PriceDisplayProps {
   price: number
   unit?: string
-  originalPrice?: number  // Зачёркнутая цена (розница для B2B)
+  originalPrice?: number // Зачёркнутая цена (розница для B2B)
   className?: string
   size?: 'sm' | 'md' | 'lg'
   showUnit?: boolean
@@ -43,7 +43,7 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
     <div className={cn('flex flex-col', className)}>
       {/* Бейдж оптовой цены */}
       {isWholesale && (
-        <span className="text-xs font-medium text-primary-600 mb-0.5">Оптовая цена</span>
+        <span className="mb-0.5 text-xs font-medium text-primary-600">Оптовая цена</span>
       )}
 
       <div className="flex items-baseline gap-2">
@@ -51,7 +51,9 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
         <span className={cn('text-gray-900', classes.price)}>
           {formatPrice(price)}
           {showUnit && (
-            <span className={cn('text-gray-400 font-normal ml-1', classes.unit)}>/ {unitLabel}</span>
+            <span className={cn('ml-1 font-normal text-gray-400', classes.unit)}>
+              / {unitLabel}
+            </span>
           )}
         </span>
 

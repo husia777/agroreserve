@@ -92,10 +92,8 @@ ReactDOM.createRoot(rootElement).render(
           },
         }}
       />
-
-
     </QueryClientProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 )
 
 // Регистрация Service Worker (UC-45 PWA)
@@ -104,7 +102,7 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/sw.js')
       .then((reg) => {
-        console.log('SW зарегистрирован:', reg.scope)
+        console.warn('SW зарегистрирован:', reg.scope)
       })
       .catch((err) => {
         console.warn('SW ошибка регистрации:', err)

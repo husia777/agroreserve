@@ -13,7 +13,11 @@ interface OrderTimelineProps {
 
 const allStatuses: { status: OrderStatus; label: string; description: string }[] = [
   { status: OrderStatus.NEW, label: 'Новый', description: 'Заказ принят в обработку' },
-  { status: OrderStatus.CONFIRMED, label: 'Подтверждён', description: 'Заказ подтверждён менеджером' },
+  {
+    status: OrderStatus.CONFIRMED,
+    label: 'Подтверждён',
+    description: 'Заказ подтверждён менеджером',
+  },
   { status: OrderStatus.ASSEMBLING, label: 'Собирается', description: 'Идёт комплектация заказа' },
   { status: OrderStatus.ASSEMBLED, label: 'Собран', description: 'Заказ укомплектован и готов' },
   { status: OrderStatus.DELIVERING, label: 'В пути', description: 'Курьер везёт ваш заказ' },
@@ -31,13 +35,13 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({
   if (currentStatus === OrderStatus.CANCELLED) {
     return (
       <div className={cn('flex items-center gap-3 py-4', className)}>
-        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-          <Circle className="w-4 h-4 text-red-600" />
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100">
+          <Circle className="h-4 w-4 text-red-600" />
         </div>
         <div>
           <div className="text-sm font-semibold text-red-700">Заказ отменён</div>
-          <div className="text-xs text-gray-500 mt-0.5">
-            {statusHistory.find(h => h.status === OrderStatus.CANCELLED)?.note || ''}
+          <div className="mt-0.5 text-xs text-gray-500">
+            {statusHistory.find((h) => h.status === OrderStatus.CANCELLED)?.note || ''}
           </div>
         </div>
       </div>
@@ -62,26 +66,26 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({
             <div className="flex flex-col items-center">
               <div
                 className={cn(
-                  'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10',
+                  'z-10 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full',
                   isCompleted && 'bg-primary-100',
                   isCurrent && 'bg-primary-600 ring-4 ring-primary-100',
-                  isPending && 'bg-gray-100'
+                  isPending && 'bg-gray-100',
                 )}
               >
                 {isCompleted ? (
-                  <CheckCircle className="w-4 h-4 text-primary-600" />
+                  <CheckCircle className="h-4 w-4 text-primary-600" />
                 ) : isCurrent ? (
-                  <Clock className="w-4 h-4 text-white" />
+                  <Clock className="h-4 w-4 text-white" />
                 ) : (
-                  <Circle className="w-4 h-4 text-gray-300" />
+                  <Circle className="h-4 w-4 text-gray-300" />
                 )}
               </div>
               {/* Линия соединения */}
               {index < allStatuses.length - 1 && (
                 <div
                   className={cn(
-                    'w-0.5 h-8 mt-1 rounded-full',
-                    isCompleted ? 'bg-primary-300' : 'bg-gray-200'
+                    'mt-1 h-8 w-0.5 rounded-full',
+                    isCompleted ? 'bg-primary-300' : 'bg-gray-200',
                   )}
                 />
               )}
@@ -95,7 +99,7 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({
                     'text-sm font-semibold',
                     isCompleted && 'text-primary-700',
                     isCurrent && 'text-gray-900',
-                    isPending && 'text-gray-400'
+                    isPending && 'text-gray-400',
                   )}
                 >
                   {step.label}
@@ -108,8 +112,8 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({
               </div>
               <p
                 className={cn(
-                  'text-xs mt-0.5',
-                  isCompleted || isCurrent ? 'text-gray-500' : 'text-gray-300'
+                  'mt-0.5 text-xs',
+                  isCompleted || isCurrent ? 'text-gray-500' : 'text-gray-300',
                 )}
               >
                 {step.description}

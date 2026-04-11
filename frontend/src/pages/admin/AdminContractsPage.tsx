@@ -10,7 +10,6 @@ import {
   Clock,
   Download,
   X,
-  AlertCircle,
 } from 'lucide-react'
 import {
   getContracts,
@@ -33,7 +32,7 @@ const ContractStatusBadge: React.FC<{ status: string }> = ({ status }) => {
   }
   const s = map[status] || { label: status, className: 'bg-gray-100 text-gray-600' }
   return (
-    <span className={`inline-flex text-xs font-semibold px-2 py-0.5 rounded-full ${s.className}`}>
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${s.className}`}>
       {s.label}
     </span>
   )
@@ -45,13 +44,13 @@ const ProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
   const color = clamp >= 100 ? 'bg-green-500' : clamp >= 50 ? 'bg-blue-500' : 'bg-amber-500'
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 bg-gray-200 rounded-full h-2">
+      <div className="h-2 flex-1 rounded-full bg-gray-200">
         <div
           className={`${color} h-2 rounded-full transition-all`}
           style={{ width: `${clamp}%` }}
         />
       </div>
-      <span className="text-xs font-semibold text-gray-600 w-8 text-right">{clamp}%</span>
+      <span className="w-8 text-right text-xs font-semibold text-gray-600">{clamp}%</span>
     </div>
   )
 }
@@ -82,21 +81,30 @@ const ContractDetails: React.FC<{ contractId: string }> = ({ contractId }) => {
     },
   })
 
-  if (isLoading) return <div className="px-6 py-4"><PageSpinner /></div>
+  if (isLoading)
+    return (
+      <div className="px-6 py-4">
+        <PageSpinner />
+      </div>
+    )
   if (!contract) return null
 
   return (
-    <div className="border-t border-gray-100 bg-gray-50/50 px-6 py-5 space-y-5">
+    <div className="space-y-5 border-t border-gray-100 bg-gray-50/50 px-6 py-5">
       {/* Спецификация */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Спецификация товаров</h3>
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <h3 className="mb-2 text-sm font-semibold text-gray-700">Спецификация товаров</h3>
+        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="border-b border-gray-100 bg-gray-50">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Товар</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">По контракту</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Поставлено</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">
+                  По контракту
+                </th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">
+                  Поставлено
+                </th>
                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Цена</th>
                 <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Сумма</th>
               </tr>
@@ -112,7 +120,7 @@ const ContractDetails: React.FC<{ contractId: string }> = ({ contractId }) => {
                     <span
                       className={
                         item.delivered_qty >= item.qty
-                          ? 'text-green-600 font-semibold'
+                          ? 'font-semibold text-green-600'
                           : 'text-gray-600'
                       }
                     >
@@ -132,27 +140,23 @@ const ContractDetails: React.FC<{ contractId: string }> = ({ contractId }) => {
 
       {/* График поставок */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">График поставок</h3>
+        <h3 className="mb-2 text-sm font-semibold text-gray-700">График поставок</h3>
         <div className="space-y-2">
           {contract.delivery_schedule.map((sched, i) => (
             <div
               key={i}
-              className={`flex items-center justify-between p-3 rounded-lg border ${
-                sched.is_completed
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-white border-gray-200'
+              className={`flex items-center justify-between rounded-lg border p-3 ${
+                sched.is_completed ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-white'
               }`}
             >
               <div className="flex items-center gap-3">
                 {sched.is_completed ? (
-                  <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-green-500" />
                 ) : (
-                  <Clock className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  <Clock className="h-5 w-5 flex-shrink-0 text-gray-400" />
                 )}
                 <div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {formatDate(sched.date)}
-                  </div>
+                  <div className="text-sm font-medium text-gray-900">{formatDate(sched.date)}</div>
                   <div className="text-xs text-gray-500">
                     {sched.items.length} позиций
                     {sched.order_id && ' · Заказ создан'}
@@ -163,18 +167,18 @@ const ContractDetails: React.FC<{ contractId: string }> = ({ contractId }) => {
                 <button
                   onClick={() => markMut.mutate({ date: sched.date })}
                   disabled={markMut.isPending}
-                  className="text-xs bg-primary-600 hover:bg-primary-700 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60"
+                  className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
                 >
                   {markMut.isPending ? '...' : 'Отметить поставку'}
                 </button>
               )}
               {sched.is_completed && (
-                <span className="text-xs text-green-600 font-semibold">Выполнено</span>
+                <span className="text-xs font-semibold text-green-600">Выполнено</span>
               )}
             </div>
           ))}
           {contract.delivery_schedule.length === 0 && (
-            <p className="text-sm text-gray-400 py-2">График поставок не задан</p>
+            <p className="py-2 text-sm text-gray-400">График поставок не задан</p>
           )}
         </div>
       </div>
@@ -184,9 +188,9 @@ const ContractDetails: React.FC<{ contractId: string }> = ({ contractId }) => {
         <button
           onClick={() => actMut.mutate()}
           disabled={actMut.isPending}
-          className="flex items-center gap-2 border border-gray-300 hover:bg-gray-100 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-60"
+          className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:opacity-60"
         >
-          <Download className="w-4 h-4" />
+          <Download className="h-4 w-4" />
           {actMut.isPending ? 'Генерируем...' : 'Сформировать акт исполнения'}
         </button>
       </div>
@@ -205,7 +209,14 @@ const NewContractModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     start_date: '',
     end_date: '',
     total_amount: 0,
-    items: [] as { product_id: string; product_name: string; qty: number; delivered_qty: number; unit: string; price: number }[],
+    items: [] as {
+      product_id: string
+      product_name: string
+      qty: number
+      delivered_qty: number
+      unit: string
+      price: number
+    }[],
     delivery_schedule: [],
     status: 'active',
     notes: '',
@@ -221,61 +232,61 @@ const NewContractModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-lg font-bold text-gray-900">Новый госконтракт</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100">
+            <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="px-6 py-5 space-y-4">
+        <div className="space-y-4 px-6 py-5">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
                 Номер контракта <span className="text-red-500">*</span>
               </label>
               <input
                 required
                 value={form.contract_number}
                 onChange={(e) => setForm({ ...form, contract_number: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="44-ФЗ-001/2025"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
                 Клиент (название)
               </label>
               <input
                 value={form.client_name}
                 onChange={(e) => setForm({ ...form, client_name: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="МБОУ «Школа №1»"
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Дата начала</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Дата начала</label>
               <input
                 type="date"
                 value={form.start_date}
                 onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Дата окончания</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Дата окончания</label>
               <input
                 type="date"
                 value={form.end_date}
                 onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
               Сумма контракта, ₽
             </label>
             <input
@@ -283,23 +294,23 @@ const NewContractModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               min={0}
               value={form.total_amount}
               onChange={(e) => setForm({ ...form, total_amount: +e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Заметки</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Заметки</label>
             <textarea
               rows={2}
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm font-medium hover:bg-gray-50"
+              className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Отмена
             </button>
@@ -307,7 +318,7 @@ const NewContractModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               type="button"
               onClick={() => createMut.mutate()}
               disabled={createMut.isPending}
-              className="flex-1 bg-primary-600 hover:bg-primary-700 text-white rounded-lg py-2 text-sm font-semibold transition-colors disabled:opacity-60"
+              className="flex-1 rounded-lg bg-primary-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
             >
               {createMut.isPending ? 'Создаём...' : 'Создать контракт'}
             </button>
@@ -336,23 +347,23 @@ export const AdminContractsPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="space-y-5 p-6">
       {/* Заголовок */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <FileText className="w-6 h-6 text-primary-600" />
+          <FileText className="h-6 w-6 text-primary-600" />
           <h1 className="text-2xl font-bold text-gray-900">Госконтракты</h1>
           {data && (
-            <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">
               {data.total}
             </span>
           )}
         </div>
         <button
           onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" />
           Новый контракт
         </button>
       </div>
@@ -368,10 +379,10 @@ export const AdminContractsPage: React.FC = () => {
           <button
             key={opt.value}
             onClick={() => setStatusFilter(opt.value)}
-            className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
               statusFilter === opt.value
                 ? 'bg-primary-600 text-white'
-                : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
+                : 'border border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
             {opt.label}
@@ -393,37 +404,39 @@ export const AdminContractsPage: React.FC = () => {
           {data.items.map((contract: Contract) => (
             <div
               key={contract._id}
-              className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+              className="overflow-hidden rounded-xl border border-gray-200 bg-white"
             >
               {/* Заголовок строки */}
               <button
                 onClick={() => toggleExpand(contract._id)}
-                className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50/50 transition-colors text-left"
+                className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-gray-50/50"
               >
-                <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className="flex min-w-0 flex-1 items-center gap-4">
                   {/* Номер */}
                   <div className="min-w-[140px]">
-                    <div className="font-bold text-gray-900 text-sm">{contract.contract_number}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">{contract.contract_type}</div>
+                    <div className="text-sm font-bold text-gray-900">
+                      {contract.contract_number}
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-400">{contract.contract_type}</div>
                   </div>
 
                   {/* Клиент */}
-                  <div className="flex-1 min-w-0 hidden md:block">
-                    <div className="text-sm text-gray-700 truncate">{contract.client_name}</div>
+                  <div className="hidden min-w-0 flex-1 md:block">
+                    <div className="truncate text-sm text-gray-700">{contract.client_name}</div>
                   </div>
 
                   {/* Сумма */}
-                  <div className="text-sm font-semibold text-gray-900 min-w-[100px] hidden sm:block">
+                  <div className="hidden min-w-[100px] text-sm font-semibold text-gray-900 sm:block">
                     {formatPrice(contract.total_amount)}
                   </div>
 
                   {/* Период */}
-                  <div className="text-xs text-gray-500 min-w-[140px] hidden lg:block">
+                  <div className="hidden min-w-[140px] text-xs text-gray-500 lg:block">
                     {formatDate(contract.start_date)} — {formatDate(contract.end_date)}
                   </div>
 
                   {/* Прогресс */}
-                  <div className="min-w-[120px] hidden md:block">
+                  <div className="hidden min-w-[120px] md:block">
                     <ProgressBar percent={contract.completion_percent} />
                   </div>
 
@@ -434,17 +447,15 @@ export const AdminContractsPage: React.FC = () => {
                 {/* Стрелка */}
                 <div className="ml-4">
                   {expandedId === contract._id ? (
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
                   )}
                 </div>
               </button>
 
               {/* Детали */}
-              {expandedId === contract._id && (
-                <ContractDetails contractId={contract._id} />
-              )}
+              {expandedId === contract._id && <ContractDetails contractId={contract._id} />}
             </div>
           ))}
         </div>

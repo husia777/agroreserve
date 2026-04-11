@@ -1,5 +1,5 @@
 // API клиент — axios instance с JWT interceptors
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
 // Базовый URL API
 const API_BASE_URL = '/api/v1'
@@ -62,7 +62,7 @@ apiClient.interceptors.request.use(
     }
     return config
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 )
 
 // Response interceptor — обновление токена при 401
@@ -119,7 +119,7 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error)
-  }
+  },
 )
 
 export default apiClient

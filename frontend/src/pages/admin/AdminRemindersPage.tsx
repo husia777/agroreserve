@@ -2,14 +2,8 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Bell, Plus, Check, Trash2, X, RefreshCw } from 'lucide-react'
-import {
-  getReminders,
-  createReminder,
-  completeReminder,
-  deleteReminder,
-} from '@/api/admin'
+import { getReminders, createReminder, completeReminder, deleteReminder } from '@/api/admin'
 import type { ReminderV2 } from '@/types'
-import { formatDate } from '@/utils/format'
 import { PageSpinner } from '@/components/ui/Spinner'
 import EmptyState from '@/components/ui/EmptyState'
 
@@ -36,44 +30,44 @@ const ReminderModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-lg font-bold text-gray-900">Новое напоминание</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="space-y-4 px-6 py-5">
           {/* Заголовок */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
               Заголовок <span className="text-red-500">*</span>
             </label>
             <input
               required
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="Оплатить счёт поставщику"
             />
           </div>
 
           {/* Описание */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Описание</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Описание</label>
             <textarea
               rows={2}
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="Дополнительные детали..."
             />
           </div>
 
           {/* Дата и время */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
               Дата и время <span className="text-red-500">*</span>
             </label>
             <input
@@ -81,17 +75,17 @@ const ReminderModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               required
               value={form.remind_at}
               onChange={(e) => setForm({ ...form, remind_at: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
 
           {/* Привязка к объекту */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Тип объекта</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Тип объекта</label>
             <select
               value={form.related_type}
               onChange={(e) => setForm({ ...form, related_type: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="">Без привязки</option>
               <option value="order">Заказ</option>
@@ -103,18 +97,18 @@ const ReminderModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
           {form.related_type && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">ID объекта</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">ID объекта</label>
               <input
                 value={form.related_id}
                 onChange={(e) => setForm({ ...form, related_id: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="Введите ID..."
               />
             </div>
           )}
 
           {/* Повторяющееся */}
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
               checked={form.is_recurring}
@@ -128,7 +122,7 @@ const ReminderModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm font-medium hover:bg-gray-50"
+              className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Отмена
             </button>
@@ -136,7 +130,7 @@ const ReminderModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               type="button"
               onClick={() => createMut.mutate()}
               disabled={createMut.isPending || !form.title || !form.remind_at}
-              className="flex-1 bg-primary-600 hover:bg-primary-700 text-white rounded-lg py-2 text-sm font-semibold transition-colors disabled:opacity-60"
+              className="flex-1 rounded-lg bg-primary-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
             >
               {createMut.isPending ? 'Создаём...' : 'Создать'}
             </button>
@@ -165,45 +159,43 @@ const ReminderCard: React.FC<{ reminder: ReminderV2 }> = ({ reminder }) => {
 
   return (
     <div
-      className={`flex items-start gap-3 p-4 rounded-xl border transition-colors ${
+      className={`flex items-start gap-3 rounded-xl border p-4 transition-colors ${
         reminder.is_completed
-          ? 'bg-gray-50 border-gray-100 opacity-60'
+          ? 'border-gray-100 bg-gray-50 opacity-60'
           : isOverdue
-          ? 'bg-red-50 border-red-200'
-          : 'bg-white border-gray-200'
+            ? 'border-red-200 bg-red-50'
+            : 'border-gray-200 bg-white'
       }`}
     >
       {/* Чекбокс */}
       <button
         onClick={() => !reminder.is_completed && completeMut.mutate()}
         disabled={reminder.is_completed || completeMut.isPending}
-        className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+        className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
           reminder.is_completed
-            ? 'bg-green-500 border-green-500'
+            ? 'border-green-500 bg-green-500'
             : 'border-gray-300 hover:border-primary-500'
         }`}
       >
-        {reminder.is_completed && <Check className="w-3 h-3 text-white" />}
+        {reminder.is_completed && <Check className="h-3 w-3 text-white" />}
       </button>
 
       {/* Контент */}
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div
-          className={`font-medium text-sm ${
-            reminder.is_completed ? 'line-through text-gray-400' : 'text-gray-900'
+          className={`text-sm font-medium ${
+            reminder.is_completed ? 'text-gray-400 line-through' : 'text-gray-900'
           }`}
         >
           {reminder.title}
         </div>
         {reminder.description && (
-          <div className="text-xs text-gray-500 mt-0.5">{reminder.description}</div>
+          <div className="mt-0.5 text-xs text-gray-500">{reminder.description}</div>
         )}
-        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <span
             className={`text-xs font-medium ${
-              isOverdue && !reminder.is_completed
-                ? 'text-red-600'
-                : 'text-gray-400'
+              isOverdue && !reminder.is_completed ? 'text-red-600' : 'text-gray-400'
             }`}
           >
             {new Date(reminder.remind_at).toLocaleString('ru-RU', {
@@ -215,17 +207,17 @@ const ReminderCard: React.FC<{ reminder: ReminderV2 }> = ({ reminder }) => {
           </span>
           {reminder.is_recurring && (
             <span className="flex items-center gap-1 text-xs text-blue-600">
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className="h-3 w-3" />
               Повторяется
             </span>
           )}
           {reminder.related_type && (
-            <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
               {reminder.related_type}
             </span>
           )}
           {isOverdue && !reminder.is_completed && (
-            <span className="text-xs font-semibold text-red-600 bg-red-100 px-1.5 py-0.5 rounded">
+            <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-600">
               Просрочено
             </span>
           )}
@@ -235,10 +227,10 @@ const ReminderCard: React.FC<{ reminder: ReminderV2 }> = ({ reminder }) => {
       {/* Удалить */}
       <button
         onClick={() => deleteMut.mutate()}
-        className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+        className="flex-shrink-0 rounded-lg p-1.5 text-gray-300 transition-colors hover:bg-red-50 hover:text-red-500"
         title="Удалить"
       >
-        <Trash2 className="w-4 h-4" />
+        <Trash2 className="h-4 w-4" />
       </button>
     </div>
   )
@@ -252,11 +244,13 @@ export const AdminRemindersPage: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('active')
 
   const { data, isLoading } = useQuery({
-    queryKey: ['reminders', { is_completed: filter === 'completed' ? true : filter === 'active' ? false : undefined }],
+    queryKey: [
+      'reminders',
+      { is_completed: filter === 'completed' ? true : filter === 'active' ? false : undefined },
+    ],
     queryFn: () =>
       getReminders({
-        is_completed:
-          filter === 'completed' ? true : filter === 'active' ? false : undefined,
+        is_completed: filter === 'completed' ? true : filter === 'active' ? false : undefined,
         per_page: 100,
       }),
   })
@@ -299,7 +293,9 @@ export const AdminRemindersPage: React.FC = () => {
     if (items.length === 0) return null
     return (
       <div>
-        <h3 className={`text-xs font-semibold uppercase tracking-wider mb-2 ${colorClass || 'text-gray-400'}`}>
+        <h3
+          className={`mb-2 text-xs font-semibold uppercase tracking-wider ${colorClass || 'text-gray-400'}`}
+        >
           {title} ({items.length})
         </h3>
         <div className="space-y-2">
@@ -312,23 +308,23 @@ export const AdminRemindersPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="space-y-5 p-6">
       {/* Заголовок */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Bell className="w-6 h-6 text-primary-600" />
+          <Bell className="h-6 w-6 text-primary-600" />
           <h1 className="text-2xl font-bold text-gray-900">Напоминания</h1>
           {data && (
-            <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">
               {data.total}
             </span>
           )}
         </div>
         <button
           onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" />
           Создать
         </button>
       </div>
@@ -343,10 +339,10 @@ export const AdminRemindersPage: React.FC = () => {
           <button
             key={opt.value}
             onClick={() => setFilter(opt.value as typeof filter)}
-            className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
               filter === opt.value
                 ? 'bg-primary-600 text-white'
-                : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
+                : 'border border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
             {opt.label}

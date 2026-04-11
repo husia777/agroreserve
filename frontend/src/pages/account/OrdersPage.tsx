@@ -28,20 +28,19 @@ export const OrdersPage: React.FC = () => {
 
   const { data, isLoading } = useQuery({
     queryKey: ['myOrders', { page, status }],
-    queryFn: () => getOrders({
-      page,
-      per_page: 15,
-      status: status as OrderStatus || undefined,
-    }),
+    queryFn: () =>
+      getOrders({
+        page,
+        per_page: 15,
+        status: (status as OrderStatus) || undefined,
+      }),
   })
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Мои заказы</h1>
-        {data && (
-          <span className="text-sm text-gray-500">{data.total} заказов</span>
-        )}
+        {data && <span className="text-sm text-gray-500">{data.total} заказов</span>}
       </div>
 
       {/* Фильтры */}
@@ -63,45 +62,59 @@ export const OrdersPage: React.FC = () => {
       ) : data?.items.length === 0 ? (
         <EmptyState
           title="Заказов нет"
-          description={status ? 'Нет заказов с выбранным статусом' : 'Вы ещё не сделали ни одного заказа'}
+          description={
+            status ? 'Нет заказов с выбранным статусом' : 'Вы ещё не сделали ни одного заказа'
+          }
           action={
             !status
-              ? { label: 'Перейти в каталог', onClick: () => window.location.href = '/catalog' }
+              ? { label: 'Перейти в каталог', onClick: () => (window.location.href = '/catalog') }
               : undefined
           }
         />
       ) : (
         <>
           {/* Таблица (desktop) */}
-          <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="hidden overflow-hidden rounded-xl border border-gray-200 bg-white md:block">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className="border-b border-gray-100 bg-gray-50">
                 <tr>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Номер</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Дата</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Товаров</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Сумма</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Статус</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Номер
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Дата
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Товаров
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Сумма
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Статус
+                  </th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {data?.items.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={order.id} className="transition-colors hover:bg-gray-50/50">
                     <td className="px-5 py-3 font-semibold text-gray-900">{order.order_number}</td>
                     <td className="px-5 py-3 text-gray-500">{formatDate(order.created_at)}</td>
                     <td className="px-5 py-3 text-gray-600">{order.items?.length || 0} поз.</td>
-                    <td className="px-5 py-3 font-semibold text-gray-900">{formatPrice(order.total)}</td>
+                    <td className="px-5 py-3 font-semibold text-gray-900">
+                      {formatPrice(order.total)}
+                    </td>
                     <td className="px-5 py-3">
                       <OrderStatusBadge status={order.status} size="sm" />
                     </td>
                     <td className="px-5 py-3">
                       <Link
                         to={`/account/orders/${order.id}`}
-                        className="flex items-center gap-1 text-primary-600 hover:text-primary-700 text-sm font-medium"
+                        className="flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
                       >
                         Детали
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className="h-4 w-4" />
                       </Link>
                     </td>
                   </tr>
@@ -111,19 +124,19 @@ export const OrdersPage: React.FC = () => {
           </div>
 
           {/* Карточки (mobile) */}
-          <div className="md:hidden space-y-3">
+          <div className="space-y-3 md:hidden">
             {data?.items.map((order) => (
               <Link
                 key={order.id}
                 to={`/account/orders/${order.id}`}
-                className="block bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 transition-colors"
+                className="block rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300"
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="mb-2 flex items-center justify-between">
                   <span className="font-semibold text-gray-900">{order.order_number}</span>
                   <OrderStatusBadge status={order.status} size="sm" />
                 </div>
                 <div className="text-xs text-gray-400">{formatDate(order.created_at)}</div>
-                <div className="flex items-center justify-between mt-2">
+                <div className="mt-2 flex items-center justify-between">
                   <span className="text-sm text-gray-500">{order.items?.length || 0} позиций</span>
                   <span className="font-bold text-gray-900">{formatPrice(order.total)}</span>
                 </div>

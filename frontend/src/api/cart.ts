@@ -20,8 +20,8 @@ export const addToCart = async (productId: string, quantity: number): Promise<Ca
 // Обновление количества товара в корзине
 export const updateCartItem = async (productId: string, quantity: number): Promise<Cart> => {
   const response = await apiClient.patch<Cart>(`/cart/items/${productId}`, {
-		quantity,
-	});
+    quantity,
+  })
   return response.data
 }
 

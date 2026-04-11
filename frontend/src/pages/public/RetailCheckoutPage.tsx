@@ -1,6 +1,6 @@
 // Страница быстрого розничного заказа без регистрации (UC-10)
 // Минимальный заказ 1000₽, предоплата переводом на карту
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -18,7 +18,6 @@ import {
   MapPin,
   Phone,
   User,
-  Clock,
   CreditCard,
   Plus,
   Minus,
@@ -63,7 +62,7 @@ const retailSchema = z.object({
   phone: z
     .string()
     .min(10, 'Введите корректный номер телефона')
-    .regex(/^[\d\s\+\-\(\)]+$/, 'Некорректный формат телефона'),
+    .regex(/^[\d\s+\-()]+$/, 'Некорректный формат телефона'),
   delivery_address: z.string().min(5, 'Укажите адрес (минимум 5 символов)'),
   delivery_date: z.string().min(1, 'Выберите дату'),
   delivery_slot: z.string().min(1, 'Выберите время'),
@@ -86,21 +85,21 @@ const ProductCard: React.FC<{
 
   return (
     <div
-      className={`bg-white rounded-xl border p-4 transition-shadow ${
+      className={`rounded-xl border bg-white p-4 transition-shadow ${
         cartQty > 0 ? 'border-green-300 shadow-sm' : 'border-gray-200'
       } ${!inStock ? 'opacity-50' : ''}`}
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
+      <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="font-medium text-gray-900 text-sm leading-snug truncate">
+          <h3 className="truncate text-sm font-medium leading-snug text-gray-900">
             {product.name}
           </h3>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="mt-0.5 text-xs text-gray-400">
             {product.country_of_origin || 'Узбекистан'}
           </p>
         </div>
-        <div className="text-right flex-shrink-0">
-          <div className="font-bold text-green-700 text-sm">
+        <div className="flex-shrink-0 text-right">
+          <div className="text-sm font-bold text-green-700">
             {formatPrice(product.price_retail)}
           </div>
           <div className="text-xs text-gray-400">за {product.unit}</div>
@@ -108,18 +107,18 @@ const ProductCard: React.FC<{
       </div>
 
       {inStock ? (
-        <div className="flex items-center gap-2 mt-3">
+        <div className="mt-3 flex items-center gap-2">
           {cartQty > 0 ? (
             <>
               <button
                 type="button"
                 onClick={onRemove}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50"
               >
                 {cartQty <= product.order_step ? (
-                  <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                  <Trash2 className="h-3.5 w-3.5 text-red-400" />
                 ) : (
-                  <Minus className="w-3.5 h-3.5" />
+                  <Minus className="h-3.5 w-3.5" />
                 )}
               </button>
               <input
@@ -132,16 +131,16 @@ const ProductCard: React.FC<{
                 }}
                 min={0}
                 step={product.order_step}
-                className="w-16 text-center text-sm font-semibold border border-gray-200 rounded-lg py-1.5 focus:outline-none focus:ring-2 focus:ring-green-300"
+                className="w-16 rounded-lg border border-gray-200 py-1.5 text-center text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-300"
               />
               <button
                 type="button"
                 onClick={onAdd}
-                className="w-8 h-8 flex items-center justify-center rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-600 text-white transition-colors hover:bg-green-700"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="h-3.5 w-3.5" />
               </button>
-              <span className="text-xs font-medium text-green-700 ml-auto">
+              <span className="ml-auto text-xs font-medium text-green-700">
                 {formatPrice(cartQty * product.price_retail)}
               </span>
             </>
@@ -149,15 +148,15 @@ const ProductCard: React.FC<{
             <button
               type="button"
               onClick={onAdd}
-              className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg py-2 transition-colors"
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-green-50 py-2 text-sm font-medium text-green-700 transition-colors hover:bg-green-100"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               Добавить
             </button>
           )}
         </div>
       ) : (
-        <div className="text-xs text-red-400 mt-3 text-center py-2">Нет в наличии</div>
+        <div className="mt-3 py-2 text-center text-xs text-red-400">Нет в наличии</div>
       )}
     </div>
   )
@@ -192,10 +191,9 @@ export const RetailCheckoutPage: React.FC = () => {
     queryFn: () => getCategories(),
   })
 
-  const products = productsData?.items || []
-
   // Фильтрация товаров
   const filteredProducts = useMemo(() => {
+    const products = productsData?.items || []
     let result = products.filter((p: Product) => p.is_active)
     if (selectedCategory !== 'all') {
       result = result.filter((p: Product) => p.category_id === selectedCategory)
@@ -205,12 +203,12 @@ export const RetailCheckoutPage: React.FC = () => {
       result = result.filter((p: Product) => p.name.toLowerCase().includes(q))
     }
     return result
-  }, [products, selectedCategory, search])
+  }, [productsData, selectedCategory, search])
 
   // Итого корзины
   const cartTotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.qty * item.product.price_retail, 0),
-    [cart]
+    [cart],
   )
   const cartCount = cart.length
 
@@ -263,7 +261,7 @@ export const RetailCheckoutPage: React.FC = () => {
         return prev.map((c) =>
           c.product.id === product.id
             ? { ...c, qty: Math.round((c.qty + product.order_step) * 100) / 100 }
-            : c
+            : c,
         )
       }
       return [...prev, { product, qty: product.order_step || 1 }]
@@ -287,8 +285,8 @@ export const RetailCheckoutPage: React.FC = () => {
     } else {
       setCart((prev) =>
         prev.map((c) =>
-          c.product.id === productId ? { ...c, qty: Math.round(qty * 100) / 100 } : c
-        )
+          c.product.id === productId ? { ...c, qty: Math.round(qty * 100) / 100 } : c,
+        ),
       )
     }
   }
@@ -323,8 +321,8 @@ export const RetailCheckoutPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Шапка */}
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-          <div className="max-w-5xl mx-auto px-4 py-3">
+        <header className="sticky top-0 z-30 border-b border-gray-200 bg-white">
+          <div className="mx-auto max-w-5xl px-4 py-3">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-lg font-bold text-gray-900">Агрорезерв</h1>
@@ -332,7 +330,7 @@ export const RetailCheckoutPage: React.FC = () => {
               </div>
               <a
                 href="tel:+7XXXXXXXXXX"
-                className="text-sm text-green-700 font-medium hover:underline"
+                className="text-sm font-medium text-green-700 hover:underline"
               >
                 Позвонить
               </a>
@@ -340,7 +338,7 @@ export const RetailCheckoutPage: React.FC = () => {
           </div>
         </header>
 
-        <div className="max-w-5xl mx-auto px-4 py-4 pb-32">
+        <div className="mx-auto max-w-5xl px-4 py-4 pb-32">
           {/* Поиск */}
           <div className="mb-4">
             <input
@@ -348,19 +346,19 @@ export const RetailCheckoutPage: React.FC = () => {
               placeholder="Поиск товара..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300 focus:border-green-400"
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-300"
             />
           </div>
 
           {/* Фильтр по категориям */}
-          <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide">
+          <div className="scrollbar-hide mb-4 flex gap-2 overflow-x-auto pb-3">
             <button
               type="button"
               onClick={() => setSelectedCategory('all')}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
                 selectedCategory === 'all'
                   ? 'bg-green-600 text-white'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
               }`}
             >
               Все
@@ -370,10 +368,10 @@ export const RetailCheckoutPage: React.FC = () => {
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
                   selectedCategory === cat.id
                     ? 'bg-green-600 text-white'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                    : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 {cat.name}
@@ -382,7 +380,7 @@ export const RetailCheckoutPage: React.FC = () => {
           </div>
 
           {/* Сетка товаров */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {filteredProducts.map((product: Product) => (
               <ProductCard
                 key={product.id}
@@ -396,39 +394,37 @@ export const RetailCheckoutPage: React.FC = () => {
           </div>
 
           {filteredProducts.length === 0 && (
-            <div className="text-center py-12 text-gray-400 text-sm">
-              Товары не найдены
-            </div>
+            <div className="py-12 text-center text-sm text-gray-400">Товары не найдены</div>
           )}
         </div>
 
         {/* Плавающая корзина */}
         {cartCount > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
-            <div className="max-w-5xl mx-auto px-4 py-3">
+          <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white shadow-lg">
+            <div className="mx-auto max-w-5xl px-4 py-3">
               <button
                 type="button"
                 onClick={() => {
                   if (cartTotal < MIN_ORDER_TOTAL) {
                     showToast.error(
-                      `Минимальная сумма заказа: ${formatPrice(MIN_ORDER_TOTAL)}. Сейчас: ${formatPrice(cartTotal)}`
+                      `Минимальная сумма заказа: ${formatPrice(MIN_ORDER_TOTAL)}. Сейчас: ${formatPrice(cartTotal)}`,
                     )
                     return
                   }
                   setStep('form')
                 }}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-3 transition-colors"
+                className="flex w-full items-center justify-center gap-3 rounded-xl bg-green-600 py-3 font-semibold text-white transition-colors hover:bg-green-700"
               >
-                <ShoppingBag className="w-5 h-5" />
+                <ShoppingBag className="h-5 w-5" />
                 <span>
                   Оформить · {cartCount} {cartCount === 1 ? 'товар' : 'товаров'}
                 </span>
-                <span className="bg-white/20 px-2.5 py-0.5 rounded-lg text-sm">
+                <span className="rounded-lg bg-white/20 px-2.5 py-0.5 text-sm">
                   {formatPrice(cartTotal)}
                 </span>
               </button>
               {cartTotal < MIN_ORDER_TOTAL && (
-                <p className="text-xs text-center text-orange-600 mt-1.5">
+                <p className="mt-1.5 text-center text-xs text-orange-600">
                   Минимальный заказ {formatPrice(MIN_ORDER_TOTAL)} (ещё{' '}
                   {formatPrice(MIN_ORDER_TOTAL - cartTotal)})
                 </p>
@@ -446,12 +442,12 @@ export const RetailCheckoutPage: React.FC = () => {
   if (step === 'form') {
     return (
       <div className="min-h-screen bg-gray-50">
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-          <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+        <header className="sticky top-0 z-30 border-b border-gray-200 bg-white">
+          <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3">
             <button
               type="button"
               onClick={() => setStep('catalog')}
-              className="text-gray-500 hover:text-gray-700 text-sm"
+              className="text-sm text-gray-500 hover:text-gray-700"
             >
               ← Назад
             </button>
@@ -459,12 +455,12 @@ export const RetailCheckoutPage: React.FC = () => {
           </div>
         </header>
 
-        <div className="max-w-lg mx-auto px-4 py-5">
+        <div className="mx-auto max-w-lg px-4 py-5">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* Контактные данные */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <User className="w-5 h-5 text-green-600" />
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <User className="h-5 w-5 text-green-600" />
                 <h2 className="font-semibold text-gray-900">Контактные данные</h2>
               </div>
               <div className="space-y-3">
@@ -479,7 +475,7 @@ export const RetailCheckoutPage: React.FC = () => {
                   label="Телефон"
                   placeholder="+7 (XXX) XXX-XX-XX"
                   type="tel"
-                  leftIcon={<Phone className="w-4 h-4" />}
+                  leftIcon={<Phone className="h-4 w-4" />}
                   error={errors.phone?.message}
                   required
                   {...register('phone')}
@@ -488,16 +484,16 @@ export const RetailCheckoutPage: React.FC = () => {
             </div>
 
             {/* Доставка */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <MapPin className="w-5 h-5 text-green-600" />
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-green-600" />
                 <h2 className="font-semibold text-gray-900">Доставка</h2>
               </div>
               <div className="space-y-3">
                 <Input
                   label="Адрес доставки"
                   placeholder="г. Тобольск, ул. Ленина, д. 1, кв. 5"
-                  leftIcon={<MapPin className="w-4 h-4" />}
+                  leftIcon={<MapPin className="h-4 w-4" />}
                   error={errors.delivery_address?.message}
                   required
                   {...register('delivery_address')}
@@ -525,54 +521,49 @@ export const RetailCheckoutPage: React.FC = () => {
             </div>
 
             {/* Комментарий */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <MessageSquare className="w-5 h-5 text-green-600" />
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-green-600" />
                 <h2 className="font-semibold text-gray-900">Комментарий</h2>
               </div>
               <textarea
                 {...register('note')}
                 rows={2}
                 placeholder="Домофон, подъезд, пожелания..."
-                className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-300 focus:border-green-400"
+                className="w-full resize-none rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm focus:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-300"
               />
             </div>
 
             {/* Состав заказа */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-900 mb-3">Ваш заказ</h2>
-              <div className="space-y-2 mb-3">
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <h2 className="mb-3 font-semibold text-gray-900">Ваш заказ</h2>
+              <div className="mb-3 space-y-2">
                 {cart.map((item) => (
-                  <div
-                    key={item.product.id}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <div className="text-gray-700 truncate mr-2">
+                  <div key={item.product.id} className="flex items-center justify-between text-sm">
+                    <div className="mr-2 truncate text-gray-700">
                       {item.product.name}
-                      <span className="text-gray-400 ml-1">
+                      <span className="ml-1 text-gray-400">
                         {formatQuantity(item.qty, item.product.unit)} ×{' '}
                         {formatPrice(item.product.price_retail)}
                       </span>
                     </div>
-                    <span className="font-semibold text-gray-900 flex-shrink-0">
+                    <span className="flex-shrink-0 font-semibold text-gray-900">
                       {formatPrice(item.qty * item.product.price_retail)}
                     </span>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-gray-100 pt-3 flex justify-between items-center">
+              <div className="flex items-center justify-between border-t border-gray-100 pt-3">
                 <span className="font-semibold text-gray-900">Итого</span>
-                <span className="text-xl font-bold text-gray-900">
-                  {formatPrice(cartTotal)}
-                </span>
+                <span className="text-xl font-bold text-gray-900">{formatPrice(cartTotal)}</span>
               </div>
-              <p className="text-xs text-gray-400 mt-1">Бесплатная доставка по Тобольску</p>
+              <p className="mt-1 text-xs text-gray-400">Бесплатная доставка по Тобольску</p>
             </div>
 
             {/* Оплата */}
-            <div className="bg-green-50 rounded-xl border border-green-200 p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <CreditCard className="w-5 h-5 text-green-600" />
+            <div className="rounded-xl border border-green-200 bg-green-50 p-5">
+              <div className="mb-2 flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-green-600" />
                 <h2 className="font-semibold text-green-800">Оплата</h2>
               </div>
               <p className="text-sm text-green-700">
@@ -580,13 +571,7 @@ export const RetailCheckoutPage: React.FC = () => {
               </p>
             </div>
 
-            <Button
-              type="submit"
-              variant="primary"
-              fullWidth
-              size="lg"
-              loading={isSubmitting}
-            >
+            <Button type="submit" variant="primary" fullWidth size="lg" loading={isSubmitting}>
               Оформить заказ
             </Button>
           </form>
@@ -600,61 +585,56 @@ export const RetailCheckoutPage: React.FC = () => {
   // ============================================================
   if (step === 'payment' && createdOrder) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="max-w-md w-full space-y-5">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-md space-y-5">
           {/* Успех */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-            <CheckCircle className="w-14 h-14 text-green-500 mx-auto mb-3" />
-            <h1 className="text-xl font-bold text-gray-900 mb-1">Заказ оформлен</h1>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 text-center">
+            <CheckCircle className="mx-auto mb-3 h-14 w-14 text-green-500" />
+            <h1 className="mb-1 text-xl font-bold text-gray-900">Заказ оформлен</h1>
             <p className="text-2xl font-bold text-green-700">{createdOrder.order_number}</p>
-            <p className="text-sm text-gray-500 mt-2">
-              Сумма к оплате: <span className="font-bold text-gray-900">{formatPrice(createdOrder.total)}</span>
+            <p className="mt-2 text-sm text-gray-500">
+              Сумма к оплате:{' '}
+              <span className="font-bold text-gray-900">{formatPrice(createdOrder.total)}</span>
             </p>
           </div>
 
           {/* Реквизиты */}
-          <div className="bg-white rounded-xl border border-green-200 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <CreditCard className="w-5 h-5 text-green-600" />
+          <div className="rounded-xl border border-green-200 bg-white p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-green-600" />
               <h2 className="font-semibold text-gray-900">Переведите на карту</h2>
             </div>
 
             <div className="space-y-4">
               {/* Номер карты */}
               <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">
+                <label className="text-xs font-medium uppercase text-gray-500">
                   Номер карты ({PAYMENT_DETAILS.bank})
                 </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 bg-gray-50 rounded-lg px-4 py-3 font-mono text-lg font-bold text-gray-900 tracking-wider">
+                <div className="mt-1 flex items-center gap-2">
+                  <div className="flex-1 rounded-lg bg-gray-50 px-4 py-3 font-mono text-lg font-bold tracking-wider text-gray-900">
                     {PAYMENT_DETAILS.card}
                   </div>
                   <button
                     type="button"
                     onClick={copyCard}
-                    className="p-3 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 transition-colors"
+                    className="rounded-lg bg-green-50 p-3 text-green-700 transition-colors hover:bg-green-100"
                     title="Скопировать"
                   >
-                    {copied ? (
-                      <CheckCircle className="w-5 h-5" />
-                    ) : (
-                      <Copy className="w-5 h-5" />
-                    )}
+                    {copied ? <CheckCircle className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
                   </button>
                 </div>
               </div>
 
               {/* Получатель */}
               <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">
-                  Получатель
-                </label>
-                <p className="mt-1 text-gray-900 font-medium">{PAYMENT_DETAILS.recipient}</p>
+                <label className="text-xs font-medium uppercase text-gray-500">Получатель</label>
+                <p className="mt-1 font-medium text-gray-900">{PAYMENT_DETAILS.recipient}</p>
               </div>
 
               {/* Сумма */}
               <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">
+                <label className="text-xs font-medium uppercase text-gray-500">
                   Сумма перевода
                 </label>
                 <p className="mt-1 text-2xl font-bold text-green-700">
@@ -663,7 +643,7 @@ export const RetailCheckoutPage: React.FC = () => {
               </div>
 
               {/* Комментарий к переводу */}
-              <div className="bg-yellow-50 rounded-lg p-3">
+              <div className="rounded-lg bg-yellow-50 p-3">
                 <p className="text-sm text-yellow-800">
                   В комментарии к переводу укажите:{' '}
                   <span className="font-bold">{createdOrder.order_number}</span>
@@ -673,23 +653,23 @@ export const RetailCheckoutPage: React.FC = () => {
           </div>
 
           {/* Дальнейшие шаги */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-3">Что дальше?</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <h3 className="mb-3 font-semibold text-gray-900">Что дальше?</h3>
             <ol className="space-y-2 text-sm text-gray-600">
               <li className="flex gap-2">
-                <span className="flex-shrink-0 w-5 h-5 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-bold">
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
                   1
                 </span>
                 Переведите указанную сумму на карту
               </li>
               <li className="flex gap-2">
-                <span className="flex-shrink-0 w-5 h-5 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-bold">
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
                   2
                 </span>
                 Мы подтвердим получение оплаты
               </li>
               <li className="flex gap-2">
-                <span className="flex-shrink-0 w-5 h-5 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-bold">
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
                   3
                 </span>
                 Доставим заказ в выбранное время
@@ -698,10 +678,7 @@ export const RetailCheckoutPage: React.FC = () => {
           </div>
 
           <div className="text-center">
-            <a
-              href="/"
-              className="text-sm text-green-700 hover:underline font-medium"
-            >
+            <a href="/" className="text-sm font-medium text-green-700 hover:underline">
               Вернуться на главную
             </a>
           </div>

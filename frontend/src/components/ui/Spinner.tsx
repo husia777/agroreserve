@@ -26,9 +26,9 @@ export const Spinner: React.FC<SpinnerProps> = ({
     <div className="flex items-center justify-center" role="status" aria-label={label}>
       <div
         className={cn(
-          'rounded-full border-gray-200 border-t-primary-600 animate-spin',
+          'animate-spin rounded-full border-gray-200 border-t-primary-600',
           sizeClasses[size],
-          className
+          className,
         )}
       />
       <span className="sr-only">{label}</span>
@@ -39,7 +39,7 @@ export const Spinner: React.FC<SpinnerProps> = ({
 // Полноэкранный спиннер
 export const FullPageSpinner: React.FC = () => {
   return (
-    <div className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
       <div className="text-center">
         <Spinner size="xl" />
         <p className="mt-3 text-sm text-gray-500">Загрузка...</p>
@@ -51,7 +51,7 @@ export const FullPageSpinner: React.FC = () => {
 // Спиннер контента страницы
 export const PageSpinner: React.FC = () => {
   return (
-    <div className="flex items-center justify-center min-h-64">
+    <div className="flex min-h-64 items-center justify-center">
       <Spinner size="lg" />
     </div>
   )

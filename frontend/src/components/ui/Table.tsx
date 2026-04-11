@@ -47,29 +47,28 @@ export function Table<T extends Record<string, unknown>>({
 }: TableProps<T>) {
   const getCellValue = (row: T, key: string): unknown => {
     if (key.includes('.')) {
-      return key.split('.').reduce((obj, k) => (obj as Record<string, unknown>)?.[k], row as unknown)
+      return key
+        .split('.')
+        .reduce((obj, k) => (obj as Record<string, unknown>)?.[k], row as unknown)
     }
     return row[key]
   }
 
   return (
     <div className={cn('overflow-x-auto rounded-lg border border-gray-200', className)}>
-      <table className="w-full text-sm text-left">
+      <table className="w-full text-left text-sm">
         {/* Заголовок */}
         <thead
-          className={cn(
-            'bg-gray-50 border-b border-gray-200',
-            stickyHeader && 'sticky top-0 z-10'
-          )}
+          className={cn('border-b border-gray-200 bg-gray-50', stickyHeader && 'sticky top-0 z-10')}
         >
           <tr>
             {columns.map((col) => (
               <th
                 key={String(col.key)}
                 className={cn(
-                  'px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap',
-                  col.sortable && onSort && 'cursor-pointer hover:text-gray-700 select-none',
-                  col.headerClassName
+                  'whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500',
+                  col.sortable && onSort && 'cursor-pointer select-none hover:text-gray-700',
+                  col.headerClassName,
                 )}
                 style={col.width ? { width: col.width } : undefined}
                 onClick={() => col.sortable && onSort && onSort(String(col.key))}
@@ -81,18 +80,18 @@ export function Table<T extends Record<string, unknown>>({
                     <div className="flex flex-col">
                       <ChevronUp
                         className={cn(
-                          'w-3 h-3 -mb-0.5',
+                          '-mb-0.5 h-3 w-3',
                           sortConfig?.key === col.key && sortConfig?.direction === 'asc'
                             ? 'text-primary-600'
-                            : 'text-gray-300'
+                            : 'text-gray-300',
                         )}
                       />
                       <ChevronDown
                         className={cn(
-                          'w-3 h-3',
+                          'h-3 w-3',
                           sortConfig?.key === col.key && sortConfig?.direction === 'desc'
                             ? 'text-primary-600'
-                            : 'text-gray-300'
+                            : 'text-gray-300',
                         )}
                       />
                     </div>
@@ -104,14 +103,14 @@ export function Table<T extends Record<string, unknown>>({
         </thead>
 
         {/* Тело таблицы */}
-        <tbody className="bg-white divide-y divide-gray-100">
+        <tbody className="divide-y divide-gray-100 bg-white">
           {loading ? (
             // Скелетон загрузки
             Array.from({ length: 5 }).map((_, i) => (
               <tr key={i}>
                 {columns.map((col) => (
                   <td key={String(col.key)} className="px-4 py-3">
-                    <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-4 animate-pulse rounded bg-gray-200" />
                   </td>
                 ))}
               </tr>
@@ -119,10 +118,7 @@ export function Table<T extends Record<string, unknown>>({
           ) : data.length === 0 ? (
             // Пустое состояние
             <tr>
-              <td
-                colSpan={columns.length}
-                className="px-4 py-12 text-center text-gray-500 text-sm"
-              >
+              <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-gray-500">
                 {emptyMessage}
               </td>
             </tr>
@@ -132,7 +128,7 @@ export function Table<T extends Record<string, unknown>>({
                 key={rowKey ? rowKey(row) : rowIndex}
                 className={cn(
                   zebra && rowIndex % 2 === 1 && 'bg-gray-50/50',
-                  onRowClick && 'cursor-pointer hover:bg-primary-50/30 transition-colors'
+                  onRowClick && 'cursor-pointer transition-colors hover:bg-primary-50/30',
                 )}
                 onClick={() => onRowClick && onRowClick(row)}
               >

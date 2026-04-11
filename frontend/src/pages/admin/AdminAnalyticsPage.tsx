@@ -54,23 +54,19 @@ const KpiCard: React.FC<{
 }> = ({ title, value, change, icon, colorClass }) => {
   const isPositive = change !== undefined && change >= 0
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-xl border border-gray-200 bg-white p-5">
+      <div className="mb-3 flex items-center justify-between">
         <span className="text-sm text-gray-500">{title}</span>
-        <div className={`p-2 rounded-lg ${colorClass}`}>{icon}</div>
+        <div className={`rounded-lg p-2 ${colorClass}`}>{icon}</div>
       </div>
       <div className="text-2xl font-bold text-gray-900">{value}</div>
       {change !== undefined && (
         <div
-          className={`flex items-center gap-1 mt-1 text-sm font-medium ${
+          className={`mt-1 flex items-center gap-1 text-sm font-medium ${
             isPositive ? 'text-green-600' : 'text-red-600'
           }`}
         >
-          {isPositive ? (
-            <TrendingUp className="w-4 h-4" />
-          ) : (
-            <TrendingDown className="w-4 h-4" />
-          )}
+          {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
           {isPositive ? '+' : ''}
           {change.toFixed(1)}% к прошлому периоду
         </div>
@@ -118,19 +114,19 @@ export const AdminAnalyticsPage: React.FC = () => {
   })
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       {/* Заголовок и переключатель периода */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <BarChart3 className="w-6 h-6 text-primary-600" />
+          <BarChart3 className="h-6 w-6 text-primary-600" />
           <h1 className="text-2xl font-bold text-gray-900">Аналитика</h1>
         </div>
-        <div className="flex bg-gray-100 rounded-lg p-1 gap-0.5">
+        <div className="flex gap-0.5 rounded-lg bg-gray-100 p-1">
           {PERIOD_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => setPeriod(opt.value)}
-              className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 period === opt.value
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
@@ -146,51 +142,51 @@ export const AdminAnalyticsPage: React.FC = () => {
       {overviewLoading ? (
         <PageSpinner />
       ) : overview ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
           <KpiCard
             title="Выручка"
             value={formatPrice(overview.revenue)}
             change={overview.revenue_change}
-            icon={<DollarSign className="w-5 h-5 text-green-600" />}
+            icon={<DollarSign className="h-5 w-5 text-green-600" />}
             colorClass="bg-green-100"
           />
           <KpiCard
             title="Прибыль"
             value={formatPrice(overview.profit)}
             change={overview.profit_change}
-            icon={<TrendingUp className="w-5 h-5 text-blue-600" />}
+            icon={<TrendingUp className="h-5 w-5 text-blue-600" />}
             colorClass="bg-blue-100"
           />
           <KpiCard
             title="Заказы"
             value={String(overview.orders_count)}
-            icon={<ShoppingCart className="w-5 h-5 text-purple-600" />}
+            icon={<ShoppingCart className="h-5 w-5 text-purple-600" />}
             colorClass="bg-purple-100"
           />
           <KpiCard
             title="Клиенты"
             value={String(overview.clients_count)}
-            icon={<Users className="w-5 h-5 text-amber-600" />}
+            icon={<Users className="h-5 w-5 text-amber-600" />}
             colorClass="bg-amber-100"
           />
           <KpiCard
             title="Средний чек"
             value={formatPrice(overview.avg_check)}
-            icon={<Calculator className="w-5 h-5 text-indigo-600" />}
+            icon={<Calculator className="h-5 w-5 text-indigo-600" />}
             colorClass="bg-indigo-100"
           />
           <KpiCard
             title="Маржа"
             value={`${overview.margin_percent.toFixed(1)}%`}
-            icon={<Percent className="w-5 h-5 text-teal-600" />}
+            icon={<Percent className="h-5 w-5 text-teal-600" />}
             colorClass="bg-teal-100"
           />
         </div>
       ) : null}
 
       {/* График выручки (area) */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">Выручка за период</h2>
+      <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <h2 className="mb-4 text-base font-semibold text-gray-900">Выручка за период</h2>
         {revenue && revenue.length > 0 ? (
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={revenue} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
@@ -234,80 +230,71 @@ export const AdminAnalyticsPage: React.FC = () => {
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">
+          <div className="flex h-[220px] items-center justify-center text-sm text-gray-400">
             Нет данных за выбранный период
           </div>
         )}
       </div>
 
       {/* Топ-5 товаров + Топ-5 клиентов */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Топ-5 товаров (bar) */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">Топ-5 товаров по выручке</h2>
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-4 text-base font-semibold text-gray-900">Топ-5 товаров по выручке</h2>
           {topProducts && topProducts.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart
-                data={topProducts}
-                layout="vertical"
-                margin={{ left: 10, right: 20 }}
-              >
+              <BarChart data={topProducts} layout="vertical" margin={{ left: 10, right: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tickFormatter={shortPrice} tick={{ fontSize: 11 }} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={110}
-                  tick={{ fontSize: 11 }}
-                />
+                <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v: number) => [formatPrice(v), 'Выручка']} />
                 <Bar dataKey="revenue" fill="#22c55e" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">
+            <div className="flex h-[220px] items-center justify-center text-sm text-gray-400">
               Нет данных
             </div>
           )}
         </div>
 
         {/* Топ-5 клиентов (таблица) */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">Топ-5 клиентов</h2>
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-4 text-base font-semibold text-gray-900">Топ-5 клиентов</h2>
           {topClients && topClients.length > 0 ? (
             <div className="space-y-3">
               {topClients.map((client, i) => (
                 <div key={client.client_id} className="flex items-center gap-3">
                   {/* Место */}
                   <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                    className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                       i === 0
                         ? 'bg-amber-100 text-amber-700'
                         : i === 1
-                        ? 'bg-gray-200 text-gray-600'
-                        : i === 2
-                        ? 'bg-orange-100 text-orange-700'
-                        : 'bg-gray-100 text-gray-500'
+                          ? 'bg-gray-200 text-gray-600'
+                          : i === 2
+                            ? 'bg-orange-100 text-orange-700'
+                            : 'bg-gray-100 text-gray-500'
                     }`}
                   >
                     {i + 1}
                   </div>
                   {/* Имя */}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">{client.name}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-gray-900">{client.name}</div>
                     <div className="text-xs text-gray-400">
                       {client.orders_count} заказов · ср. чек {formatPrice(client.avg_check)}
                     </div>
                   </div>
                   {/* Выручка */}
-                  <div className="text-sm font-bold text-gray-900 flex-shrink-0">
+                  <div className="flex-shrink-0 text-sm font-bold text-gray-900">
                     {formatPrice(client.revenue)}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">
+            <div className="flex h-[220px] items-center justify-center text-sm text-gray-400">
               Нет данных
             </div>
           )}
@@ -315,8 +302,8 @@ export const AdminAnalyticsPage: React.FC = () => {
       </div>
 
       {/* Тренды за 12 месяцев (line) */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <h2 className="mb-4 text-base font-semibold text-gray-900">
           Тренды за последние 12 месяцев
         </h2>
         {trends && trends.length > 0 ? (
@@ -342,17 +329,11 @@ export const AdminAnalyticsPage: React.FC = () => {
                 strokeWidth={2}
                 dot={false}
               />
-              <Line
-                type="monotone"
-                dataKey="profit"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dot={false}
-              />
+              <Line type="monotone" dataKey="profit" stroke="#3b82f6" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">
+          <div className="flex h-[220px] items-center justify-center text-sm text-gray-400">
             Нет данных за 12 месяцев
           </div>
         )}

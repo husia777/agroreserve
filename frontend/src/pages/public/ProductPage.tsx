@@ -2,7 +2,16 @@
 import React, { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, ImageOff, Award, Info, Calculator, FileDown, Shield, Bell, CheckCircle, Loader2 } from 'lucide-react'
+import {
+  ImageOff,
+  Award,
+  Info,
+  Calculator,
+  FileDown,
+  Bell,
+  CheckCircle,
+  Loader2,
+} from 'lucide-react'
 import { getProductBySlug, getProductCertificates, subscribeStockNotify } from '@/api/catalog'
 import { useAuthStore } from '@/stores/authStore'
 import { useCartStore } from '@/stores/cartStore'
@@ -16,19 +25,24 @@ import { cn } from '@/utils/cn'
 import SEOHead, { productSchema } from '@/components/shared/SEOHead'
 
 export const ProductPage: React.FC = () => {
-  const { category, id: slug } = useParams<{ category: string; id: string }>()
+  const { id: slug } = useParams<{ category: string; id: string }>()
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [calcKg, setCalcKg] = useState(1)
   const [calcPcs, setCalcPcs] = useState(1)
-  const [calcMode, setCalcMode] = useState<'kg' | 'pcs'>('kg')
+  const [_, setCalcMode] = useState<'kg' | 'pcs'>('kg')
 
   // UC-01: Состояние подписки на уведомление о поступлении
   const [notifyEmail, setNotifyEmail] = useState('')
   const [notifySubscribed, setNotifySubscribed] = useState(false)
   const [showNotifyForm, setShowNotifyForm] = useState(false)
 
+  // UC-107: Калькулятор порций
+  const [portionWeight, setPortionWeight] = useState(150)
+  const [portionKg, setPortionKg] = useState(10)
+
   const { isAuthenticated, isApproved, user } = useAuthStore()
+
   const { addItem } = useCartStore()
 
   const { data: product, isLoading } = useQuery({
@@ -62,14 +76,15 @@ export const ProductPage: React.FC = () => {
   })
 
   if (isLoading) return <PageSpinner />
-  if (!product) return (
-    <div className="max-w-7xl mx-auto px-4 py-16 text-center">
-      <p className="text-gray-500">Товар не найден</p>
-      <Link to="/catalog" className="text-primary-600 hover:underline mt-4 inline-block">
-        Вернуться в каталог
-      </Link>
-    </div>
-  )
+  if (!product)
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-16 text-center">
+        <p className="text-gray-500">Товар не найден</p>
+        <Link to="/catalog" className="mt-4 inline-block text-primary-600 hover:underline">
+          Вернуться в каталог
+        </Link>
+      </div>
+    )
 
   const showWholesale = isAuthenticated && isApproved
   const displayPrice = showWholesale ? product.price_wholesale : product.price_retail
@@ -83,15 +98,17 @@ export const ProductPage: React.FC = () => {
   const calcSumPcs = +(calcKgFromPcs * displayPrice).toFixed(2)
 
   // UC-107: Калькулятор порций
-  const [portionWeight, setPortionWeight] = useState(150) // грамм
-  const [portionKg, setPortionKg] = useState(10) // кг
+
+  // UC-107: Калькулятор порций
   const portionCount = portionWeight > 0 ? Math.floor((portionKg * 1000) / portionWeight) : 0
   const portionCost = portionCount > 0 ? (portionKg * displayPrice) / portionCount : 0
   const portionTotal = portionKg * displayPrice
 
   const handleAddToCart = () => {
     addItem(product, quantity, showWholesale)
-    showToast.success(`«${product.name}» добавлен в корзину (${formatQuantity(quantity, product.unit)})`)
+    showToast.success(
+      `«${product.name}» добавлен в корзину (${formatQuantity(quantity, product.unit)})`,
+    )
   }
 
   // UC-01: Обработчик подписки на уведомление
@@ -115,12 +132,14 @@ export const ProductPage: React.FC = () => {
 
   const breadcrumbs = [
     { label: 'Каталог', href: '/catalog' },
-    ...(product.category ? [{ label: product.category.name, href: `/catalog/${product.category.slug}` }] : []),
+    ...(product.category
+      ? [{ label: product.category.name, href: `/catalog/${product.category.slug}` }]
+      : []),
     { label: product.name },
   ]
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <SEOHead
         title={product.name}
         description={product.description || `${product.name} — купить оптом в Агрорезерв`}
@@ -142,24 +161,24 @@ export const ProductPage: React.FC = () => {
       {/* Хлебные крошки */}
       <Breadcrumbs items={breadcrumbs} className="mb-6" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
         {/* Галерея */}
         <div>
           {/* Главное фото */}
-          <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-3">
+          <div className="mb-3 aspect-square overflow-hidden rounded-2xl bg-gray-50">
             {hasImages && !product.images[selectedImage] ? (
-              <div className="w-full h-full flex items-center justify-center">
-                <ImageOff className="w-16 h-16 text-gray-300" />
+              <div className="flex h-full w-full items-center justify-center">
+                <ImageOff className="h-16 w-16 text-gray-300" />
               </div>
             ) : hasImages ? (
               <img
                 src={product.images[selectedImage]}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <ImageOff className="w-16 h-16 text-gray-300" />
+              <div className="flex h-full w-full items-center justify-center">
+                <ImageOff className="h-16 w-16 text-gray-300" />
               </div>
             )}
           </div>
@@ -172,11 +191,11 @@ export const ProductPage: React.FC = () => {
                   key={i}
                   onClick={() => setSelectedImage(i)}
                   className={cn(
-                    'w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors',
-                    selectedImage === i ? 'border-primary-600' : 'border-transparent'
+                    'h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-colors',
+                    selectedImage === i ? 'border-primary-600' : 'border-transparent',
                   )}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img src={img} alt="" className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>
@@ -186,8 +205,8 @@ export const ProductPage: React.FC = () => {
         {/* Информация о товаре */}
         <div>
           {/* Название и статус */}
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-bold leading-tight text-gray-900 sm:text-3xl">
               {product.name}
             </h1>
             <StockBadge
@@ -199,23 +218,27 @@ export const ProductPage: React.FC = () => {
           </div>
 
           {/* Страна */}
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-            <Info className="w-4 h-4" />
-            <span>Страна: <strong className="text-gray-700">{product.country_of_origin}</strong></span>
+          <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
+            <Info className="h-4 w-4" />
+            <span>
+              Страна: <strong className="text-gray-700">{product.country_of_origin}</strong>
+            </span>
           </div>
 
           {/* Цена */}
-          <div className="bg-gray-50 rounded-xl p-4 mb-5">
+          <div className="mb-5 rounded-xl bg-gray-50 p-4">
             {showWholesale ? (
               <div>
-                <div className="text-xs font-semibold text-primary-600 mb-1">Оптовая цена (для вас)</div>
+                <div className="mb-1 text-xs font-semibold text-primary-600">
+                  Оптовая цена (для вас)
+                </div>
                 <div className="text-3xl font-bold text-gray-900">
                   {formatPrice(product.price_wholesale)}
-                  <span className="text-base font-normal text-gray-400 ml-2">
+                  <span className="ml-2 text-base font-normal text-gray-400">
                     / {product.unit === 'kg' ? 'кг' : 'шт'}
                   </span>
                 </div>
-                <div className="text-sm text-gray-400 line-through mt-1">
+                <div className="mt-1 text-sm text-gray-400 line-through">
                   Розница: {formatPrice(product.price_retail)}
                 </div>
               </div>
@@ -223,17 +246,20 @@ export const ProductPage: React.FC = () => {
               <div>
                 <div className="text-3xl font-bold text-gray-900">
                   {formatPrice(product.price_retail)}
-                  <span className="text-base font-normal text-gray-400 ml-2">
+                  <span className="ml-2 text-base font-normal text-gray-400">
                     / {product.unit === 'kg' ? 'кг' : 'шт'}
                   </span>
                 </div>
                 {isAuthenticated ? (
-                  <div className="text-sm text-primary-600 mt-1">
+                  <div className="mt-1 text-sm text-primary-600">
                     Оптовая цена доступна после подтверждения аккаунта
                   </div>
                 ) : (
-                  <div className="text-sm text-primary-600 mt-1">
-                    <Link to="/login" className="underline hover:text-primary-700">Войдите</Link> для получения оптовой цены
+                  <div className="mt-1 text-sm text-primary-600">
+                    <Link to="/login" className="underline hover:text-primary-700">
+                      Войдите
+                    </Link>{' '}
+                    для получения оптовой цены
                   </div>
                 )}
               </div>
@@ -242,12 +268,12 @@ export const ProductPage: React.FC = () => {
 
           {/* Описание */}
           {product.description && (
-            <p className="text-sm text-gray-600 leading-relaxed mb-5">{product.description}</p>
+            <p className="mb-5 text-sm leading-relaxed text-gray-600">{product.description}</p>
           )}
 
           {/* Добавить в корзину / Уведомить о поступлении (UC-01) */}
           {isAvailable ? (
-            <div className="flex items-center gap-3 mb-6">
+            <div className="mb-6 flex items-center gap-3">
               <QuantityInput
                 value={quantity}
                 onChange={setQuantity}
@@ -260,7 +286,7 @@ export const ProductPage: React.FC = () => {
               />
               <button
                 onClick={handleAddToCart}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-semibold text-base transition-colors bg-primary-600 text-white hover:bg-primary-700 shadow-sm shadow-primary-200"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-2.5 text-base font-semibold text-white shadow-sm shadow-primary-200 transition-colors hover:bg-primary-700"
               >
                 Добавить в корзину
               </button>
@@ -270,15 +296,15 @@ export const ProductPage: React.FC = () => {
               {/* Кнопка «Нет в наличии» — неактивная */}
               <button
                 disabled
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-semibold text-base bg-gray-100 text-gray-400 cursor-not-allowed mb-3"
+                className="mb-3 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-gray-100 px-6 py-2.5 text-base font-semibold text-gray-400"
               >
                 Нет в наличии
               </button>
 
               {/* UC-01: Кнопка/форма подписки на уведомление */}
               {notifySubscribed ? (
-                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-3">
+                  <CheckCircle className="h-5 w-5 flex-shrink-0 text-green-600" />
                   <span className="text-sm text-green-800">
                     Мы уведомим вас, когда товар поступит в наличие
                   </span>
@@ -287,12 +313,12 @@ export const ProductPage: React.FC = () => {
                 <button
                   onClick={handleQuickNotify}
                   disabled={notifyMutation.isPending}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-semibold text-sm transition-colors bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-6 py-2.5 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-100"
                 >
                   {notifyMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Bell className="w-4 h-4" />
+                    <Bell className="h-4 w-4" />
                   )}
                   Уведомить о поступлении
                 </button>
@@ -307,17 +333,17 @@ export const ProductPage: React.FC = () => {
                       value={notifyEmail || (user?.email ?? '')}
                       onChange={(e) => setNotifyEmail(e.target.value)}
                       placeholder="your@email.com"
-                      className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+                      className="flex-1 rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300"
                     />
                     <button
                       onClick={handleNotifySubmit}
                       disabled={notifyMutation.isPending}
-                      className="flex items-center gap-2 py-2.5 px-4 rounded-xl font-semibold text-sm transition-colors bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50"
+                      className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
                     >
                       {notifyMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Bell className="w-4 h-4" />
+                        <Bell className="h-4 w-4" />
                       )}
                       <span className="hidden sm:inline">Уведомить</span>
                     </button>
@@ -329,23 +355,30 @@ export const ProductPage: React.FC = () => {
 
           {/* Минимальный заказ */}
           {product.min_order_qty && product.min_order_qty > 1 && (
-            <p className="text-xs text-gray-500 mb-5">
+            <p className="mb-5 text-xs text-gray-500">
               Минимальный заказ: {formatQuantity(product.min_order_qty, product.unit)}
             </p>
           )}
 
           {/* Сертификаты (UC-23) */}
           {product.certificate_ids?.length > 0 && (
-            <div className="p-3 bg-blue-50 rounded-lg mb-5">
-              <div className="flex items-center gap-2 mb-2">
-                <Award className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                <span className="text-blue-800 font-medium text-sm">Сертификат соответствия</span>
+            <div className="mb-5 rounded-lg bg-blue-50 p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <Award className="h-5 w-5 flex-shrink-0 text-blue-500" />
+                <span className="text-sm font-medium text-blue-800">Сертификат соответствия</span>
               </div>
               {certsData?.certificates?.map((cert) => (
-                <div key={cert._id} className="flex items-center justify-between gap-2 py-1.5 border-t border-blue-100 first:border-t-0">
+                <div
+                  key={cert._id}
+                  className="flex items-center justify-between gap-2 border-t border-blue-100 py-1.5 first:border-t-0"
+                >
                   <div className="text-xs text-blue-700">
                     {cert.cert_type_label || 'Сертификат'} №{cert.number}
-                    {cert.expiry_date && <span className="text-blue-400 ml-1">до {new Date(cert.expiry_date).toLocaleDateString('ru-RU')}</span>}
+                    {cert.expiry_date && (
+                      <span className="ml-1 text-blue-400">
+                        до {new Date(cert.expiry_date).toLocaleDateString('ru-RU')}
+                      </span>
+                    )}
                   </div>
                   {cert.has_file && cert.file_url && (
                     <a
@@ -353,23 +386,23 @@ export const ProductPage: React.FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       download={cert.file_name || 'certificate.pdf'}
-                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800"
                     >
-                      <FileDown className="w-3.5 h-3.5" />
+                      <FileDown className="h-3.5 w-3.5" />
                       Скачать
                     </a>
                   )}
                 </div>
               ))}
               {(!certsData?.certificates || certsData.certificates.length === 0) && (
-                <span className="text-blue-500 text-xs">Декларация ТР ТС / Сертификат</span>
+                <span className="text-xs text-blue-500">Декларация ТР ТС / Сертификат</span>
               )}
             </div>
           )}
 
           {/* Условия хранения */}
           {product.storage_conditions && (
-            <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 mb-5">
+            <div className="mb-5 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
               <span className="font-medium text-gray-900">Условия хранения: </span>
               {product.storage_conditions}
             </div>
@@ -377,32 +410,34 @@ export const ProductPage: React.FC = () => {
 
           {/* UC-107: Калькулятор порций */}
           {product.unit === 'kg' && (
-            <div className="border border-gray-200 rounded-xl p-4 mb-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Calculator className="w-4 h-4 text-primary-600" />
+            <div className="mb-5 rounded-xl border border-gray-200 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Calculator className="h-4 w-4 text-primary-600" />
                 <h3 className="text-sm font-semibold text-gray-900">Калькулятор порций</h3>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="mb-3 grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Кол-во (кг)</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    Кол-во (кг)
+                  </label>
                   <input
                     type="number"
                     value={portionKg}
                     onChange={(e) => setPortionKg(Math.max(0, +e.target.value))}
                     min="0"
                     step="1"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Порция (г)</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Порция (г)</label>
                   <div className="flex gap-1">
                     {[100, 150, 200].map((w) => (
                       <button
                         key={w}
                         onClick={() => setPortionWeight(w)}
-                        className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                        className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-colors ${
                           portionWeight === w
                             ? 'bg-primary-600 text-white'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -416,7 +451,7 @@ export const ProductPage: React.FC = () => {
               </div>
 
               {/* Результат */}
-              <div className="bg-primary-50 rounded-lg p-3">
+              <div className="rounded-lg bg-primary-50 p-3">
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm text-gray-700">
                     {portionKg} кг {product.name.toLowerCase()}
@@ -425,10 +460,8 @@ export const ProductPage: React.FC = () => {
                     = {portionCount} порций
                   </span>
                 </div>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-xs text-gray-500">
-                    по {portionWeight}г каждая
-                  </span>
+                <div className="mt-1 flex items-baseline justify-between">
+                  <span className="text-xs text-gray-500">по {portionWeight}г каждая</span>
                   <span className="text-xs text-gray-500">
                     {formatPrice(portionCost)} / порция · {formatPrice(portionTotal)} итого
                   </span>
@@ -439,19 +472,21 @@ export const ProductPage: React.FC = () => {
 
           {/* Поштучный калькулятор (UC-24) */}
           {product.unit === 'piece' && product.unit_weight && (
-            <div className="border border-gray-200 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Calculator className="w-4 h-4 text-primary-600" />
+            <div className="rounded-xl border border-gray-200 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Calculator className="h-4 w-4 text-primary-600" />
                 <h3 className="text-sm font-semibold text-gray-900">Поштучный калькулятор</h3>
               </div>
-              <p className="text-xs text-gray-500 mb-3">
+              <p className="mb-3 text-xs text-gray-500">
                 1 шт ≈ {product.unit_weight * 1000}г ({product.unit_weight} кг)
               </p>
 
               <div className="grid grid-cols-2 gap-3">
                 {/* По кг */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Кол-во (кг)</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    Кол-во (кг)
+                  </label>
                   <input
                     type="number"
                     value={calcKg}
@@ -461,17 +496,21 @@ export const ProductPage: React.FC = () => {
                     }}
                     min="0"
                     step="0.1"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   />
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="mt-1 text-xs text-gray-500">
                     ≈ {Math.round(calcKg / (product.unit_weight || 0.15))} шт
                   </div>
-                  <div className="text-sm font-bold text-gray-900 mt-0.5">{formatPrice(calcSumKg)}</div>
+                  <div className="mt-0.5 text-sm font-bold text-gray-900">
+                    {formatPrice(calcSumKg)}
+                  </div>
                 </div>
 
                 {/* По штукам */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Кол-во (шт)</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    Кол-во (шт)
+                  </label>
                   <input
                     type="number"
                     value={calcPcs}
@@ -481,12 +520,12 @@ export const ProductPage: React.FC = () => {
                     }}
                     min="0"
                     step="1"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   />
-                  <div className="text-xs text-gray-500 mt-1">
-                    ≈ {calcKgFromPcs} кг
+                  <div className="mt-1 text-xs text-gray-500">≈ {calcKgFromPcs} кг</div>
+                  <div className="mt-0.5 text-sm font-bold text-gray-900">
+                    {formatPrice(calcSumPcs)}
                   </div>
-                  <div className="text-sm font-bold text-gray-900 mt-0.5">{formatPrice(calcSumPcs)}</div>
                 </div>
               </div>
             </div>

@@ -40,17 +40,17 @@ export const ToasterConfig = () => (
 export const showToast = {
   success: (message: string) =>
     toast.success(message, {
-      icon: <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />,
+      icon: <CheckCircle className="h-5 w-5 flex-shrink-0 text-green-600" />,
     }),
 
   error: (message: string) =>
     toast.error(message, {
-      icon: <XCircle className="w-5 h-5 text-red-600 flex-shrink-0" />,
+      icon: <XCircle className="h-5 w-5 flex-shrink-0 text-red-600" />,
     }),
 
   warning: (message: string) =>
     toast(message, {
-      icon: <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />,
+      icon: <AlertTriangle className="h-5 w-5 flex-shrink-0 text-yellow-500" />,
       style: {
         borderLeft: '4px solid #F59E0B',
       },
@@ -58,7 +58,7 @@ export const showToast = {
 
   info: (message: string) =>
     toast(message, {
-      icon: <Info className="w-5 h-5 text-blue-500 flex-shrink-0" />,
+      icon: <Info className="h-5 w-5 flex-shrink-0 text-blue-500" />,
       style: {
         borderLeft: '4px solid #3B82F6',
       },

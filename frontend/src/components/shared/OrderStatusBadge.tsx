@@ -9,7 +9,10 @@ interface OrderStatusBadgeProps {
 }
 
 // Маппинг статусов на варианты Badge
-const statusConfig: Record<OrderStatus, { label: string; variant: 'gray' | 'blue' | 'purple' | 'yellow' | 'green' | 'cyan' | 'red' }> = {
+const statusConfig: Record<
+  OrderStatus,
+  { label: string; variant: 'gray' | 'blue' | 'purple' | 'yellow' | 'green' | 'cyan' | 'red' }
+> = {
   [OrderStatus.NEW]: { label: 'Новый', variant: 'blue' },
   [OrderStatus.CONFIRMED]: { label: 'Подтверждён', variant: 'purple' },
   [OrderStatus.ASSEMBLING]: { label: 'Собирается', variant: 'yellow' },

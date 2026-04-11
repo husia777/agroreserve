@@ -546,7 +546,7 @@ sync_log           — лог синхронизации с 1С
 
 ```json
 {
-	"_id": "ObjectId",
+	"id": "ObjectId",
 	"name": "Картофель «Гала»",
 	"slug": "kartofel-gala",
 	"category_id": "ObjectId",
@@ -575,7 +575,7 @@ sync_log           — лог синхронизации с 1С
 
 ```json
 {
-	"_id": "ObjectId",
+	"id": "ObjectId",
 	"order_number": "ORD-2026-00045",
 	"client_id": "ObjectId",
 	"status": "confirmed",
@@ -618,7 +618,7 @@ sync_log           — лог синхронизации с 1С
 
 ```json
 {
-	"_id": "ObjectId",
+	"id": "ObjectId",
 	"receipt_number": "REC-2026-00012",
 	"supplier_id": "ObjectId",
 	"supplier_name": "ООО АгроБаза",
@@ -644,7 +644,7 @@ sync_log           — лог синхронизации с 1С
 
 ```json
 {
-	"_id": "ObjectId",
+	"id": "ObjectId",
 	"date": "2026-03-08",
 	"category": "transport",
 	"description": "Газ АЗС",
@@ -660,7 +660,7 @@ sync_log           — лог синхронизации с 1С
 
 ```json
 {
-	"_id": "ObjectId",
+	"id": "ObjectId",
 	"phone": "+79001234567",
 	"email": "client@example.com",
 	"name": "Иванова Анна Сергеевна",

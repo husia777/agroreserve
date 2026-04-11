@@ -13,13 +13,10 @@ import {
   File,
 } from 'lucide-react'
 import { apiClient } from '@/api/client'
-import { DocType } from '@/types'
 import { formatDate } from '@/utils/format'
-import { cn } from '@/utils/cn'
 import { PageSpinner } from '@/components/ui/Spinner'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
 import Pagination from '@/components/ui/Pagination'
 import toast from 'react-hot-toast'
 
@@ -60,21 +57,30 @@ const docTypeLabels: Record<string, string> = {
 
 const docTypeIcon = (t: string) => {
   switch (t) {
-    case 'invoice': return <FileText className="w-4 h-4 text-blue-500" />
-    case 'torg12': return <FileSpreadsheet className="w-4 h-4 text-green-500" />
-    case 'contract': return <FileCheck className="w-4 h-4 text-purple-500" />
-    default: return <File className="w-4 h-4 text-gray-500" />
+    case 'invoice':
+      return <FileText className="h-4 w-4 text-blue-500" />
+    case 'torg12':
+      return <FileSpreadsheet className="h-4 w-4 text-green-500" />
+    case 'contract':
+      return <FileCheck className="h-4 w-4 text-purple-500" />
+    default:
+      return <File className="h-4 w-4 text-gray-500" />
   }
 }
 
 const docTypeVariant = (t: string): 'blue' | 'green' | 'yellow' | 'red' | 'gray' => {
   switch (t) {
-    case 'invoice': return 'blue'
-    case 'torg12': return 'green'
-    case 'contract': return 'yellow'
+    case 'invoice':
+      return 'blue'
+    case 'torg12':
+      return 'green'
+    case 'contract':
+      return 'yellow'
     case 'act':
-    case 'reconciliation': return 'gray'
-    default: return 'gray'
+    case 'reconciliation':
+      return 'gray'
+    default:
+      return 'gray'
   }
 }
 
@@ -142,22 +148,23 @@ const AdminDocumentsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Документы</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Счета, накладные, акты сверки, договоры
-          </p>
+          <p className="mt-1 text-sm text-gray-500">Счета, накладные, акты сверки, договоры</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => refetch()}>
-          <RefreshCw className="w-4 h-4 mr-1.5" />
+          <RefreshCw className="mr-1.5 h-4 w-4" />
           Обновить
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 bg-white rounded-xl border border-gray-200 p-4">
-        <Filter className="w-4 h-4 text-gray-400" />
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white p-4">
+        <Filter className="h-4 w-4 text-gray-400" />
         <select
           value={filterType}
-          onChange={(e) => { setFilterType(e.target.value); setPage(1) }}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+          onChange={(e) => {
+            setFilterType(e.target.value)
+            setPage(1)
+          }}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
         >
           <option value="">Все типы</option>
           <option value="invoice">Счёт на оплату</option>
@@ -168,59 +175,58 @@ const AdminDocumentsPage: React.FC = () => {
           <option value="label">Ярлык</option>
         </select>
 
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Номер заказа..."
             value={searchOrderId}
-            onChange={(e) => { setSearchOrderId(e.target.value); setPage(1) }}
-            className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+            onChange={(e) => {
+              setSearchOrderId(e.target.value)
+              setPage(1)
+            }}
+            className="w-full rounded-lg border border-gray-200 bg-white py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
 
-        {data && (
-          <span className="text-xs text-gray-500">
-            Найдено: {data.total}
-          </span>
-        )}
+        {data && <span className="text-xs text-gray-500">Найдено: {data.total}</span>}
       </div>
 
       {isLoading ? (
         <PageSpinner />
       ) : isError ? (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <p className="text-red-600 text-sm">Ошибка загрузки документов</p>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-sm text-red-600">Ошибка загрузки документов</p>
           <Button variant="secondary" size="sm" className="mt-3" onClick={() => refetch()}>
             Повторить
           </Button>
         </div>
       ) : !data?.items?.length ? (
-        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
-          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">Документов пока нет</p>
-          <p className="text-gray-400 text-xs mt-1">
+        <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+          <FileText className="mx-auto mb-3 h-12 w-12 text-gray-300" />
+          <p className="text-sm text-gray-500">Документов пока нет</p>
+          <p className="mt-1 text-xs text-gray-400">
             Документы создаются автоматически при обработке заказов
           </p>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Тип</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Номер</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Клиент</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Файл</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Размер</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Дата</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600"></th>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">Тип</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">Номер</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">Клиент</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">Файл</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">Размер</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">Дата</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-600"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {data.items.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={doc.id} className="transition-colors hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {docTypeIcon(doc.doc_type)}
@@ -232,10 +238,8 @@ const AdminDocumentsPage: React.FC = () => {
                     <td className="px-4 py-3 font-mono text-xs text-gray-700">
                       {doc.number || '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {doc.client_name || '—'}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 truncate max-w-[200px]">
+                    <td className="px-4 py-3 text-gray-700">{doc.client_name || '—'}</td>
+                    <td className="max-w-[200px] truncate px-4 py-3 text-xs text-gray-500">
                       {doc.file_name || '—'}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
@@ -247,10 +251,10 @@ const AdminDocumentsPage: React.FC = () => {
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleDownload(doc)}
-                        className="inline-flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-700"
                         title="Скачать"
                       >
-                        <Download className="w-3.5 h-3.5" />
+                        <Download className="h-3.5 w-3.5" />
                         Скачать
                       </button>
                     </td>
@@ -262,11 +266,7 @@ const AdminDocumentsPage: React.FC = () => {
 
           {data.pages > 1 && (
             <div className="border-t border-gray-200 px-4 py-3">
-              <Pagination
-                page={page}
-                totalPages={data.pages}
-                onPageChange={setPage}
-              />
+              <Pagination page={page} totalPages={data.pages} onPageChange={setPage} />
             </div>
           )}
         </div>

@@ -1,10 +1,9 @@
 // Управление поставщиками (UC — Поставщики)
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Star, Truck, Pencil, Trash2, X, Phone, Mail, MapPin, Hash } from 'lucide-react'
+import { Plus, Star, Truck, Pencil, Trash2, X, Phone, Mail, Hash } from 'lucide-react'
 import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '@/api/admin'
 import type { Supplier } from '@/types'
-import { formatDate } from '@/utils/format'
 import { PageSpinner } from '@/components/ui/Spinner'
 import EmptyState from '@/components/ui/EmptyState'
 import SearchInput from '@/components/ui/SearchInput'
@@ -29,10 +28,8 @@ const StarRating: React.FC<{
           className={readonly ? 'cursor-default' : 'cursor-pointer'}
         >
           <Star
-            className={`w-4 h-4 ${
-              star <= (hover || value)
-                ? 'fill-amber-400 text-amber-400'
-                : 'text-gray-300'
+            className={`h-4 w-4 ${
+              star <= (hover || value) ? 'fill-amber-400 text-amber-400' : 'text-gray-300'
             }`}
           />
         </button>
@@ -74,7 +71,7 @@ const SupplierModal: React.FC<{
           is_active: supplier.is_active,
           product_ids: supplier.product_ids,
         }
-      : { ...EMPTY_FORM }
+      : { ...EMPTY_FORM },
   )
 
   const createMut = useMutation({
@@ -106,43 +103,43 @@ const SupplierModal: React.FC<{
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
         {/* Заголовок */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-lg font-bold text-gray-900">
             {supplier ? 'Редактировать поставщика' : 'Новый поставщик'}
           </h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Форма */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
           {/* Название */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
               Название организации <span className="text-red-500">*</span>
             </label>
             <input
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="ООО «Агросбыт»"
             />
           </div>
 
           {/* Контактное лицо */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
               Контактное лицо <span className="text-red-500">*</span>
             </label>
             <input
               required
               value={form.contact_person}
               onChange={(e) => setForm({ ...form, contact_person: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="Иванов Иван Иванович"
             />
           </div>
@@ -150,7 +147,7 @@ const SupplierModal: React.FC<{
           <div className="grid grid-cols-2 gap-3">
             {/* Телефон */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
                 Телефон <span className="text-red-500">*</span>
               </label>
               <input
@@ -158,19 +155,19 @@ const SupplierModal: React.FC<{
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="+7 900 000 00 00"
               />
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
               <input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="info@example.com"
               />
             </div>
@@ -178,11 +175,11 @@ const SupplierModal: React.FC<{
 
           {/* ИНН */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ИНН</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">ИНН</label>
             <input
               value={form.inn}
               onChange={(e) => setForm({ ...form, inn: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="1234567890"
               maxLength={12}
             />
@@ -190,35 +187,35 @@ const SupplierModal: React.FC<{
 
           {/* Адрес */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Адрес</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Адрес</label>
             <input
               value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="г. Москва, ул. Примерная, д. 1"
             />
           </div>
 
           {/* Рейтинг */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Рейтинг</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Рейтинг</label>
             <StarRating value={form.rating} onChange={(v) => setForm({ ...form, rating: v })} />
           </div>
 
           {/* Заметки */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Заметки</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Заметки</label>
             <textarea
               rows={2}
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="Дополнительная информация..."
             />
           </div>
 
           {/* Активен */}
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
               checked={form.is_active}
@@ -233,14 +230,14 @@ const SupplierModal: React.FC<{
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+              className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
             >
               Отмена
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="flex-1 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white rounded-lg py-2 text-sm font-semibold transition-colors"
+              className="flex-1 rounded-lg bg-primary-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
             >
               {isPending ? 'Сохраняем...' : supplier ? 'Сохранить' : 'Добавить'}
             </button>
@@ -292,23 +289,23 @@ export const AdminSuppliersPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="space-y-5 p-6">
       {/* Заголовок */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Truck className="w-6 h-6 text-primary-600" />
+          <Truck className="h-6 w-6 text-primary-600" />
           <h1 className="text-2xl font-bold text-gray-900">Поставщики</h1>
           {suppliers && (
-            <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">
               {suppliers.length}
             </span>
           )}
         </div>
         <button
           onClick={handleAdd}
-          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" />
           Добавить
         </button>
       </div>
@@ -332,26 +329,26 @@ export const AdminSuppliersPage: React.FC = () => {
           action={{ label: 'Добавить поставщика', onClick: handleAdd }}
         />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="border-b border-gray-100 bg-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Организация
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                <th className="hidden px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 md:table-cell">
                   Контакт
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                <th className="hidden px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 lg:table-cell">
                   Телефон
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Рейтинг
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                <th className="hidden px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 lg:table-cell">
                   Товаров
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Статус
                 </th>
                 <th className="px-5 py-3" />
@@ -359,38 +356,38 @@ export const AdminSuppliersPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {suppliers.map((s) => (
-                <tr key={s._id} className="hover:bg-gray-50/50 transition-colors">
+                <tr key={s._id} className="transition-colors hover:bg-gray-50/50">
                   {/* Название */}
                   <td className="px-5 py-3">
                     <div className="font-semibold text-gray-900">{s.name}</div>
                     {s.inn && (
-                      <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                        <Hash className="w-3 h-3" />
+                      <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+                        <Hash className="h-3 w-3" />
                         ИНН {s.inn}
                       </div>
                     )}
                   </td>
 
                   {/* Контактное лицо */}
-                  <td className="px-5 py-3 text-gray-600 hidden md:table-cell">
+                  <td className="hidden px-5 py-3 text-gray-600 md:table-cell">
                     {s.contact_person}
                   </td>
 
                   {/* Телефон */}
-                  <td className="px-5 py-3 hidden lg:table-cell">
+                  <td className="hidden px-5 py-3 lg:table-cell">
                     <a
                       href={`tel:${s.phone}`}
-                      className="flex items-center gap-1.5 text-gray-600 hover:text-primary-600 transition-colors"
+                      className="flex items-center gap-1.5 text-gray-600 transition-colors hover:text-primary-600"
                     >
-                      <Phone className="w-3.5 h-3.5" />
+                      <Phone className="h-3.5 w-3.5" />
                       {s.phone}
                     </a>
                     {s.email && (
                       <a
                         href={`mailto:${s.email}`}
-                        className="flex items-center gap-1.5 text-gray-400 hover:text-primary-600 transition-colors text-xs mt-0.5"
+                        className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-primary-600"
                       >
-                        <Mail className="w-3 h-3" />
+                        <Mail className="h-3 w-3" />
                         {s.email}
                       </a>
                     )}
@@ -402,21 +399,19 @@ export const AdminSuppliersPage: React.FC = () => {
                   </td>
 
                   {/* Количество товаров */}
-                  <td className="px-5 py-3 text-gray-600 hidden lg:table-cell">
+                  <td className="hidden px-5 py-3 text-gray-600 lg:table-cell">
                     {s.product_ids.length} поз.
                   </td>
 
                   {/* Статус */}
                   <td className="px-5 py-3">
                     <span
-                      className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-                        s.is_active
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-500'
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                        s.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                       }`}
                     >
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${
+                        className={`h-1.5 w-1.5 rounded-full ${
                           s.is_active ? 'bg-green-500' : 'bg-gray-400'
                         }`}
                       />
@@ -429,17 +424,17 @@ export const AdminSuppliersPage: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleEdit(s)}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                         title="Редактировать"
                       >
-                        <Pencil className="w-4 h-4" />
+                        <Pencil className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(s)}
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
                         title="Удалить"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </td>
@@ -451,9 +446,7 @@ export const AdminSuppliersPage: React.FC = () => {
       )}
 
       {/* Модальное окно */}
-      {modalOpen && (
-        <SupplierModal supplier={editSupplier} onClose={handleCloseModal} />
-      )}
+      {modalOpen && <SupplierModal supplier={editSupplier} onClose={handleCloseModal} />}
     </div>
   )
 }

@@ -13,7 +13,9 @@ export interface DocumentsParams {
 }
 
 // Получение списка документов
-export const getDocuments = async (params?: DocumentsParams): Promise<PaginatedResponse<Document>> => {
+export const getDocuments = async (
+  params?: DocumentsParams,
+): Promise<PaginatedResponse<Document>> => {
   const response = await apiClient.get<PaginatedResponse<Document>>('/documents', { params })
   return response.data
 }

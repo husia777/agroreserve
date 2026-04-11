@@ -18,7 +18,7 @@ export const MobileNav: React.FC = () => {
   const { isAuthenticated } = useAuthStore()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden bg-white border-t border-gray-200 safe-area-bottom">
+    <nav className="safe-area-bottom fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white md:hidden">
       <div className="flex items-stretch">
         {tabs.map((tab) => {
           // Если требует авторизации, показываем ссылку на вход
@@ -31,19 +31,19 @@ export const MobileNav: React.FC = () => {
               to={href}
               className={({ isActive }) =>
                 cn(
-                  'flex-1 flex flex-col items-center justify-center py-2 gap-0.5 relative',
+                  'relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2',
                   'text-xs transition-colors',
-                  isActive ? 'text-primary-600' : 'text-gray-500 hover:text-gray-700'
+                  isActive ? 'text-primary-600' : 'text-gray-500 hover:text-gray-700',
                 )
               }
             >
               {({ isActive }) => (
                 <>
                   <div className="relative">
-                    <Icon className={cn('w-5 h-5', isActive && 'text-primary-600')} />
+                    <Icon className={cn('h-5 w-5', isActive && 'text-primary-600')} />
                     {/* Бейдж корзины */}
                     {tab.badge && itemsCount > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                      <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold leading-none text-white">
                         {itemsCount > 9 ? '9+' : itemsCount}
                       </span>
                     )}
@@ -53,7 +53,7 @@ export const MobileNav: React.FC = () => {
                   </span>
                   {/* Активная черта */}
                   {isActive && (
-                    <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary-600 rounded-full" />
+                    <span className="absolute left-1/2 top-0 h-0.5 w-8 -translate-x-1/2 rounded-full bg-primary-600" />
                   )}
                 </>
               )}

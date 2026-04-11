@@ -1,6 +1,6 @@
 // Layout для личного кабинета клиента
 import React from 'react'
-import { Outlet, NavLink, Link } from 'react-router-dom'
+import { Outlet, NavLink } from 'react-router-dom'
 import { LayoutDashboard, Package, FileText, User, ChevronRight } from 'lucide-react'
 import Header from './Header'
 import Footer from './Footer'
@@ -19,21 +19,20 @@ export const AccountLayout: React.FC = () => {
   const { user, isApproved } = useAuthStore()
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-gray-50">
       <Header />
-      <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex gap-6">
-
           {/* Боковое меню (только desktop) */}
-          <aside className="hidden lg:block w-56 flex-shrink-0">
+          <aside className="hidden w-56 flex-shrink-0 lg:block">
             {/* Карточка пользователя */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+            <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                  <User className="w-5 h-5 text-primary-600" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100">
+                  <User className="h-5 w-5 text-primary-600" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-gray-900 truncate">
+                  <div className="truncate text-sm font-semibold text-gray-900">
                     {user?.full_name}
                   </div>
                   <div className="text-xs text-gray-500">
@@ -44,7 +43,7 @@ export const AccountLayout: React.FC = () => {
             </div>
 
             {/* Навигация */}
-            <nav className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <nav className="overflow-hidden rounded-xl border border-gray-200 bg-white">
               {sidebarNav.map((item, idx) => {
                 const Icon = item.icon
                 return (
@@ -57,16 +56,18 @@ export const AccountLayout: React.FC = () => {
                         'flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors',
                         idx > 0 && 'border-t border-gray-100',
                         isActive
-                          ? 'text-primary-700 bg-primary-50'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                          ? 'bg-primary-50 text-primary-700'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                       )
                     }
                   >
                     {({ isActive }) => (
                       <>
-                        <Icon className={cn('w-4 h-4', isActive ? 'text-primary-600' : 'text-gray-400')} />
+                        <Icon
+                          className={cn('h-4 w-4', isActive ? 'text-primary-600' : 'text-gray-400')}
+                        />
                         <span className="flex-1">{item.label}</span>
-                        {isActive && <ChevronRight className="w-4 h-4 text-primary-400" />}
+                        {isActive && <ChevronRight className="h-4 w-4 text-primary-400" />}
                       </>
                     )}
                   </NavLink>
@@ -76,15 +77,15 @@ export const AccountLayout: React.FC = () => {
           </aside>
 
           {/* Основной контент */}
-          <main className="flex-1 min-w-0">
+          <main className="min-w-0 flex-1">
             <Outlet />
           </main>
         </div>
       </div>
 
       {/* Мобильная навигация */}
-      <div className="lg:hidden border-t border-gray-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 py-2 flex gap-1 overflow-x-auto">
+      <div className="border-t border-gray-200 bg-white lg:hidden">
+        <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 py-2">
           {sidebarNav.map((item) => {
             const Icon = item.icon
             return (
@@ -94,14 +95,14 @@ export const AccountLayout: React.FC = () => {
                 end={item.exact}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors',
+                    'flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                     isActive
                       ? 'bg-primary-100 text-primary-700'
-                      : 'text-gray-500 hover:bg-gray-100'
+                      : 'text-gray-500 hover:bg-gray-100',
                   )
                 }
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="h-3.5 w-3.5" />
                 {item.label}
               </NavLink>
             )

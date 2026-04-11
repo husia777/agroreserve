@@ -4,11 +4,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
-import { User, Building, MapPin, Eye, EyeOff, Lock, FileText } from 'lucide-react'
+import { Building, MapPin, Eye, EyeOff, Lock, FileText, User as UserIcon } from 'lucide-react'
 import { apiClient } from '@/api/client'
 import { changePassword } from '@/api/auth'
 import { useAuthStore } from '@/stores/authStore'
-import { ClientType, UserStatus } from '@/types'
+import { ClientType, UserStatus, type User as UserType } from '@/types'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -20,14 +20,16 @@ const profileSchema = z.object({
   delivery_address: z.string().optional(),
 })
 
-const passwordSchema = z.object({
-  current_password: z.string().min(6, 'Введите текущий пароль'),
-  new_password: z.string().min(8, 'Минимум 8 символов'),
-  confirm_password: z.string(),
-}).refine(d => d.new_password === d.confirm_password, {
-  message: 'Пароли не совпадают',
-  path: ['confirm_password'],
-})
+const passwordSchema = z
+  .object({
+    current_password: z.string().min(6, 'Введите текущий пароль'),
+    new_password: z.string().min(8, 'Минимум 8 символов'),
+    confirm_password: z.string(),
+  })
+  .refine((d) => d.new_password === d.confirm_password, {
+    message: 'Пароли не совпадают',
+    path: ['confirm_password'],
+  })
 
 type ProfileFormData = z.infer<typeof profileSchema>
 type PasswordFormData = z.infer<typeof passwordSchema>
@@ -38,7 +40,10 @@ const clientTypeLabels: Record<string, string> = {
   [ClientType.OOO]: 'Организация',
 }
 
-const statusConfig: Record<string, { label: string; variant: 'yellow' | 'green' | 'red' | 'gray' }> = {
+const statusConfig: Record<
+  string,
+  { label: string; variant: 'yellow' | 'green' | 'red' | 'gray' }
+> = {
   [UserStatus.PENDING]: { label: 'На проверке', variant: 'yellow' },
   [UserStatus.APPROVED]: { label: 'Активен', variant: 'green' },
   [UserStatus.REJECTED]: { label: 'Отклонён', variant: 'red' },
@@ -96,17 +101,21 @@ export const ProfilePage: React.FC = () => {
       <h1 className="text-2xl font-bold text-gray-900">Профиль</h1>
 
       {/* Информация об аккаунте */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-14 h-14 bg-primary-100 rounded-full flex items-center justify-center">
-            <User className="w-7 h-7 text-primary-600" />
+      <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <div className="mb-4 flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-100">
+            <UserIcon className="h-7 w-7 text-primary-600" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">{user?.full_name}</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm text-gray-500">{clientTypeLabels[user?.client_type || ''] || user?.client_type}</span>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-sm text-gray-500">
+                {clientTypeLabels[user?.client_type || ''] || user?.client_type}
+              </span>
               {statusInfo && (
-                <Badge variant={statusInfo.variant} size="sm">{statusInfo.label}</Badge>
+                <Badge variant={statusInfo.variant} size="sm">
+                  {statusInfo.label}
+                </Badge>
               )}
             </div>
           </div>
@@ -114,13 +123,13 @@ export const ProfilePage: React.FC = () => {
       </div>
 
       {/* Редактирование профиля */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">Личные данные</h2>
+      <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <h2 className="mb-4 text-base font-semibold text-gray-900">Личные данные</h2>
         <form onSubmit={handleProfileSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               label="ФИО"
-              leftIcon={<User className="w-4 h-4" />}
+              leftIcon={<UserIcon className="h-4 w-4" />}
               error={profileForm.formState.errors.full_name?.message}
               {...profileForm.register('full_name')}
             />
@@ -131,27 +140,18 @@ export const ProfilePage: React.FC = () => {
               {...profileForm.register('phone')}
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Email"
-              value={user?.email || ''}
-              disabled
-              hint="Email изменить нельзя"
-            />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input label="Email" value={user?.email || ''} disabled hint="Email изменить нельзя" />
             <Input
               label="Адрес доставки"
               placeholder="Адрес для доставки заказов"
-              leftIcon={<MapPin className="w-4 h-4" />}
+              leftIcon={<MapPin className="h-4 w-4" />}
               error={profileForm.formState.errors.delivery_address?.message}
               {...profileForm.register('delivery_address')}
             />
           </div>
           <div className="flex justify-end">
-            <Button
-              type="submit"
-              variant="primary"
-              loading={profileForm.formState.isSubmitting}
-            >
+            <Button type="submit" variant="primary" loading={profileForm.formState.isSubmitting}>
               Сохранить изменения
             </Button>
           </div>
@@ -160,12 +160,12 @@ export const ProfilePage: React.FC = () => {
 
       {/* Реквизиты организации (B2B) */}
       {isB2B && user?.organization && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Building className="w-5 h-5 text-gray-500" />
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <Building className="h-5 w-5 text-gray-500" />
             <h2 className="text-base font-semibold text-gray-900">Реквизиты организации</h2>
           </div>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-gray-500">Название</dt>
               <dd className="font-medium text-gray-900">{user.organization.name}</dd>
@@ -192,30 +192,30 @@ export const ProfilePage: React.FC = () => {
       )}
 
       {/* UC-265: Настройка пакета документов */}
-      {isB2B && (
-        <DocumentPreferencesBlock user={user} />
-      )}
+      {isB2B && user && <DocumentPreferencesBlock user={user} />}
 
       {/* Смена пароля */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Lock className="w-5 h-5 text-gray-500" />
+      <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <Lock className="h-5 w-5 text-gray-500" />
           <h2 className="text-base font-semibold text-gray-900">Смена пароля</h2>
         </div>
         <form onSubmit={handlePasswordSubmit} className="space-y-4">
           <Input
             label="Текущий пароль"
             type={showCurrentPwd ? 'text' : 'password'}
-            rightIcon={showCurrentPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            rightIcon={
+              showCurrentPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />
+            }
             onRightIconClick={() => setShowCurrentPwd(!showCurrentPwd)}
             error={passwordForm.formState.errors.current_password?.message}
             {...passwordForm.register('current_password')}
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               label="Новый пароль"
               type={showNewPwd ? 'text' : 'password'}
-              rightIcon={showNewPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              rightIcon={showNewPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               onRightIconClick={() => setShowNewPwd(!showNewPwd)}
               error={passwordForm.formState.errors.new_password?.message}
               hint="Минимум 8 символов"
@@ -229,11 +229,7 @@ export const ProfilePage: React.FC = () => {
             />
           </div>
           <div className="flex justify-end">
-            <Button
-              type="submit"
-              variant="secondary"
-              loading={passwordForm.formState.isSubmitting}
-            >
+            <Button type="submit" variant="secondary" loading={passwordForm.formState.isSubmitting}>
               Изменить пароль
             </Button>
           </div>
@@ -250,7 +246,11 @@ const DOCUMENT_OPTIONS = [
   { key: 'upd', label: 'УПД', description: 'Универсальный передаточный документ' },
   { key: 'scheta_factura', label: 'Счёт-фактура', description: 'Для организаций с НДС' },
   { key: 'act_sverki', label: 'Акт сверки', description: 'Ежемесячная сверка взаиморасчётов' },
-  { key: 'realization', label: 'Реализация товаров', description: 'Документ реализации товаров и услуг' },
+  {
+    key: 'realization',
+    label: 'Реализация товаров',
+    description: 'Документ реализации товаров и услуг',
+  },
 ] as const
 
 interface DocPrefs {
@@ -262,7 +262,7 @@ interface DocPrefs {
   realization: boolean
 }
 
-const DocumentPreferencesBlock: React.FC<{ user: any }> = ({ user }) => {
+const DocumentPreferencesBlock: React.FC<{ user: UserType }> = ({ user }) => {
   const [saving, setSaving] = useState(false)
   const [prefs, setPrefs] = useState<DocPrefs>({
     torg12: user?.document_preferences?.torg12 ?? true,
@@ -290,25 +290,22 @@ const DocumentPreferencesBlock: React.FC<{ user: any }> = ({ user }) => {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <FileText className="w-5 h-5 text-gray-500" />
+    <div className="rounded-xl border border-gray-200 bg-white p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <FileText className="h-5 w-5 text-gray-500" />
         <h2 className="text-base font-semibold text-gray-900">Пакет документов</h2>
       </div>
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="mb-4 text-sm text-gray-500">
         Выберите, какие документы формировать при каждой отгрузке
       </p>
       <div className="space-y-3">
         {DOCUMENT_OPTIONS.map((doc) => (
-          <label
-            key={doc.key}
-            className="flex items-start gap-3 cursor-pointer group"
-          >
+          <label key={doc.key} className="group flex cursor-pointer items-start gap-3">
             <input
               type="checkbox"
               checked={prefs[doc.key]}
               onChange={() => handleToggle(doc.key)}
-              className="mt-0.5 w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
             />
             <div>
               <span className="text-sm font-medium text-gray-900 group-hover:text-primary-600">
@@ -319,13 +316,8 @@ const DocumentPreferencesBlock: React.FC<{ user: any }> = ({ user }) => {
           </label>
         ))}
       </div>
-      <div className="flex justify-end mt-4 pt-3 border-t border-gray-100">
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={handleSave}
-          loading={saving}
-        >
+      <div className="mt-4 flex justify-end border-t border-gray-100 pt-3">
+        <Button variant="primary" size="sm" onClick={handleSave} loading={saving}>
           Сохранить настройки
         </Button>
       </div>

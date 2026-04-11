@@ -5,7 +5,7 @@ import { ShoppingCart, ImageOff } from 'lucide-react'
 import { type Product } from '@/types'
 import { useAuthStore } from '@/stores/authStore'
 import { useCartStore } from '@/stores/cartStore'
-import { formatPrice, formatQuantity } from '@/utils/format'
+import { formatPrice } from '@/utils/format'
 import { cn } from '@/utils/cn'
 import StockBadge from './StockBadge'
 import QuantityInput from './QuantityInput'
@@ -46,51 +46,56 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   if (layout === 'list') {
     return (
-      <Link to={productUrl} className={cn('block group', className)}>
-        <div className="flex gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+      <Link to={productUrl} className={cn('group block', className)}>
+        <div className="flex gap-4 rounded-xl border border-gray-200 bg-white p-4 transition-all hover:border-gray-300 hover:shadow-sm">
           {/* Фото */}
-          <div className="w-20 h-20 rounded-lg bg-gray-50 flex-shrink-0 overflow-hidden">
+          <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-50">
             {!imageError && product.images?.[0] ? (
               <img
                 src={product.images[0]}
                 alt={product.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 onError={() => setImageError(true)}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <ImageOff className="w-8 h-8 text-gray-300" />
+              <div className="flex h-full w-full items-center justify-center">
+                <ImageOff className="h-8 w-8 text-gray-300" />
               </div>
             )}
           </div>
 
           {/* Инфо */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <h3 className="text-sm font-semibold text-gray-900 group-hover:text-primary-700 transition-colors line-clamp-2">
+              <h3 className="line-clamp-2 text-sm font-semibold text-gray-900 transition-colors group-hover:text-primary-700">
                 {product.name}
               </h3>
-              <StockBadge quantity={product.stock_quantity} minQuantity={product.min_stock_quantity} />
+              <StockBadge
+                quantity={product.stock_quantity}
+                minQuantity={product.min_stock_quantity}
+              />
             </div>
-            <p className="text-xs text-gray-500 mt-1">{product.country_of_origin}</p>
-            <div className="flex items-center justify-between mt-2">
+            <p className="mt-1 text-xs text-gray-500">{product.country_of_origin}</p>
+            <div className="mt-2 flex items-center justify-between">
               <div>
                 <span className="text-base font-bold text-gray-900">
                   {formatPrice(displayPrice)}
                 </span>
-                <span className="text-xs text-gray-400 ml-1">/ {product.unit === 'kg' ? 'кг' : 'шт'}</span>
+                <span className="ml-1 text-xs text-gray-400">
+                  / {product.unit === 'kg' ? 'кг' : 'шт'}
+                </span>
               </div>
               <button
                 onClick={handleAddToCart}
                 disabled={!isAvailable}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                  'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                   isAvailable
                     ? 'bg-primary-600 text-white hover:bg-primary-700'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'cursor-not-allowed bg-gray-100 text-gray-400',
                 )}
               >
-                <ShoppingCart className="w-3.5 h-3.5" />
+                <ShoppingCart className="h-3.5 w-3.5" />
                 {inCart ? 'В корзине' : 'В корзину'}
               </button>
             </div>
@@ -102,33 +107,38 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   // Grid layout
   return (
-    <div className={cn('group relative bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-gray-300 hover:shadow-md transition-all duration-200', className)}>
+    <div
+      className={cn(
+        'group relative overflow-hidden rounded-xl border border-gray-200 bg-white transition-all duration-200 hover:border-gray-300 hover:shadow-md',
+        className,
+      )}
+    >
       {/* Бейдж скидки */}
       {hasDiscount && (
-        <div className="absolute top-2 left-2 z-10 bg-primary-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+        <div className="absolute left-2 top-2 z-10 rounded-full bg-primary-600 px-2 py-0.5 text-xs font-bold text-white">
           Опт
         </div>
       )}
 
       {/* Статус наличия */}
-      <div className="absolute top-2 right-2 z-10">
+      <div className="absolute right-2 top-2 z-10">
         <StockBadge quantity={product.stock_quantity} minQuantity={product.min_stock_quantity} />
       </div>
 
       {/* Ссылка на карточку */}
       <Link to={productUrl} className="block">
         {/* Фото */}
-        <div className="aspect-square bg-gray-50 overflow-hidden">
+        <div className="aspect-square overflow-hidden bg-gray-50">
           {!imageError && product.images?.[0] ? (
             <img
               src={product.images[0]}
               alt={product.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               onError={() => setImageError(true)}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <ImageOff className="w-12 h-12 text-gray-300" />
+            <div className="flex h-full w-full items-center justify-center">
+              <ImageOff className="h-12 w-12 text-gray-300" />
             </div>
           )}
         </div>
@@ -137,19 +147,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       {/* Информация */}
       <div className="p-3">
         <Link to={productUrl}>
-          <h3 className="text-sm font-semibold text-gray-900 group-hover:text-primary-700 transition-colors line-clamp-2 min-h-[2.5rem]">
+          <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold text-gray-900 transition-colors group-hover:text-primary-700">
             {product.name}
           </h3>
         </Link>
 
-        <p className="text-xs text-gray-400 mt-1">{product.country_of_origin}</p>
+        <p className="mt-1 text-xs text-gray-400">{product.country_of_origin}</p>
 
         {/* Цены */}
-        <div className="mt-2 mb-3">
+        <div className="mb-3 mt-2">
           <div className="flex items-baseline gap-2">
-            <span className="text-base font-bold text-gray-900">
-              {formatPrice(displayPrice)}
-            </span>
+            <span className="text-base font-bold text-gray-900">{formatPrice(displayPrice)}</span>
             <span className="text-xs text-gray-400">/ {product.unit === 'kg' ? 'кг' : 'шт'}</span>
           </div>
           {hasDiscount && (
@@ -158,9 +166,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </div>
           )}
           {!showWholesale && isAuthenticated && (
-            <div className="text-xs text-primary-600 mt-0.5">
-              Войдите для оптовой цены
-            </div>
+            <div className="mt-0.5 text-xs text-primary-600">Войдите для оптовой цены</div>
           )}
         </div>
 
@@ -178,20 +184,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <button
               onClick={handleAddToCart}
               className={cn(
-                'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                'flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition-colors',
                 inCart
                   ? 'bg-primary-100 text-primary-700 hover:bg-primary-200'
-                  : 'bg-primary-600 text-white hover:bg-primary-700'
+                  : 'bg-primary-600 text-white hover:bg-primary-700',
               )}
             >
-              <ShoppingCart className="w-3.5 h-3.5" />
+              <ShoppingCart className="h-3.5 w-3.5" />
               {inCart ? 'В корзине' : 'В корзину'}
             </button>
           </div>
         ) : (
           <button
             disabled
-            className="w-full py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-400 cursor-not-allowed"
+            className="w-full cursor-not-allowed rounded-lg bg-gray-100 py-1.5 text-xs font-medium text-gray-400"
           >
             Нет в наличии
           </button>

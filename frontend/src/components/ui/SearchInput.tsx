@@ -49,8 +49,8 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   return (
     <div className={cn('relative', className)}>
       {/* Иконка поиска */}
-      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-        <Search className="w-4 h-4" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+        <Search className="h-4 w-4" />
       </div>
 
       {/* Поле ввода */}
@@ -61,10 +61,10 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         placeholder={placeholder}
         autoFocus={autoFocus}
         className={cn(
-          'w-full pl-10 pr-9 py-2.5 rounded-lg border border-gray-300 bg-white',
+          'w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-9',
           'text-sm text-gray-900 placeholder:text-gray-400',
-          'focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400',
-          'transition-colors'
+          'focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-300',
+          'transition-colors',
         )}
       />
 
@@ -72,9 +72,9 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       {localValue && (
         <button
           onClick={handleClear}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+          className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
         >
-          <X className="w-4 h-4" />
+          <X className="h-4 w-4" />
         </button>
       )}
     </div>

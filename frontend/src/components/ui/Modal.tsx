@@ -62,15 +62,11 @@ export const Modal: React.FC<ModalProps> = ({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel
-                className={cn(
-                  'w-full bg-white rounded-xl shadow-xl',
-                  sizeClasses[size],
-                  className
-                )}
+                className={cn('w-full rounded-xl bg-white shadow-xl', sizeClasses[size], className)}
               >
                 {/* Шапка модалки */}
                 {(title || showCloseButton) && (
-                  <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                  <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
                     {title && (
                       <Dialog.Title className="text-lg font-semibold text-gray-900">
                         {title}
@@ -79,9 +75,9 @@ export const Modal: React.FC<ModalProps> = ({
                     {showCloseButton && (
                       <button
                         onClick={onClose}
-                        className="ml-auto p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                        className="ml-auto rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="h-5 w-5" />
                       </button>
                     )}
                   </div>

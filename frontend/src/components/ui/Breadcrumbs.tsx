@@ -15,26 +15,19 @@ interface BreadcrumbsProps {
   showHome?: boolean
 }
 
-export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
-  items,
-  className,
-  showHome = true,
-}) => {
+export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items, className, showHome = true }) => {
   return (
-    <nav
-      aria-label="Хлебные крошки"
-      className={cn('flex items-center gap-1 text-sm', className)}
-    >
+    <nav aria-label="Хлебные крошки" className={cn('flex items-center gap-1 text-sm', className)}>
       {showHome && (
         <>
           <Link
             to="/"
-            className="flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+            className="flex items-center text-gray-400 transition-colors hover:text-gray-600"
             aria-label="Главная"
           >
-            <Home className="w-4 h-4" />
+            <Home className="h-4 w-4" />
           </Link>
-          <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+          <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-gray-300" />
         </>
       )}
 
@@ -44,22 +37,20 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
         return (
           <React.Fragment key={index}>
             {isLast ? (
-              <span className="text-gray-900 font-medium truncate max-w-[200px]">
-                {item.label}
-              </span>
+              <span className="max-w-[200px] truncate font-medium text-gray-900">{item.label}</span>
             ) : (
               <>
                 {item.href ? (
                   <Link
                     to={item.href}
-                    className="text-gray-500 hover:text-gray-700 transition-colors truncate max-w-[160px]"
+                    className="max-w-[160px] truncate text-gray-500 transition-colors hover:text-gray-700"
                   >
                     {item.label}
                   </Link>
                 ) : (
-                  <span className="text-gray-500 truncate max-w-[160px]">{item.label}</span>
+                  <span className="max-w-[160px] truncate text-gray-500">{item.label}</span>
                 )}
-                <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-gray-300" />
               </>
             )}
           </React.Fragment>

@@ -85,38 +85,40 @@ const ProductSelector: React.FC<{
   return (
     <div ref={dropdownRef} className="relative">
       <div
-        className="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2.5 bg-white cursor-pointer hover:border-green-400 transition-colors"
+        className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2.5 transition-colors hover:border-green-400"
         onClick={() => setOpen(!open)}
       >
-        <Plus className="w-4 h-4 text-green-600 flex-shrink-0" />
+        <Plus className="h-4 w-4 flex-shrink-0 text-green-600" />
         <span className="text-sm text-gray-500">Добавить товар...</span>
-        <ChevronDown className={`w-4 h-4 text-gray-400 ml-auto transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          className={`ml-auto h-4 w-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
       </div>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-80 flex flex-col">
-          <div className="p-2 border-b border-gray-100">
+        <div className="absolute z-50 mt-1 flex max-h-80 w-full flex-col rounded-lg border border-gray-200 bg-white shadow-xl">
+          <div className="border-b border-gray-100 p-2">
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Поиск товара..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full rounded-md border border-gray-200 py-2 pl-8 pr-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500"
                 autoFocus
               />
             </div>
           </div>
 
-          <div className="overflow-y-auto flex-1">
+          <div className="flex-1 overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center py-8 text-gray-400">
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 <span className="text-sm">Загрузка...</span>
               </div>
             ) : filtered.length === 0 ? (
-              <div className="py-6 text-center text-gray-400 text-sm">
+              <div className="py-6 text-center text-sm text-gray-400">
                 {search ? 'Ничего не найдено' : 'Нет активных товаров'}
               </div>
             ) : (
@@ -128,14 +130,12 @@ const ProductSelector: React.FC<{
                     setSearch('')
                     setOpen(false)
                   }}
-                  className="w-full text-left px-3 py-2.5 hover:bg-green-50 flex items-center gap-3 transition-colors border-b border-gray-50 last:border-0"
+                  className="flex w-full items-center gap-3 border-b border-gray-50 px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-green-50"
                 >
-                  <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-800 truncate">
-                      {product.name}
-                    </div>
-                    <div className="text-xs text-gray-400 flex items-center gap-2">
+                  <Package className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-gray-800">{product.name}</div>
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
                       <span>{product.origin_country}</span>
                       {product.shelf_life_days && (
                         <>
@@ -170,58 +170,60 @@ const LabelRow: React.FC<{
   onPreview: (item: LabelItem) => void
 }> = ({ item, onUpdate, onRemove, onPreview }) => {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 hover:shadow-sm transition-shadow">
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-gray-800 truncate">{item.product_name}</div>
+    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 transition-shadow hover:shadow-sm sm:flex-row sm:items-center sm:p-4">
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium text-gray-800">{item.product_name}</div>
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-500 whitespace-nowrap">Дата:</label>
+        <label className="whitespace-nowrap text-xs text-gray-500">Дата:</label>
         <input
           type="date"
           value={item.packing_date}
           onChange={(e) => onUpdate(item.id, 'packing_date', e.target.value)}
-          className="text-sm border border-gray-200 rounded-md px-2 py-1.5 w-36 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          className="w-36 rounded-md border border-gray-200 px-2 py-1.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500"
         />
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-500 whitespace-nowrap">Масса:</label>
+        <label className="whitespace-nowrap text-xs text-gray-500">Масса:</label>
         <input
           type="text"
           value={item.net_weight}
           onChange={(e) => onUpdate(item.id, 'net_weight', e.target.value)}
           placeholder="_____ кг"
-          className="text-sm border border-gray-200 rounded-md px-2 py-1.5 w-24 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          className="w-24 rounded-md border border-gray-200 px-2 py-1.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500"
         />
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-500 whitespace-nowrap">Шт:</label>
+        <label className="whitespace-nowrap text-xs text-gray-500">Шт:</label>
         <input
           type="number"
           min={1}
           max={100}
           value={item.copies}
-          onChange={(e) => onUpdate(item.id, 'copies', Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-          className="text-sm border border-gray-200 rounded-md px-2 py-1.5 w-16 text-center focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          onChange={(e) =>
+            onUpdate(item.id, 'copies', Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))
+          }
+          className="w-16 rounded-md border border-gray-200 px-2 py-1.5 text-center text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500"
         />
       </div>
 
       <div className="flex items-center gap-1">
         <button
           onClick={() => onPreview(item)}
-          className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
           title="Предпросмотр"
         >
-          <Eye className="w-4 h-4" />
+          <Eye className="h-4 w-4" />
         </button>
         <button
           onClick={() => onRemove(item.id)}
-          className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
           title="Удалить"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="h-4 w-4" />
         </button>
       </div>
     </div>
@@ -237,23 +239,20 @@ const PreviewModal: React.FC<{
 }> = ({ html, productName, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-        <div className="flex items-center justify-between p-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-800 text-sm">Предпросмотр: {productName}</h3>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md hover:bg-gray-100 transition-colors"
-          >
-            <X className="w-4 h-4 text-gray-500" />
+      <div className="w-full max-w-md rounded-xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-100 p-4">
+          <h3 className="text-sm font-semibold text-gray-800">Предпросмотр: {productName}</h3>
+          <button onClick={onClose} className="rounded-md p-1 transition-colors hover:bg-gray-100">
+            <X className="h-4 w-4 text-gray-500" />
           </button>
         </div>
-        <div className="p-6 flex justify-center">
+        <div className="flex justify-center p-6">
           <div
-            className="border border-dashed border-gray-400 p-4 max-w-[300px] w-full bg-white shadow-sm"
+            className="w-full max-w-[300px] border border-dashed border-gray-400 bg-white p-4 shadow-sm"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         </div>
-        <div className="p-4 border-t border-gray-100 text-center">
+        <div className="border-t border-gray-100 p-4 text-center">
           <span className="text-xs text-gray-400">Так будет выглядеть ярлык при печати</span>
         </div>
       </div>
@@ -295,11 +294,12 @@ const AdminLabelsPage: React.FC = () => {
     setError(null)
   }, [])
 
-  const handleUpdateItem = useCallback((id: string, field: keyof LabelItem, value: string | number) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
-    )
-  }, [])
+  const handleUpdateItem = useCallback(
+    (id: string, field: keyof LabelItem, value: string | number) => {
+      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)))
+    },
+    [],
+  )
 
   const handleRemoveItem = useCallback((id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id))
@@ -367,23 +367,24 @@ const AdminLabelsPage: React.FC = () => {
   }, [items, labelsPerPage, totalLabels])
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="mx-auto max-w-4xl">
       <div className="mb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <Tag className="w-6 h-6 text-green-600" />
+        <div className="mb-1 flex items-center gap-3">
+          <Tag className="h-6 w-6 text-green-600" />
           <h1 className="text-xl font-bold text-gray-800">Ярлыки и этикетки</h1>
         </div>
-        <p className="text-sm text-gray-500 ml-9">
-          Генерация PDF с ярлыками для наклейки на упаковку. Выберите товары, укажите дату фасовки и массу.
+        <p className="ml-9 text-sm text-gray-500">
+          Генерация PDF с ярлыками для наклейки на упаковку. Выберите товары, укажите дату фасовки и
+          массу.
         </p>
       </div>
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <span>{error}</span>
           <button onClick={() => setError(null)} className="ml-auto p-0.5">
-            <X className="w-3.5 h-3.5" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
@@ -397,7 +398,7 @@ const AdminLabelsPage: React.FC = () => {
       </div>
 
       {items.length > 0 ? (
-        <div className="space-y-2 mb-6">
+        <div className="mb-6 space-y-2">
           {items.map((item) => (
             <LabelRow
               key={item.id}
@@ -409,24 +410,22 @@ const AdminLabelsPage: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="mb-6 border-2 border-dashed border-gray-200 rounded-xl p-8 text-center">
-          <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-sm text-gray-400">
-            Добавьте товары для генерации ярлыков
-          </p>
+        <div className="mb-6 rounded-xl border-2 border-dashed border-gray-200 p-8 text-center">
+          <FileText className="mx-auto mb-3 h-10 w-10 text-gray-300" />
+          <p className="text-sm text-gray-400">Добавьте товары для генерации ярлыков</p>
         </div>
       )}
 
       {items.length > 0 && (
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-600 whitespace-nowrap">На странице:</label>
+                <label className="whitespace-nowrap text-sm text-gray-600">На странице:</label>
                 <select
                   value={labelsPerPage}
                   onChange={(e) => setLabelsPerPage(Number(e.target.value) as LabelsPerPage)}
-                  className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   {LABELS_PER_PAGE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -448,16 +447,16 @@ const AdminLabelsPage: React.FC = () => {
             <button
               onClick={handleGenerate}
               disabled={isGenerating || items.length === 0}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors shadow-sm"
+              className="flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   <span>Генерация...</span>
                 </>
               ) : (
                 <>
-                  <Printer className="w-4 h-4" />
+                  <Printer className="h-4 w-4" />
                   <span>Скачать PDF</span>
                 </>
               )}
@@ -479,8 +478,8 @@ const AdminLabelsPage: React.FC = () => {
 
       {isPreviewing && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-lg p-4 flex items-center gap-3 shadow-xl">
-            <Loader2 className="w-5 h-5 animate-spin text-green-600" />
+          <div className="flex items-center gap-3 rounded-lg bg-white p-4 shadow-xl">
+            <Loader2 className="h-5 w-5 animate-spin text-green-600" />
             <span className="text-sm text-gray-700">Загрузка предпросмотра...</span>
           </div>
         </div>

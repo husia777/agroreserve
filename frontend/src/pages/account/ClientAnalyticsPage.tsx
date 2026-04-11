@@ -11,7 +11,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts'
 import { ShoppingCart, TrendingUp, Receipt } from 'lucide-react'
 import { getOrders } from '@/api/orders'
@@ -33,13 +32,13 @@ const KpiCard: React.FC<{
   icon: React.ReactNode
   colorClass: string
 }> = ({ title, value, sub, icon, colorClass }) => (
-  <div className="bg-white rounded-xl border border-gray-200 p-5">
-    <div className="flex items-center justify-between mb-3">
+  <div className="rounded-xl border border-gray-200 bg-white p-5">
+    <div className="mb-3 flex items-center justify-between">
       <span className="text-sm text-gray-500">{title}</span>
-      <div className={`p-2 rounded-lg ${colorClass}`}>{icon}</div>
+      <div className={`rounded-lg p-2 ${colorClass}`}>{icon}</div>
     </div>
     <div className="text-2xl font-bold text-gray-900">{value}</div>
-    {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
+    {sub && <div className="mt-1 text-xs text-gray-400">{sub}</div>}
   </div>
 )
 
@@ -92,7 +91,20 @@ export const ClientAnalyticsPage: React.FC = () => {
       .slice(-12)
       .map(([date, amount]) => ({
         date: date.replace(/^(\d{4})-(\d{2})$/, (_, y, m) => {
-          const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
+          const months = [
+            'Янв',
+            'Фев',
+            'Мар',
+            'Апр',
+            'Май',
+            'Июн',
+            'Июл',
+            'Авг',
+            'Сен',
+            'Окт',
+            'Ноя',
+            'Дек',
+          ]
           return `${months[parseInt(m) - 1]} ${y}`
         }),
         amount,
@@ -105,7 +117,7 @@ export const ClientAnalyticsPage: React.FC = () => {
 
   if (!analytics) {
     return (
-      <div className="text-center py-12">
+      <div className="py-12 text-center">
         <p className="text-gray-400">Нет данных для анализа</p>
       </div>
     )
@@ -115,35 +127,35 @@ export const ClientAnalyticsPage: React.FC = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Моя аналитика</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Статистика ваших заказов</p>
+        <p className="mt-0.5 text-sm text-gray-500">Статистика ваших заказов</p>
       </div>
 
       {/* KPI */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard
           title="Всего заказов"
           value={String(analytics.orders_count)}
-          icon={<ShoppingCart className="w-5 h-5 text-blue-600" />}
+          icon={<ShoppingCart className="h-5 w-5 text-blue-600" />}
           colorClass="bg-blue-100"
         />
         <KpiCard
           title="Сумма заказов"
           value={formatPrice(analytics.total)}
-          icon={<TrendingUp className="w-5 h-5 text-green-600" />}
+          icon={<TrendingUp className="h-5 w-5 text-green-600" />}
           colorClass="bg-green-100"
         />
         <KpiCard
           title="Средний чек"
           value={formatPrice(analytics.avg_check)}
           sub={`за ${analytics.orders_count} заказов`}
-          icon={<Receipt className="w-5 h-5 text-purple-600" />}
+          icon={<Receipt className="h-5 w-5 text-purple-600" />}
           colorClass="bg-purple-100"
         />
       </div>
 
       {/* Расходы по месяцам (area chart) */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">Расходы по месяцам</h2>
+      <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <h2 className="mb-4 text-base font-semibold text-gray-900">Расходы по месяцам</h2>
         {analytics.monthly.length > 0 ? (
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={analytics.monthly} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
@@ -168,15 +180,15 @@ export const ClientAnalyticsPage: React.FC = () => {
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">
+          <div className="flex h-[220px] items-center justify-center text-sm text-gray-400">
             Недостаточно данных
           </div>
         )}
       </div>
 
       {/* Топ товаров (bar chart) */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">Топ-5 заказываемых товаров</h2>
+      <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <h2 className="mb-4 text-base font-semibold text-gray-900">Топ-5 заказываемых товаров</h2>
         {analytics.topProducts.length > 0 ? (
           <ResponsiveContainer width="100%" height={220}>
             <BarChart
@@ -186,18 +198,13 @@ export const ClientAnalyticsPage: React.FC = () => {
             >
               <CartesianGrid strokeDasharray="3 3" horizontal={false} />
               <XAxis type="number" tickFormatter={shortNum} tick={{ fontSize: 11 }} />
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={120}
-                tick={{ fontSize: 11 }}
-              />
+              <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v: number) => [formatPrice(v), 'Сумма']} />
               <Bar dataKey="revenue" fill="#22c55e" radius={[0, 4, 4, 0]} name="Сумма" />
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">
+          <div className="flex h-[220px] items-center justify-center text-sm text-gray-400">
             Нет данных
           </div>
         )}
@@ -205,23 +212,31 @@ export const ClientAnalyticsPage: React.FC = () => {
 
       {/* Таблица топ товаров */}
       {analytics.topProducts.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+          <div className="border-b border-gray-100 px-5 py-4">
             <h2 className="text-base font-semibold text-gray-900">Детали по товарам</h2>
           </div>
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="border-b border-gray-100 bg-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">#</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Товар</th>
-                <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Кол-во</th>
-                <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Сумма</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  #
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Товар
+                </th>
+                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Кол-во
+                </th>
+                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Сумма
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {analytics.topProducts.map((p, i) => (
                 <tr key={i} className="hover:bg-gray-50/50">
-                  <td className="px-5 py-3 text-gray-400 font-medium">{i + 1}</td>
+                  <td className="px-5 py-3 font-medium text-gray-400">{i + 1}</td>
                   <td className="px-5 py-3 font-medium text-gray-900">{p.name}</td>
                   <td className="px-5 py-3 text-right text-gray-600">{p.qty.toFixed(1)}</td>
                   <td className="px-5 py-3 text-right font-bold text-gray-900">

@@ -116,13 +116,13 @@ const LazyPage: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 // Страница 404
 // ============================================================
 const NotFoundPage: React.FC = () => (
-  <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-gray-50">
+  <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-50">
     <div className="text-6xl font-bold text-gray-200">404</div>
     <h1 className="text-xl font-semibold text-gray-700">Страница не найдена</h1>
-    <p className="text-gray-500 text-sm">Возможно, она была перемещена или удалена</p>
+    <p className="text-sm text-gray-500">Возможно, она была перемещена или удалена</p>
     <a
       href="/"
-      className="mt-2 inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+      className="mt-2 inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
     >
       На главную
     </a>
@@ -168,9 +168,7 @@ const router = createBrowserRouter([
       // Оформление — требует входа
       {
         element: <ProtectedRoute />,
-        children: [
-          { path: '/checkout', element: <CheckoutPage /> },
-        ],
+        children: [{ path: '/checkout', element: <CheckoutPage /> }],
       },
     ],
   },

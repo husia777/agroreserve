@@ -50,15 +50,15 @@ export const Badge: React.FC<BadgeProps> = ({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 font-medium rounded-full whitespace-nowrap',
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-medium',
         variantClasses[variant],
         sizeClasses[size],
-        className
+        className,
       )}
     >
       {dot && (
         <span
-          className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', dotVariantClasses[variant])}
+          className={cn('h-1.5 w-1.5 flex-shrink-0 rounded-full', dotVariantClasses[variant])}
         />
       )}
       {children}

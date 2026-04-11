@@ -25,12 +25,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       <div className="w-full">
         {/* Метка */}
         {label && (
-          <label
-            htmlFor={selectId}
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
+          <label htmlFor={selectId} className="mb-1 block text-sm font-medium text-gray-700">
             {label}
-            {props.required && <span className="text-red-500 ml-1">*</span>}
+            {props.required && <span className="ml-1 text-red-500">*</span>}
           </label>
         )}
 
@@ -41,13 +38,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             id={selectId}
             className={cn(
               'w-full appearance-none rounded-lg border py-2.5 pl-3.5 pr-10',
-              'text-sm bg-white transition-colors',
+              'bg-white text-sm transition-colors',
               'focus:outline-none focus:ring-2 focus:ring-offset-0',
               error
-                ? 'border-red-300 bg-red-50 focus:ring-red-300 text-red-900'
-                : 'border-gray-300 focus:ring-primary-300 focus:border-primary-400 text-gray-900',
-              props.disabled && 'bg-gray-100 cursor-not-allowed text-gray-500',
-              className
+                ? 'border-red-300 bg-red-50 text-red-900 focus:ring-red-300'
+                : 'border-gray-300 text-gray-900 focus:border-primary-400 focus:ring-primary-300',
+              props.disabled && 'cursor-not-allowed bg-gray-100 text-gray-500',
+              className,
             )}
             {...props}
           >
@@ -57,11 +54,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             )}
             {options.map((option) => (
-              <option
-                key={option.value}
-                value={option.value}
-                disabled={option.disabled}
-              >
+              <option key={option.value} value={option.value} disabled={option.disabled}>
                 {option.label}
               </option>
             ))}
@@ -69,7 +62,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
 
           {/* Иконка стрелки */}
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
-            <ChevronDown className="w-4 h-4" />
+            <ChevronDown className="h-4 w-4" />
           </div>
         </div>
 
@@ -80,7 +73,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {hint && !error && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
       </div>
     )
-  }
+  },
 )
 
 Select.displayName = 'Select'

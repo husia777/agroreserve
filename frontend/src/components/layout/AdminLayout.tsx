@@ -7,7 +7,7 @@ export const AdminLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-gray-100">
       {/* Боковая панель */}
       <AdminSidebar
         collapsed={sidebarCollapsed}
@@ -15,7 +15,7 @@ export const AdminLayout: React.FC = () => {
       />
 
       {/* Основной контент */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Контент страницы */}
         <main className="flex-1 overflow-y-auto">
           <Outlet />

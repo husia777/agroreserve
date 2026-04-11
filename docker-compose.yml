@@ -39,7 +39,7 @@ services:
 
   # ── FastAPI Backend ──────────────────────────────────────────
   api:
-    build: .
+    build: ./backend
     container_name: agroreserve-api
     restart: unless-stopped
     ports:
@@ -66,7 +66,7 @@ services:
 
   # ── Celery Worker ────────────────────────────────────────────
   celery-worker:
-    build: .
+    build: ./backend
     container_name: agroreserve-celery
     restart: unless-stopped
     command: uv run celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
@@ -85,7 +85,7 @@ services:
 
   # ── Celery Beat (планировщик) ────────────────────────────────
   celery-beat:
-    build: .
+    build: ./backend
     container_name: agroreserve-beat
     restart: unless-stopped
     command: uv run celery -A app.tasks.celery_app beat --loglevel=info

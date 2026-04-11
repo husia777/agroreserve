@@ -19,11 +19,11 @@ export const AdminStockPage: React.FC = () => {
   const normalItems = stockItems?.filter((item) => !item.is_critical) || []
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="space-y-5 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Склад</h1>
         <Link to="/admin/stock/receipt">
-          <Button variant="primary" icon={<Plus className="w-4 h-4" />}>
+          <Button variant="primary" icon={<Plus className="h-4 w-4" />}>
             Приходование
           </Button>
         </Link>
@@ -35,25 +35,32 @@ export const AdminStockPage: React.FC = () => {
         <>
           {/* Критичные остатки */}
           {criticalItems.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-                <h2 className="font-semibold text-red-800">Критичные остатки ({criticalItems.length})</h2>
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                <h2 className="font-semibold text-red-800">
+                  Критичные остатки ({criticalItems.length})
+                </h2>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {criticalItems.map((item) => (
-                  <div key={item.product_id} className="bg-white rounded-lg border border-red-200 p-3">
-                    <div className="font-medium text-gray-900 text-sm truncate">
+                  <div
+                    key={item.product_id}
+                    className="rounded-lg border border-red-200 bg-white p-3"
+                  >
+                    <div className="truncate text-sm font-medium text-gray-900">
                       {item.product?.name || '—'}
                     </div>
-                    <div className="flex items-center justify-between mt-1">
+                    <div className="mt-1 flex items-center justify-between">
                       <span className="text-xs text-gray-500">
                         Мин: {formatQuantity(item.min_quantity, item.product?.unit || 'kg')}
                       </span>
-                      <span className={cn(
-                        'text-sm font-bold',
-                        item.quantity <= 0 ? 'text-red-600' : 'text-orange-600'
-                      )}>
+                      <span
+                        className={cn(
+                          'text-sm font-bold',
+                          item.quantity <= 0 ? 'text-red-600' : 'text-orange-600',
+                        )}
+                      >
                         {formatQuantity(item.quantity, item.product?.unit || 'kg')}
                       </span>
                     </div>
@@ -64,15 +71,25 @@ export const AdminStockPage: React.FC = () => {
           )}
 
           {/* Таблица остатков */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className="border-b border-gray-100 bg-gray-50">
                 <tr>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Товар</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Категория</th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Остаток</th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Мин. остаток</th>
-                  <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Статус</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Товар
+                  </th>
+                  <th className="hidden px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 md:table-cell">
+                    Категория
+                  </th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Остаток
+                  </th>
+                  <th className="hidden px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 md:table-cell">
+                    Мин. остаток
+                  </th>
+                  <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Статус
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -81,22 +98,28 @@ export const AdminStockPage: React.FC = () => {
                     key={item.product_id}
                     className={cn(
                       'transition-colors',
-                      item.is_critical ? 'bg-red-50/30' : i % 2 === 1 ? 'bg-gray-50/50' : ''
+                      item.is_critical ? 'bg-red-50/30' : i % 2 === 1 ? 'bg-gray-50/50' : '',
                     )}
                   >
                     <td className="px-5 py-3 font-medium text-gray-900">
                       {item.product?.name || '—'}
                     </td>
-                    <td className="px-5 py-3 text-gray-500 hidden md:table-cell">
+                    <td className="hidden px-5 py-3 text-gray-500 md:table-cell">
                       {item.product?.category?.name || '—'}
                     </td>
-                    <td className={cn(
-                      'px-5 py-3 text-right font-semibold',
-                      item.quantity <= 0 ? 'text-red-600' : item.is_critical ? 'text-orange-600' : 'text-gray-900'
-                    )}>
+                    <td
+                      className={cn(
+                        'px-5 py-3 text-right font-semibold',
+                        item.quantity <= 0
+                          ? 'text-red-600'
+                          : item.is_critical
+                            ? 'text-orange-600'
+                            : 'text-gray-900',
+                      )}
+                    >
                       {formatQuantity(item.quantity, item.product?.unit || 'kg')}
                     </td>
-                    <td className="px-5 py-3 text-right text-gray-500 hidden md:table-cell">
+                    <td className="hidden px-5 py-3 text-right text-gray-500 md:table-cell">
                       {formatQuantity(item.min_quantity, item.product?.unit || 'kg')}
                     </td>
                     <td className="px-5 py-3 text-center">
