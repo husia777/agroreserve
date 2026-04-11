@@ -200,7 +200,7 @@ async def update_dish(
 
     # Проверяем уникальность нового имени
     if data.name is not None and data.name != dish.name:
-        existing = await Dish.find_one({"name": data.name, "_id": {"$ne": dish.id}})
+        existing = await Dish.find_one({"name": data.name, "id": {"$ne": dish.id}})
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

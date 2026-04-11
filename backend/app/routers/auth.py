@@ -157,7 +157,7 @@ async def register(data: UserRegister):
             correspondent_account=None,
         )
 
-    new_user = User(
+    new_user = User(  # pyright: ignore[reportCallIssue]
         phone=data.phone,
         email=data.email,
         name=data.full_name,

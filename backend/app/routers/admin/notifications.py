@@ -44,7 +44,7 @@ async def get_notifications(
 
     notifications = (
         await Notification.find(query_filter)
-        .sort(-Notification.created_at)
+        .sort("-Notification.created_at")
         .skip((page - 1) * limit)
         .limit(limit)
         .to_list()

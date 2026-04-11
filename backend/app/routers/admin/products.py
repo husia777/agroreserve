@@ -7,9 +7,10 @@ import math
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 import structlog
+from beanie import Link
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from slugify import slugify
 
@@ -159,7 +160,7 @@ async def create_category(data: CategoryCreate, admin=Depends(require_admin)):
         slug=slug,
         icon_url=data.icon_url,
         description=data.description,
-        parent_id=data.parent_id,
+        parent_id=cast(Link["Category"] | None, data.parent_id),
         sort_order=data.sort_order,
         is_active=data.is_active,
     )
@@ -173,7 +174,7 @@ async def create_category(data: CategoryCreate, admin=Depends(require_admin)):
         slug=category.slug,
         icon_url=category.icon_url,
         description=category.description,
-        parent_id=category.parent_id,
+        parent_id=str(category.parent_id) if category.parent_id else None,
         sort_order=category.sort_order,
         is_active=category.is_active,
         product_count=0,
@@ -294,7 +295,7 @@ async def create_product(data: ProductCreate, admin=Depends(require_admin)):
     product = Product(
         name=data.name,
         slug=slug,
-        category_id=category,
+        category_id=cast(Link["Category"], category.id),
         description=data.description,
         origin_country=data.country_of_origin or data.origin_country or "Узбекистан",
         unit=ProductUnit(data.unit),

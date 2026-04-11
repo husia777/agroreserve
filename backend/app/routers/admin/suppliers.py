@@ -72,7 +72,7 @@ async def get_suppliers(
         ]
 
     await Supplier.find(query).count()
-    suppliers = await Supplier.find(query).sort(-Supplier.rating).skip((page - 1) * limit).limit(limit).to_list()
+    suppliers = await Supplier.find(query).sort("-Supplier.rating").skip((page - 1) * limit).limit(limit).to_list()
 
     return [_to_response(s) for s in suppliers]
 
@@ -255,7 +255,7 @@ async def get_supplier_price_history(
                 detail="Неверный формат product_id",
             ) from e
 
-    price_logs = await PriceLog.find(query).sort(PriceLog.logged_at).limit(limit).to_list()
+    price_logs = await PriceLog.find(query).sort("-PriceLog.logged_at").limit(limit).to_list()
 
     return {
         "supplier_id": supplier_id,
@@ -301,7 +301,7 @@ async def get_supplier_products(
 
     from app.models.product import Product
 
-    products = await Product.find({"_id": {"$in": supplier.product_ids}, "is_active": True}).to_list()
+    products = await Product.find({"id": {"$in": supplier.product_ids}, "is_active": True}).to_list()
 
     return {
         "supplier_id": supplier_id,

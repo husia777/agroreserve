@@ -41,7 +41,7 @@ async def get_next_doc_number(doc_type: DocumentType) -> str:
             DocumentRecord.doc_type == doc_type,
             DocumentRecord.year == year,
         )
-        .sort(-DocumentRecord.number)
+        .sort("-DocumentRecord.number")
         .first_or_none()
     )
 
@@ -748,7 +748,7 @@ async def generate_reconciliation_act(
             Order.created_at >= start_dt,
             Order.created_at <= end_dt,
         )
-        .sort(Order.created_at)
+        .sort("-Order.created_at")
         .to_list()
     )
 
@@ -756,7 +756,7 @@ async def generate_reconciliation_act(
     orders_before = await Order.find(
         {"client_id.$id": PydanticObjectId(client_id)},
         Order.created_at < start_dt,
-        Order.status.in_([OrderStatus.DELIVERED, OrderStatus.CONFIRMED]),
+        {"status": {"$in": [OrderStatus.DELIVERED, OrderStatus.CONFIRMED]}},
     ).to_list()
 
     opening_debit = sum(o.total for o in orders_before)
@@ -842,6 +842,9 @@ async def generate_reconciliation_act(
         file_url=file_url,
         file_name=filename,
         file_size_bytes=file_size,
+        order_id=None,
+        created_at=datetime.now(UTC),
+        created_by="system",
     )
     await doc_record.insert()
 
@@ -1248,6 +1251,9 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
             contract_number=contract_number,
             today=today,
         )
+    else:
+        msg = f"Неизвестный тип договора: {contract_type}"
+        raise ValueError(msg)
 
     # Сохраняем PDF
     filename = f"contract_{contract_type}_{client_id}_{year}_{contract_counter:05d}.pdf"
@@ -1266,6 +1272,11 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
         file_url=file_url,
         file_name=filename,
         file_size_bytes=file_size,
+        created_at=datetime.now(UTC),
+        created_by="system",
+        id=None,  # Явно указываем, что ID будет сгенерирован автоматически
+        order_id=None,
+        revision_id=None,
     )
     await doc_record.insert()
 

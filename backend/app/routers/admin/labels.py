@@ -285,7 +285,7 @@ async def get_products_for_labels(
         cert_number, cert_type = await _get_certificate_info(p)
         result.append(
             {
-                "_id": str(p.id),
+                "id": str(p.id),
                 "name": p.name,
                 "origin_country": p.origin_country,
                 "storage_conditions": p.storage_conditions,
@@ -423,6 +423,11 @@ async def generate_labels_pdf(
         from weasyprint import HTML
 
         pdf_bytes = HTML(string=full_html).write_pdf()
+        if not pdf_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="WeasyPrint вернул пустой результат",
+            )
     except ImportError:
         # Если WeasyPrint не установлен — отдаём HTML
         logger.warning("WeasyPrint не установлен, отдаём HTML")

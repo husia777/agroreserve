@@ -112,7 +112,7 @@ async def get_write_offs(
         query["created_at"] = date_filter
 
     total = await WriteOff.find(query).count()
-    write_offs = await WriteOff.find(query).sort(-WriteOff.created_at).skip((page - 1) * limit).limit(limit).to_list()
+    write_offs = await WriteOff.find(query).sort("-WriteOff.created_at").skip((page - 1) * limit).limit(limit).to_list()
 
     return WriteOffListResponse(
         items=[_to_response(wo) for wo in write_offs],
@@ -260,6 +260,8 @@ async def create_write_off(
         is_recurring=False,
         created_at=now,
         created_by=str(current_admin.id),
+        recurring_day=None,
+        receipt_photo=data.photo_url,
     )
     await expense.insert()
 

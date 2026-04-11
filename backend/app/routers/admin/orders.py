@@ -11,7 +11,7 @@ import structlog
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.models.order import Order, OrderStatus
+from app.models.order import Order, OrderStatus, PaymentStatus
 from app.schemas.order import (
     ActualQtyUpdate,
     OrderDocumentResponse,
@@ -31,7 +31,7 @@ router = APIRouter(prefix="/api/v1/admin/orders", tags=["Админ: Заказ�
 
 def _order_to_response(order: Order) -> OrderResponse:
     """Конвертирует Order в ответ API."""
-    client_id_str = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
+    client_id_str = str(order.client_id) if hasattr(order.client_id, "id") else str(order.client_id)
 
     return OrderResponse(
         id=str(order.id),
@@ -130,12 +130,11 @@ async def get_all_orders(
     query = Order.find(query_filter)
 
     if sort_field_name == "created_at":
-        query = query.sort(-Order.created_at if not sort_asc else Order.created_at)
+        query = query.sort("Order.created_at" if not sort_asc else "-Order.created_at")
     elif sort_field_name == "delivery_date":
-        query = query.sort(-Order.delivery_date if not sort_asc else Order.delivery_date)
+        query = query.sort("Order.delivery_date" if not sort_asc else "-Order.delivery_date")
     else:
-        query = query.sort(-Order.created_at)
-
+        query = query.sort("Order.created_at")
     orders = await query.skip((page - 1) * limit).limit(limit).to_list()
 
     items = [
@@ -343,7 +342,7 @@ async def confirm_order_payment(
     if not order:
         raise HTTPException(status_code=404, detail="Заказ не найден")
 
-    order.payment_status = "paid"
+    order.payment_status = PaymentStatus.PAID
     order.paid_at = datetime.now(UTC)
 
     # Добавляем в историю статусов

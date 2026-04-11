@@ -111,7 +111,7 @@ async def get_contracts(
         query["contract_type"] = contract_type
 
     total = await Contract.find(query).count()
-    contracts = await Contract.find(query).sort(-Contract.created_at).skip((page - 1) * limit).limit(limit).to_list()
+    contracts = await Contract.find(query).sort("-Contract.created_at").skip((page - 1) * limit).limit(limit).to_list()
 
     return ContractListResponse(
         items=[_to_response(c) for c in contracts],
@@ -195,6 +195,7 @@ async def create_contract(
         notes=data.notes,
         created_at=now,
         updated_at=now,
+        completion_percent=0.0,
     )
     await contract.insert()
 
@@ -256,7 +257,7 @@ async def update_contract(
     # Обновляем поля
     if data.contract_number is not None:
         # Проверяем уникальность нового номера
-        existing = await Contract.find_one({"contract_number": data.contract_number, "_id": {"$ne": contract.id}})
+        existing = await Contract.find_one({"contract_number": data.contract_number, "id": {"$ne": contract.id}})
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

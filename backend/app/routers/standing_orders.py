@@ -137,7 +137,7 @@ async def get_my_standing_orders(
     if only_active:
         query["is_active"] = True
 
-    orders = await StandingOrder.find(query).sort(-StandingOrder.created_at).to_list()
+    orders = await StandingOrder.find(query).sort("-StandingOrder.created_at").to_list()
     total = len(orders)
 
     logger.info(
@@ -220,6 +220,9 @@ async def create_standing_order(
         next_generation_at=next_gen,
         note=data.note,
         created_at=datetime.now(UTC),
+        id=None,  # Явно указываем, что ID будет сгенерирован автоматически
+        last_generated_at=None,
+        revision_id=None,
     )
     await standing_order.insert()
 
@@ -372,6 +375,7 @@ async def confirm_generated_order(
     Система генерирует черновой заказ перед датой доставки.
     Клиент должен подтвердить его — после чего заказ становится активным.
     """
+    so = None
     try:
         so = await StandingOrder.get(PydanticObjectId(order_id))
     except Exception:

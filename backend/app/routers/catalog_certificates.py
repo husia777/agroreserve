@@ -45,7 +45,7 @@ def _public_cert_dict(cert: Certificate) -> dict:
     days_left = (cert.expiry_date - today).days
 
     return {
-        "_id": str(cert.id),
+        "id": str(cert.id),
         "number": cert.number,
         "cert_type": raw_type,
         "cert_type_label": type_label,
@@ -88,7 +88,7 @@ async def get_product_certificates(product_id: str):
             if hasattr(cert_ref, "ref"):
                 cert_id = cert_ref.ref.id
             elif hasattr(cert_ref, "id"):
-                cert_id = cert_ref.id
+                cert_id = PydanticObjectId(str(cert_ref))
             else:
                 cert_id = PydanticObjectId(str(cert_ref))
             cert = await Certificate.get(cert_id)
@@ -171,7 +171,7 @@ async def download_order_certificates_zip(order_id: str):
 
     product_ids = set()
     for item in order.items:
-        pid = str(item.product_id) if hasattr(item, "product_id") else str(item.get("product_id", ""))
+        pid = str(item.product_id)
         if pid:
             product_ids.add(pid)
 
@@ -182,6 +182,7 @@ async def download_order_certificates_zip(order_id: str):
     seen_cert_ids = set()
 
     for pid in product_ids:
+        product = None
         try:
             product = await Product.get(PydanticObjectId(pid))
         except Exception:

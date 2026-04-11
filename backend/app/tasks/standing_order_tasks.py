@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 
 import structlog
 
+from app.models.order import PaymentStatus
 from app.tasks.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
@@ -230,7 +231,7 @@ def generate_standing_orders(self) -> dict:
                 # Создаём заказ
                 new_order = Order(
                     order_number=order_number,
-                    client_id=client,
+                    client_id=client.id,  # pyright: ignore[reportArgumentType]
                     client_name=client.name,
                     client_phone=client.phone,
                     status=OrderStatus.NEW,
@@ -243,6 +244,20 @@ def generate_standing_orders(self) -> dict:
                     delivery_address=so.delivery_address,
                     payment_method=PaymentMethod.BANK_TRANSFER,
                     note=f"Регулярный заказ (автогенерация). {so.note or ''}".strip(),
+                    admin_note=f"Сгенерирован из регулярного заказа {so.id!s}. {so.admin_note or ''}".strip(),
+                    contract_id=so.contract_id,
+                    created_at=datetime.now(UTC),
+                    updated_at=datetime.now(UTC),
+                    delivery_priority=so.delivery_priority,
+                    documents=[],
+                    paid_amount=0.0,
+                    id=None,
+                    paid_at=None,
+                    payment_status=PaymentStatus.PENDING,
+                    revision_id=None,
+                    status_history=[],
+                    sync_1c_id=None,
+                    synced_to_1c=False,
                 )
                 await new_order.insert()
 

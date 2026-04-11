@@ -351,7 +351,7 @@ async def get_all_documents(
     total = await DocumentRecord.find(query_filter).count()
     documents = (
         await DocumentRecord.find(query_filter)
-        .sort(-DocumentRecord.created_at)
+        .sort("-DocumentRecord.created_at")
         .skip((page - 1) * limit)
         .limit(limit)
         .to_list()
@@ -407,7 +407,7 @@ async def download_document(
 
     if not filepath.exists():
         # Пробуем HTML версию
-        html_path = filepath.replace(".pdf", ".html")
+        html_path = str(filepath).replace(".pdf", ".html")
         if Path(html_path).exists():
             filepath = html_path
         else:
@@ -416,7 +416,7 @@ async def download_document(
                 detail="Файл документа не найден на сервере",
             )
 
-    media_type = "application/pdf" if filepath.endswith(".pdf") else "text/html"
+    media_type = "application/pdf" if str(filepath).endswith(".pdf") else "text/html"
 
     safe_name = quote(doc.file_name)
     return FileResponse(

@@ -208,6 +208,14 @@ async def create_menu(
         days=menu_days,
         status="draft",
         created_at=datetime.now(UTC),
+        generated_order_id=None,
+        id=None,  # Явно указываем, что ID будет сгенерирован автоматически
+        revision_id=None,
+        total_calories=0,
+        total_carbs=0,
+        total_fat=0,
+        total_portions=0,
+        total_protein=0,
     )
 
     # Рассчитываем КБЖУ
@@ -245,7 +253,7 @@ async def get_my_menus(
         query["status"] = status_filter
 
     total = await Menu.find(query).count()
-    menus = await Menu.find(query).sort(-Menu.week_start).skip((page - 1) * limit).limit(limit).to_list()
+    menus = await Menu.find(query).sort("-Menu.week_start").skip((page - 1) * limit).limit(limit).to_list()
 
     return MenuListResponse(
         items=[_menu_to_response(m) for m in menus],
@@ -380,6 +388,14 @@ async def repeat_menu(
         days=new_days,
         status="draft",
         created_at=datetime.now(UTC),
+        generated_order_id=None,
+        id=None,  # Явно указываем, что ID будет сгенерирован автоматически
+        revision_id=None,
+        total_calories=0,
+        total_carbs=0,
+        total_fat=0,
+        total_portions=0,
+        total_protein=0,
     )
 
     new_menu = await recalculate_menu_totals(new_menu)

@@ -8,7 +8,7 @@
 """
 
 import math
-from typing import Optional
+from typing import Optional, cast
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -170,7 +170,7 @@ async def get_products(
             )
             if cat_id not in category_info:
                 try:
-                    fetched_cat = await product.category_id.fetch()
+                    fetched_cat = cast(Category, await product.category_id.fetch())
                     if fetched_cat:
                         category_info[cat_id] = {"name": fetched_cat.name, "slug": fetched_cat.slug or ""}
                     else:
@@ -224,7 +224,7 @@ async def get_product_by_slug(
     cat = None
     if product.category_id:
         try:
-            cat = await product.category_id.fetch()
+            cat = cast(Category | None, await product.category_id.fetch())
             if cat:
                 cat_name = cat.name
                 cat_slug = cat.slug or ""

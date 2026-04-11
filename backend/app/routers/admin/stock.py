@@ -141,7 +141,7 @@ async def get_receipts(
 
     total = await StockReceipt.find(query_filter).count()
     receipts = (
-        await StockReceipt.find(query_filter).sort(-StockReceipt.date).skip((page - 1) * limit).limit(limit).to_list()
+        await StockReceipt.find(query_filter).sort("-StockReceipt.date").skip((page - 1) * limit).limit(limit).to_list()
     )
 
     items = [

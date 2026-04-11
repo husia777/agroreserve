@@ -90,7 +90,7 @@ def _reminder_to_dict(reminder: Reminder) -> dict:
     is_overdue = not reminder.is_completed and remind_at < now
 
     return {
-        "_id": str(reminder.id),  # Фронтенд: _id
+        "id": str(reminder.id),  # Фронтенд: _id
         "title": reminder.title,
         "description": reminder.description,
         "remind_at": remind_at.isoformat(),
@@ -124,7 +124,7 @@ async def get_upcoming_reminders(
             Reminder.remind_at >= now,
             Reminder.remind_at <= threshold,
         )
-        .sort(Reminder.remind_at)
+        .sort("-Reminder.remind_at")
         .to_list()
     )
 
@@ -158,7 +158,7 @@ async def get_reminders(
 
     total = await Reminder.find(query_filter).count()
     reminders = (
-        await Reminder.find(query_filter).sort(Reminder.remind_at).skip((page - 1) * limit).limit(limit).to_list()
+        await Reminder.find(query_filter).sort("-Reminder.remind_at").skip((page - 1) * limit).limit(limit).to_list()
     )
 
     return {

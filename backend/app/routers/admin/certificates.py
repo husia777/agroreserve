@@ -9,10 +9,10 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from datetime import date as DateType
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 import structlog
-from beanie import PydanticObjectId
+from beanie import Link, PydanticObjectId
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 
@@ -149,7 +149,7 @@ async def get_expiring_certificates(
         await Certificate.find(
             Certificate.expiry_date <= threshold,
         )
-        .sort(Certificate.expiry_date)
+        .sort("-Certificate.expiry_date")
         .to_list()
     )
 
@@ -218,7 +218,7 @@ async def get_certificates(
     total = await Certificate.find(query_filter).count()
     certs = (
         await Certificate.find(query_filter)
-        .sort(Certificate.expiry_date)
+        .sort("-Certificate.expiry_date")
         .skip((page - 1) * limit)
         .limit(limit)
         .to_list()
@@ -417,7 +417,7 @@ async def update_certificate(
             try:
                 product = await Product.get(PydanticObjectId(pid))
                 if product and cert_id_str not in product.certificate_ids:
-                    product.certificate_ids.append(cert_id_str)
+                    product.certificate_ids.append(cast(Link["Certificate"], cert_id_str))
                     await product.save()
             except Exception:
                 logger.warning("Товар не найден при привязке сертификата", product_id=pid)

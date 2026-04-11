@@ -177,7 +177,7 @@ async def get_tenders(
         query_filter["is_relevant"] = is_relevant
 
     total = await Tender.find(query_filter).count()
-    tenders = await Tender.find(query_filter).sort(Tender.deadline).skip((page - 1) * limit).limit(limit).to_list()
+    tenders = await Tender.find(query_filter).sort("Tender.deadline").skip((page - 1) * limit).limit(limit).to_list()
 
     # Аналитика по текущей выборке
     from app.services.tender_service import get_tender_analytics

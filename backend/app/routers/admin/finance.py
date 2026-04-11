@@ -187,7 +187,7 @@ async def get_expenses(
         query_filter.setdefault("date", {})["$lte"] = date_to
 
     total = await Expense.find(query_filter).count()
-    expenses = await Expense.find(query_filter).sort(-Expense.date).skip((page - 1) * limit).limit(limit).to_list()
+    expenses = await Expense.find(query_filter).sort("-Expense.date").skip((page - 1) * limit).limit(limit).to_list()
 
     total_amount = sum(e.amount for e in expenses)
 

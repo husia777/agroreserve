@@ -5,15 +5,16 @@
 
 from datetime import UTC
 from datetime import date as DateType
-from typing import Optional
+from typing import Optional, cast
 
 import structlog
-from beanie import PydanticObjectId
+from beanie import Link, PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from app.models.cart import Cart
 from app.models.order import Order, OrderStatus
+from app.models.user import ClientType, UserRole, UserStatus
 from app.schemas.order import (
     OrderCreate,
     OrderDocumentResponse,
@@ -64,7 +65,7 @@ router = APIRouter(prefix="/api/v1/orders", tags=["Заказы"])
 def _order_to_response(order: Order) -> OrderResponse:
     """Конвертирует объект Order в ответ API."""
     # Безопасно получаем client_id строкой
-    client_id_str = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
+    client_id_str = str(order.client_id) if hasattr(order.client_id, "id") else str(order.client_id)
 
     return OrderResponse(
         id=str(order.id),
@@ -241,7 +242,7 @@ async def get_my_orders(
         query_filter["status"] = status_filter
 
     total = await Order.find(query_filter).count()
-    orders = await Order.find(query_filter).sort(-Order.created_at).skip((page - 1) * limit).limit(limit).to_list()
+    orders = await Order.find(query_filter).sort("-Order.created_at").skip((page - 1) * limit).limit(limit).to_list()
 
     items = [
         OrderListItem(
@@ -299,7 +300,7 @@ async def get_order(
             # DBRef
             client_id_str = str(cid.ref.id) if hasattr(cid.ref, "id") else str(cid.ref)
         elif hasattr(cid, "id"):
-            client_id_str = str(cid.id)
+            client_id_str = str(order.client_id)
         else:
             client_id_str = str(cid)
         if client_id_str != str(current_user.id):
@@ -342,7 +343,7 @@ async def repeat_order(
 
     # Клиент может повторять только свои заказы
     client_id_str = (
-        str(source_order.client_id.id) if hasattr(source_order.client_id, "id") else str(source_order.client_id)
+        str(source_order.client_id) if hasattr(source_order.client_id, "id") else str(source_order.client_id)
     )
     if client_id_str != str(current_user.id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
@@ -359,7 +360,7 @@ async def repeat_order(
 
     cart = await Cart.find_one(Cart.user_id == str(current_user.id))
     if not cart:
-        cart = Cart(user_id=str(current_user.id), items=[])
+        cart = Cart(user_id=str(current_user.id), items=[], items_count=0, total=0.0)
 
     added_count = 0
     skipped_products = []
@@ -469,7 +470,7 @@ async def track_order(
 
     # Проверяем принадлежность
     if current_user.role != "admin":
-        client_id_str = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
+        client_id_str = str(order.client_id) if hasattr(order.client_id, "id") else str(order.client_id)
         if client_id_str != str(current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -601,19 +602,19 @@ async def create_retail_order(data: RetailOrderCreate):
     if not guest_user:
         from app.utils.security import get_password_hash
 
-        guest_user = User(
+        guest_user = User(  # pyright: ignore[reportCallIssue]
             phone=data.phone,
             name=data.name,
             password_hash=get_password_hash("retail_guest_no_password"),
-            role="client",
-            client_type="b2c",
-            status="approved",
+            role=UserRole.CLIENT,
+            client_type=ClientType.B2C,
+            status=UserStatus.APPROVED,
         )
         await guest_user.insert()
 
     order = Order(
         order_number=order_number,
-        client_id=guest_user,
+        client_id=cast(Link["User"], guest_user),
         client_name=data.name,
         client_phone=data.phone,
         items=order_items,
@@ -638,6 +639,15 @@ async def create_retail_order(data: RetailOrderCreate):
         ],
         created_at=now,
         updated_at=now,
+        contract_id=None,
+        documents=[],
+        id=None,  # ID будет сгенерирован автоматически
+        paid_amount=0.0,
+        paid_at=None,
+        revision_id=None,
+        status=OrderStatus.NEW,
+        sync_1c_id=None,
+        synced_to_1c=False,
     )
     await order.insert()
 

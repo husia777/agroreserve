@@ -103,7 +103,7 @@ def send_pricelist_telegram(self) -> dict:
         # ── 2. Группируем по категориям ───────────────────────
         # Собираем категории
         category_ids = list(
-            {str(p.category_id.id) if hasattr(p.category_id, "id") else str(p.category_id) for p in products}
+            {str(p.category_id) if hasattr(p.category_id, "id") else str(p.category_id) for p in products}
         )
         categories: dict = {}
 
@@ -122,7 +122,7 @@ def send_pricelist_telegram(self) -> dict:
         # Группируем товары по категориям
         grouped: dict = {}
         for product in products:
-            cat_id = str(product.category_id.id) if hasattr(product.category_id, "id") else str(product.category_id)
+            cat_id = str(product.category_id) if hasattr(product.category_id, "id") else str(product.category_id)
             cat_name = categories.get(cat_id, "Прочее")
             if cat_name not in grouped:
                 grouped[cat_name] = []

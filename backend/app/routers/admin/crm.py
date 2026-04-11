@@ -60,7 +60,7 @@ class InteractionCreate(BaseModel):
 def _note_to_dict(note: ClientNote) -> dict:
     """Конвертирует ClientNote в словарь."""
     return {
-        "_id": str(note.id),
+        "id": str(note.id),
         "text": note.text,
         "created_at": note.created_at.isoformat(),
     }
@@ -69,7 +69,7 @@ def _note_to_dict(note: ClientNote) -> dict:
 def _interaction_to_dict(interaction: ClientInteraction) -> dict:
     """Конвертирует ClientInteraction в словарь фронтенда."""
     return {
-        "_id": str(interaction.id),
+        "id": str(interaction.id),
         "type": (
             interaction.interaction_type.value
             if hasattr(interaction.interaction_type, "value")
@@ -113,7 +113,7 @@ async def get_client_card(
         await Order.find(
             {"client_id.$id": PydanticObjectId(client_id)},
         )
-        .sort(-Order.created_at)
+        .sort("-Order.created_at")
         .to_list()
     )
 
@@ -151,7 +151,7 @@ async def get_client_card(
         await Contract.find(
             Contract.client_id == PydanticObjectId(client_id),
         )
-        .sort(-Contract.created_at)
+        .sort("-Contract.created_at")
         .to_list()
     )
 
@@ -160,7 +160,7 @@ async def get_client_card(
         await ClientNote.find(
             ClientNote.client_id == client_id,
         )
-        .sort(-ClientNote.created_at)
+        .sort("-ClientNote.created_at")
         .limit(20)
         .to_list()
     )
@@ -170,7 +170,7 @@ async def get_client_card(
         await ClientInteraction.find(
             ClientInteraction.client_id == client_id,
         )
-        .sort(-ClientInteraction.created_at)
+        .sort("-ClientInteraction.created_at")
         .limit(10)
         .to_list()
     )
@@ -214,7 +214,7 @@ async def get_client_card(
         # Договоры, заметки, взаимодействия
         "contracts": [
             {
-                "_id": str(c.id),
+                "id": str(c.id),
                 "contract_number": c.contract_number,
                 "contract_type": c.contract_type,
                 "total_amount": c.total_amount,
@@ -293,7 +293,7 @@ async def get_interactions(
     await ClientInteraction.find(query_filter).count()
     interactions = (
         await ClientInteraction.find(query_filter)
-        .sort(-ClientInteraction.created_at)
+        .sort("-ClientInteraction.created_at")
         .skip((page - 1) * limit)
         .limit(limit)
         .to_list()

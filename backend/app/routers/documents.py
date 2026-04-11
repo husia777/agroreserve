@@ -63,7 +63,7 @@ async def get_my_documents(
     total = await DocumentRecord.find(query_filter).count()
     documents = (
         await DocumentRecord.find(query_filter)
-        .sort(-DocumentRecord.created_at)
+        .sort("-DocumentRecord.created_at")
         .skip((page - 1) * limit)
         .limit(limit)
         .to_list()
@@ -156,8 +156,8 @@ async def download_document(
 
     # Пробуем HTML если PDF нет
     if not filepath.exists():
-        html_path = filepath.replace(".pdf", ".html")
-        if Path(html_path).exists():
+        html_path = Path(str(filepath).replace(".pdf", ".html"))
+        if html_path.exists():
             filepath = html_path
         else:
             raise HTTPException(
@@ -165,7 +165,7 @@ async def download_document(
                 detail="Файл документа не найден на сервере",
             )
 
-    media_type = "application/pdf" if filepath.endswith(".pdf") else "text/html"
+    media_type = "application/pdf" if filepath.suffix == ".pdf" else "text/html"
 
     logger.info(
         "Документ скачан",

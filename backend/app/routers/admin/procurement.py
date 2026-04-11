@@ -175,7 +175,7 @@ async def get_price_logs(
                 detail="Неверный формат supplier_id",
             ) from e
 
-    logs = await PriceLog.find(query).sort(PriceLog.logged_at).to_list()
+    logs = await PriceLog.find(query).sort("PriceLog.logged_at").to_list()
 
     # Группируем по товарам для анализа трендов
     by_product: dict[str, Any] = {}

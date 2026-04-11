@@ -71,7 +71,7 @@ def check_reminders(self) -> dict:
                 Reminder.remind_at <= now,
                 Reminder.is_completed == False,  # noqa: E712
             )
-            .sort(Reminder.remind_at)
+            .sort("-Reminder.remind_at")
             .to_list()
         )
 

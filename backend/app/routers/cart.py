@@ -73,7 +73,7 @@ async def _get_or_create_cart(user_id: str) -> Cart:
     """Получает или создаёт корзину для пользователя."""
     cart = await Cart.find_one(Cart.user_id == user_id)
     if not cart:
-        cart = Cart(user_id=user_id)
+        cart = Cart(user_id=user_id, total=0.0, items_count=0)
         await cart.insert()
     return cart
 
