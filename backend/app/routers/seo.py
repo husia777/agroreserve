@@ -64,7 +64,7 @@ async def sitemap_xml():
         )
 
     try:
-        categories = await Category.find(Category.is_active is True).to_list()
+        categories = await Category.find(Category.is_active == True).to_list()
         for cat in categories:
             urls.append(
                 {
@@ -78,20 +78,16 @@ async def sitemap_xml():
         logger.warning("Ошибка категорий для sitemap", error=str(e))
 
     try:
-        products = await Product.find(Product.is_active is True).to_list()
+        products = await Product.find(Product.is_active == True).to_list()
         for prod in products:
             cat_slug = ""
             if prod.category_id:
                 try:
-                    prod_cat = await Category.get(prod.category_id)
-                    if prod_cat is not None:
-                        cat_slug = prod_cat.slug
+                    cat = await Category.get(prod.category_id)
+                    if cat is not None:
+                        cat_slug = cat.slug
                 except Exception:
-                    logger.warning(
-                        "Ошибка получения категории для товара в sitemap",
-                        product_id=str(prod.id),
-                        category_id=str(prod.category_id),
-                    )
+                    pass
             updated = now
             if hasattr(prod, "updated_at") and prod.updated_at:
                 updated = prod.updated_at.strftime("%Y-%m-%d")

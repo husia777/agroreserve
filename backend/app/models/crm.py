@@ -5,9 +5,9 @@
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional
+from typing import Annotated, Optional
 
-from beanie import Document
+from beanie import Document, Indexed
 from pydantic import Field
 
 
@@ -31,7 +31,7 @@ class ClientNote(Document):
     """
 
     # ── Привязка ──────────────────────────────────────────────
-    client_id: str = Field(..., description="ID клиента")
+    client_id: Annotated[str, Indexed()] = Field(..., description="ID клиента")
 
     # ── Содержание ────────────────────────────────────────────
     text: str = Field(..., max_length=2000, description="Текст заметки")
@@ -60,7 +60,7 @@ class ClientInteraction(Document):
     """
 
     # ── Привязка ──────────────────────────────────────────────
-    client_id: str = Field(..., description="ID клиента")
+    client_id: Annotated[str, Indexed()] = Field(..., description="ID клиента")
 
     # ── Тип и описание ────────────────────────────────────────
     interaction_type: InteractionType = Field(..., description="Тип взаимодействия")

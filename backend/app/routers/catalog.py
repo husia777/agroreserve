@@ -8,7 +8,7 @@
 """
 
 import math
-from typing import Optional, cast
+from typing import Optional
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -135,7 +135,7 @@ async def get_products(
 
                 cat = await Category.get(PydanticObjectId(category))
             except Exception:
-                logger.warning("Категория не найдена по slug или id", category=category)
+                pass
 
         if cat:
             query_conditions["category_id.$id"] = cat.id
@@ -170,7 +170,7 @@ async def get_products(
             )
             if cat_id not in category_info:
                 try:
-                    fetched_cat = cast(Category, await product.category_id.fetch())
+                    fetched_cat = await product.category_id.fetch()
                     if fetched_cat:
                         category_info[cat_id] = {"name": fetched_cat.name, "slug": fetched_cat.slug or ""}
                     else:
@@ -224,15 +224,11 @@ async def get_product_by_slug(
     cat = None
     if product.category_id:
         try:
-            cat = cast(Category | None, await product.category_id.fetch())
+            cat = await product.category_id.fetch()
             if cat:
                 cat_name = cat.name
                 cat_slug = cat.slug or ""
         except Exception:
-            logger.warning(
-                "Ошибка получения категории для товара",
-                product_id=str(product.id),
-                category_id=str(product.category_id),
-            )
+            pass
 
     return ProductResponse(**_product_to_response(product, cat_name, is_b2b, category_slug=cat_slug))

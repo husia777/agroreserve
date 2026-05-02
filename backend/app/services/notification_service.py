@@ -210,6 +210,7 @@ async def notify_admin_low_stock(products: list) -> None:
     message = f"Следующие товары ниже минимального остатка:\n\n{products_text}"
 
     for admin in admins:
+        # Системное уведомление (появится в интерфейсе)
         await send_notification(
             user_id=str(admin.id),
             channel=NotificationChannel.SYSTEM,
@@ -219,6 +220,17 @@ async def notify_admin_low_stock(products: list) -> None:
             action_url="/admin/stock",
             action_label="Открыть склад",
         )
+        # Email-уведомление (если у админа указан email)
+        if admin.email:
+            await send_notification(
+                user_id=str(admin.id),
+                channel=NotificationChannel.EMAIL,
+                notification_type=NotificationType.STOCK_LOW,
+                title=title,
+                message=message,
+                action_url="/admin/stock",
+                action_label="Открыть склад",
+            )
 
 
 async def notify_admin_credit_limit(client) -> None:

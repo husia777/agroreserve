@@ -5,8 +5,8 @@
 Если WeasyPrint не установлен — создаёт заглушку в виде HTML файла.
 """
 
+import os
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Optional
 
 import structlog
@@ -41,7 +41,7 @@ async def get_next_doc_number(doc_type: DocumentType) -> str:
             DocumentRecord.doc_type == doc_type,
             DocumentRecord.year == year,
         )
-        .sort("-DocumentRecord.number")
+        .sort(-DocumentRecord.number)
         .first_or_none()
     )
 
@@ -330,25 +330,25 @@ async def _save_pdf(html: str, filename: str) -> Optional[str]:
     Returns:
         Путь к файлу или None при ошибке
     """
-    Path(DOCUMENTS_DIR).mkdir(parents=True, exist_ok=True)
-    filepath = Path(DOCUMENTS_DIR) / filename
+    os.makedirs(DOCUMENTS_DIR, exist_ok=True)
+    filepath = os.path.join(DOCUMENTS_DIR, filename)
 
     try:
         import weasyprint
 
         weasyprint.HTML(string=html).write_pdf(filepath)
         logger.info("PDF сгенерирован через WeasyPrint", filename=filename)
-        return str(filepath)
+        return filepath
     except ImportError:
         # WeasyPrint не установлен — сохраняем HTML как fallback
-        html_filepath = str(filepath).replace(".pdf", ".html")
-        with Path(html_filepath).open("w", encoding="utf-8") as f:
+        html_filepath = filepath.replace(".pdf", ".html")
+        with open(html_filepath, "w", encoding="utf-8") as f:
             f.write(html)
         logger.warning(
             "WeasyPrint не установлен, сохранён HTML",
-            html_filename=Path(html_filepath).name,
+            html_filename=os.path.basename(html_filepath),
         )
-        return str(html_filepath)
+        return html_filepath
     except Exception as e:
         logger.error("Ошибка генерации PDF", error=str(e), filename=filename)
         return None
@@ -375,7 +375,7 @@ async def generate_invoice(order) -> Optional[DocumentRecord]:
 
     # URL для скачивания
     file_url = f"/api/v1/documents/files/{filename}" if filepath else None
-    file_size = Path(filepath).stat().st_size if filepath and Path(filepath).exists() else None
+    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
 
     doc = DocumentRecord(
         doc_type=DocumentType.INVOICE,
@@ -387,8 +387,6 @@ async def generate_invoice(order) -> Optional[DocumentRecord]:
         file_url=file_url,
         file_name=filename,
         file_size_bytes=file_size,
-        created_at=datetime.now(UTC),
-        created_by="system",
     )
     await doc.insert()
 
@@ -421,7 +419,7 @@ async def generate_torg12(order) -> Optional[DocumentRecord]:
     filepath = await _save_pdf(html, filename)
 
     file_url = f"/api/v1/documents/files/{filename}" if filepath else None
-    file_size = Path(filepath).stat().st_size if filepath and Path(filepath).exists() else None
+    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
 
     doc = DocumentRecord(
         doc_type=DocumentType.TORG12,
@@ -433,8 +431,6 @@ async def generate_torg12(order) -> Optional[DocumentRecord]:
         file_url=file_url,
         file_name=filename,
         file_size_bytes=file_size,
-        created_at=datetime.now(UTC),
-        created_by="system",
     )
     await doc.insert()
 
@@ -505,7 +501,7 @@ async def generate_labels(products: list, order_id: Optional[str] = None) -> Opt
     filepath = await _save_pdf(label_html, filename)
 
     file_url = f"/api/v1/documents/files/{filename}" if filepath else None
-    file_size = Path(filepath).stat().st_size if filepath and Path(filepath).exists() else None
+    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
 
     doc = DocumentRecord(
         doc_type=DocumentType.LABEL,
@@ -517,8 +513,6 @@ async def generate_labels(products: list, order_id: Optional[str] = None) -> Opt
         file_url=file_url,
         file_name=filename,
         file_size_bytes=file_size,
-        created_at=datetime.now(UTC),
-        created_by="system",
     )
     await doc.insert()
 
@@ -724,8 +718,8 @@ async def generate_reconciliation_act(
     # Получаем клиента
     try:
         client = await User.get(PydanticObjectId(client_id))
-    except Exception as e:
-        raise ValueError(f"Клиент с ID {client_id} не найден") from e
+    except Exception:
+        raise ValueError(f"Клиент с ID {client_id} не найден")
 
     if not client:
         raise ValueError(f"Клиент с ID {client_id} не найден")
@@ -748,7 +742,7 @@ async def generate_reconciliation_act(
             Order.created_at >= start_dt,
             Order.created_at <= end_dt,
         )
-        .sort("-Order.created_at")
+        .sort(Order.created_at)
         .to_list()
     )
 
@@ -756,7 +750,7 @@ async def generate_reconciliation_act(
     orders_before = await Order.find(
         {"client_id.$id": PydanticObjectId(client_id)},
         Order.created_at < start_dt,
-        {"status": {"$in": [OrderStatus.DELIVERED, OrderStatus.CONFIRMED]}},
+        Order.status.in_([OrderStatus.DELIVERED, OrderStatus.CONFIRMED]),
     ).to_list()
 
     opening_debit = sum(o.total for o in orders_before)
@@ -831,7 +825,7 @@ async def generate_reconciliation_act(
     doc_number = await get_next_doc_number(DocumentType.ACT_SVERKI)
     year = datetime.now(UTC).year
     file_url = f"/admin/documents/files/{filename}" if filepath else None
-    file_size = Path(filepath).stat().st_size if filepath and Path(filepath).exists() else None
+    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
 
     doc_record = DocumentRecord(
         doc_type=DocumentType.ACT_SVERKI,
@@ -842,9 +836,6 @@ async def generate_reconciliation_act(
         file_url=file_url,
         file_name=filename,
         file_size_bytes=file_size,
-        order_id=None,
-        created_at=datetime.now(UTC),
-        created_by="system",
     )
     await doc_record.insert()
 
@@ -858,8 +849,8 @@ async def generate_reconciliation_act(
     )
 
     # Читаем и возвращаем байты
-    if filepath and Path(filepath).exists():
-        with Path(filepath).open("rb") as f:
+    if filepath and os.path.exists(filepath):
+        with open(filepath, "rb") as f:
             return f.read()
     else:
         return html.encode("utf-8")
@@ -1194,8 +1185,8 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
     # Получаем клиента
     try:
         client = await User.get(PydanticObjectId(client_id))
-    except Exception as e:
-        raise ValueError(f"Клиент с ID {client_id} не найден") from e
+    except Exception:
+        raise ValueError(f"Клиент с ID {client_id} не найден")
 
     if not client:
         raise ValueError(f"Клиент с ID {client_id} не найден")
@@ -1251,9 +1242,6 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
             contract_number=contract_number,
             today=today,
         )
-    else:
-        msg = f"Неизвестный тип договора: {contract_type}"
-        raise ValueError(msg)
 
     # Сохраняем PDF
     filename = f"contract_{contract_type}_{client_id}_{year}_{contract_counter:05d}.pdf"
@@ -1261,7 +1249,7 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
 
     # Сохраняем запись в БД
     file_url = f"/admin/documents/files/{filename}" if filepath else None
-    file_size = Path(filepath).stat().st_size if filepath and Path(filepath).exists() else None
+    file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else None
 
     doc_record = DocumentRecord(
         doc_type=DocumentType.CONTRACT,
@@ -1272,11 +1260,6 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
         file_url=file_url,
         file_name=filename,
         file_size_bytes=file_size,
-        created_at=datetime.now(UTC),
-        created_by="system",
-        id=None,  # Явно указываем, что ID будет сгенерирован автоматически
-        order_id=None,
-        revision_id=None,
     )
     await doc_record.insert()
 
@@ -1289,8 +1272,8 @@ async def generate_contract_pdf(contract_type: str, client_id: str) -> bytes:
     )
 
     # Возвращаем байты
-    if filepath and Path(filepath).exists():
-        with Path(filepath).open("rb") as f:
+    if filepath and os.path.exists(filepath):
+        with open(filepath, "rb") as f:
             return f.read()
     else:
         return html.encode("utf-8")

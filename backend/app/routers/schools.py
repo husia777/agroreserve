@@ -208,14 +208,6 @@ async def create_menu(
         days=menu_days,
         status="draft",
         created_at=datetime.now(UTC),
-        generated_order_id=None,
-        id=None,  # Явно указываем, что ID будет сгенерирован автоматически
-        revision_id=None,
-        total_calories=0,
-        total_carbs=0,
-        total_fat=0,
-        total_portions=0,
-        total_protein=0,
     )
 
     # Рассчитываем КБЖУ
@@ -253,7 +245,7 @@ async def get_my_menus(
         query["status"] = status_filter
 
     total = await Menu.find(query).count()
-    menus = await Menu.find(query).sort("-Menu.week_start").skip((page - 1) * limit).limit(limit).to_list()
+    menus = await Menu.find(query).sort(-Menu.week_start).skip((page - 1) * limit).limit(limit).to_list()
 
     return MenuListResponse(
         items=[_menu_to_response(m) for m in menus],
@@ -278,8 +270,8 @@ async def get_menu_detail(
     """
     try:
         menu = await Menu.get(PydanticObjectId(menu_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
 
     if not menu:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
@@ -325,8 +317,8 @@ async def repeat_menu(
 
     try:
         source_menu = await Menu.get(PydanticObjectId(menu_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
 
     if not source_menu:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
@@ -339,11 +331,11 @@ async def repeat_menu(
     try:
         new_week_start = date.fromisoformat(week_start)
         new_week_end = date.fromisoformat(week_end)
-    except ValueError as e:
+    except ValueError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Неверный формат даты. Используйте YYYY-MM-DD",
-        ) from e
+        )
 
     # Проверяем уникальность периода
     existing = await Menu.find_one(
@@ -388,14 +380,6 @@ async def repeat_menu(
         days=new_days,
         status="draft",
         created_at=datetime.now(UTC),
-        generated_order_id=None,
-        id=None,  # Явно указываем, что ID будет сгенерирован автоматически
-        revision_id=None,
-        total_calories=0,
-        total_carbs=0,
-        total_fat=0,
-        total_portions=0,
-        total_protein=0,
     )
 
     new_menu = await recalculate_menu_totals(new_menu)
@@ -427,8 +411,8 @@ async def create_order_from_menu(
     """
     try:
         menu = await Menu.get(PydanticObjectId(menu_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
 
     if not menu:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
@@ -448,7 +432,7 @@ async def create_order_from_menu(
     try:
         order = await generate_order_from_menu(menu, current_user)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     logger.info(
         "Заказ из меню сформирован через API",
@@ -484,8 +468,8 @@ async def get_kbzhu_report(
     """
     try:
         menu = await Menu.get(PydanticObjectId(menu_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
 
     if not menu:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Меню не найдено")
@@ -546,8 +530,8 @@ async def auto_generate_menu(
 
     try:
         parsed_date = date_type.fromisoformat(week_start)
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail="Неверный формат даты. Используйте YYYY-MM-DD") from e
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Неверный формат даты. Используйте YYYY-MM-DD")
 
     try:
         result = await auto_generate_weekly_menu(
@@ -556,7 +540,7 @@ async def auto_generate_menu(
             week_start=parsed_date,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=400, detail=str(e))
 
     return result
 
@@ -581,8 +565,8 @@ async def get_menu_cost(
     """
     try:
         menu = await Menu.get(PydanticObjectId(menu_id))
-    except Exception as e:
-        raise HTTPException(status_code=404, detail="Меню не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=404, detail="Меню не найдено")
 
     if not menu:
         raise HTTPException(status_code=404, detail="Меню не найдено")
@@ -620,8 +604,8 @@ async def create_daily_report(
 
     try:
         menu = await Menu.get(PydanticObjectId(menu_id))
-    except Exception as e:
-        raise HTTPException(status_code=404, detail="Меню не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=404, detail="Меню не найдено")
 
     if not menu:
         raise HTTPException(status_code=404, detail="Меню не найдено")
@@ -631,13 +615,13 @@ async def create_daily_report(
 
     try:
         parsed_date = date_type.fromisoformat(report_date)
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail="Неверный формат даты") from e
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Неверный формат даты")
 
     try:
         return await generate_daily_cook_report(menu, parsed_date)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ══════════════════════════════════════════════════════════════
@@ -661,8 +645,8 @@ async def check_menu_budget(
     """
     try:
         menu = await Menu.get(PydanticObjectId(menu_id))
-    except Exception as e:
-        raise HTTPException(status_code=404, detail="Меню не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=404, detail="Меню не найдено")
 
     if not menu:
         raise HTTPException(status_code=404, detail="Меню не найдено")
@@ -675,4 +659,4 @@ async def check_menu_budget(
     try:
         return await check_budget_compliance(contract_id, menu, children_count)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=400, detail=str(e))

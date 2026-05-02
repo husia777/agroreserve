@@ -4,9 +4,9 @@
 """
 
 import math
+import os
 import uuid
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Optional
 
 import structlog
@@ -82,37 +82,37 @@ async def get_write_offs(
     if product_id:
         try:
             query["product_id"] = PydanticObjectId(product_id)
-        except Exception as e:
+        except Exception:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Неверный формат product_id",
-            ) from e
+            )
 
     # Фильтрация по дате
     date_filter: dict = {}
     if date_from:
         try:
             date_filter["$gte"] = datetime.fromisoformat(date_from)
-        except ValueError as e:
+        except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Неверный формат date_from. Используйте YYYY-MM-DD",
-            ) from e
+            )
     if date_to:
         try:
             # До конца указанного дня
             dt_to = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59)
             date_filter["$lte"] = dt_to
-        except ValueError as e:
+        except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Неверный формат date_to. Используйте YYYY-MM-DD",
-            ) from e
+            )
     if date_filter:
         query["created_at"] = date_filter
 
     total = await WriteOff.find(query).count()
-    write_offs = await WriteOff.find(query).sort("-WriteOff.created_at").skip((page - 1) * limit).limit(limit).to_list()
+    write_offs = await WriteOff.find(query).sort(-WriteOff.created_at).skip((page - 1) * limit).limit(limit).to_list()
 
     return WriteOffListResponse(
         items=[_to_response(wo) for wo in write_offs],
@@ -260,8 +260,6 @@ async def create_write_off(
         is_recurring=False,
         created_at=now,
         created_by=str(current_admin.id),
-        recurring_day=None,
-        receipt_photo=data.photo_url,
     )
     await expense.insert()
 
@@ -369,13 +367,13 @@ async def upload_write_off_photo(
         raise HTTPException(400, detail="Максимальный размер: 5 МБ")
 
     # Сохранение
-    Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
     _filename = file.filename or ""
     ext = _filename.rsplit(".", 1)[-1] if "." in _filename else "jpg"
     filename = f"{uuid.uuid4().hex}.{ext}"
-    filepath = Path(UPLOAD_DIR) / filename
+    filepath = os.path.join(UPLOAD_DIR, filename)
 
-    with Path.open(filepath, "wb") as f:
+    with open(filepath, "wb") as f:
         f.write(content)
 
     url = f"/uploads/write_offs/{filename}"

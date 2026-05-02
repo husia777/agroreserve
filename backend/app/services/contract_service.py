@@ -35,8 +35,8 @@ async def update_completion(contract_id: str) -> float:
     """
     try:
         contract = await Contract.get(PydanticObjectId(contract_id))
-    except Exception as e:
-        raise ValueError(f"Контракт с ID {contract_id} не найден") from e
+    except Exception:
+        raise ValueError(f"Контракт с ID {contract_id} не найден")
 
     if not contract:
         raise ValueError(f"Контракт с ID {contract_id} не найден")
@@ -126,8 +126,8 @@ async def generate_delivery_act(contract_id: str, delivery_index: int) -> dict[s
     """
     try:
         contract = await Contract.get(PydanticObjectId(contract_id))
-    except Exception as e:
-        raise ValueError(f"Контракт с ID {contract_id} не найден") from e
+    except Exception:
+        raise ValueError(f"Контракт с ID {contract_id} не найден")
 
     if not contract:
         raise ValueError(f"Контракт с ID {contract_id} не найден")
@@ -219,8 +219,8 @@ async def mark_delivery_completed(
     """
     try:
         contract = await Contract.get(PydanticObjectId(contract_id))
-    except Exception as e:
-        raise ValueError(f"Контракт с ID {contract_id} не найден") from e
+    except Exception:
+        raise ValueError(f"Контракт с ID {contract_id} не найден")
 
     if not contract:
         raise ValueError(f"Контракт с ID {contract_id} не найден")

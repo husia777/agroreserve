@@ -5,9 +5,9 @@
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional
+from typing import Annotated, Optional
 
-from beanie import Document
+from beanie import Document, Indexed
 from pydantic import Field
 
 
@@ -49,7 +49,7 @@ class Notification(Document):
     """
 
     # ── Получатель ────────────────────────────────────────────
-    user_id: str = Field(..., description="ID получателя (пользователь)")
+    user_id: Annotated[str, Indexed()] = Field(..., description="ID получателя (пользователь)")
 
     # ── Тип и канал ───────────────────────────────────────────
     notification_type: NotificationType = Field(..., description="Тип уведомления")

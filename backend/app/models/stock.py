@@ -5,9 +5,9 @@
 
 from datetime import UTC, datetime
 from datetime import date as DateType
-from typing import Optional
+from typing import Annotated, Optional
 
-from beanie import Document
+from beanie import Document, Indexed
 from pydantic import BaseModel, Field
 
 
@@ -19,6 +19,7 @@ class StockReceiptItem(BaseModel):
     qty: float = Field(..., ge=0, description="Количество")
     unit: str = Field("kg", description="Единица измерения")
     cost_price: float = Field(..., ge=0, description="Закупочная цена за единицу (₽)")
+    sell_price: float = Field(0, ge=0, description="Продажная цена за единицу (₽)")
     total: float = Field(..., ge=0, description="Сумма по позиции (₽)")
 
 
@@ -35,7 +36,7 @@ class StockReceipt(Document):
     """
 
     # ── Номер документа ───────────────────────────────────────
-    receipt_number: str = Field(..., description="Номер прихода (REC-2026-00001)")
+    receipt_number: Annotated[str, Indexed()] = Field(..., description="Номер прихода (REC-2026-00001)")
 
     # ── Поставщик ─────────────────────────────────────────────
     supplier_id: Optional[str] = Field(None, description="ID поставщика (если из справочника)")

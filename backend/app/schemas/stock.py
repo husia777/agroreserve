@@ -15,6 +15,7 @@ class StockReceiptItemCreate(BaseModel):
     quantity: float = Field(..., gt=0, description="Количество")
     unit: str = Field("kg", description="Единица измерения")
     purchase_price: float = Field(..., ge=0, description="Закупочная цена за единицу (₽)")
+    sell_price: float = Field(0, ge=0, description="Цена продажи за единицу (₽)")
 
 
 class StockReceiptCreate(BaseModel):
@@ -38,6 +39,7 @@ class StockReceiptItemResponse(BaseModel):
     qty: float
     unit: str
     cost_price: float
+    sell_price: float = 0
     total: float
 
     model_config = {"from_attributes": True}

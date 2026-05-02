@@ -56,13 +56,7 @@ class SystemSettings(Document):
 
     # ── Банковские реквизиты ──────────────────────────────────
     bank_details: BankDetails = Field(
-        default_factory=lambda: BankDetails(
-            bank_name="",
-            bik="",
-            account="",
-            correspondent_account="",
-        ),
-        description="Банковские реквизиты для документов",
+        default_factory=lambda: BankDetails(), description="Банковские реквизиты для документов"
     )
 
     # ── Медиа для документов ──────────────────────────────────

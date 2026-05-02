@@ -110,8 +110,7 @@ def _generate_mock_tender(
     if total_max_price > 0:
         scale = min(max_price, total_max_price) / total_max_price
         for item in items:
-            cur_price: float = item["max_price"]  # type: ignore[assignment]
-            item["max_price"] = round(cur_price * scale, 2)
+            item["max_price"] = round(item["max_price"] * scale, 2)
         actual_price = round(total_max_price * scale, 2)
     else:
         actual_price = float(max_price) * 0.8
@@ -250,8 +249,8 @@ async def calculate_tender_bid(
 
     try:
         tender = await Tender.get(PydanticObjectId(tender_id))
-    except Exception as e:
-        raise ValueError(f"Тендер с ID {tender_id} не найден") from e
+    except Exception:
+        raise ValueError(f"Тендер с ID {tender_id} не найден")
 
     if not tender:
         raise ValueError(f"Тендер с ID {tender_id} не найден")
@@ -283,9 +282,10 @@ async def calculate_tender_bid(
             matched_product_name = products[0].name
         else:
             # Используем примерную себестоимость (50% от НМЦК позиции)
-            cost_price = (
-                round(item.max_price / item.qty * 0.5, 2) if item.max_price and item.qty > 0 else 50.0
-            )  # ₽/кг по умолчанию
+            if item.max_price and item.qty > 0:
+                cost_price = round(item.max_price / item.qty * 0.5, 2)
+            else:
+                cost_price = 50.0  # ₽/кг по умолчанию
 
         # Стоимость логистики на единицу
         logistics_per_unit = round(total_logistics / max(sum(i.qty for i in tender.items), 1), 4)

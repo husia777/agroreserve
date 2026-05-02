@@ -109,4 +109,20 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(minute=0),  # Каждый час
         "options": {"queue": "notifications"},
     },
+    "check-low-stock": {
+        "task": "app.tasks.notification_tasks.check_low_stock",
+        "schedule": crontab(hour=9, minute=0),
+        "options": {"queue": "notifications"},
+    },
+    # Импорт номенклатуры из 1С (каждые 6 часов, в 00:00, 06:00, 12:00, 18:00)
+    "sync-nomenclature-from-1c": {
+        "task": "app.tasks.sync_tasks.sync_nomenclature_from_1c",
+        "schedule": crontab(minute="0", hour="*/6"),
+        "options": {"queue": "sync"},
+    },
+    "sync-payments-from-1c": {
+        "task": "app.tasks.sync_tasks.sync_payments_from_1c",
+        "schedule": crontab(minute="*/30"),  # каждые 30 минут
+        "options": {"queue": "sync"},
+    },
 }

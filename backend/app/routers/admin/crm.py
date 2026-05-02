@@ -60,7 +60,7 @@ class InteractionCreate(BaseModel):
 def _note_to_dict(note: ClientNote) -> dict:
     """Конвертирует ClientNote в словарь."""
     return {
-        "id": str(note.id),
+        "_id": str(note.id),
         "text": note.text,
         "created_at": note.created_at.isoformat(),
     }
@@ -69,7 +69,7 @@ def _note_to_dict(note: ClientNote) -> dict:
 def _interaction_to_dict(interaction: ClientInteraction) -> dict:
     """Конвертирует ClientInteraction в словарь фронтенда."""
     return {
-        "id": str(interaction.id),
+        "_id": str(interaction.id),
         "type": (
             interaction.interaction_type.value
             if hasattr(interaction.interaction_type, "value")
@@ -100,8 +100,8 @@ async def get_client_card(
     """
     try:
         client = await User.get(PydanticObjectId(client_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")
 
     if not client:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")
@@ -113,7 +113,7 @@ async def get_client_card(
         await Order.find(
             {"client_id.$id": PydanticObjectId(client_id)},
         )
-        .sort("-Order.created_at")
+        .sort(-Order.created_at)
         .to_list()
     )
 
@@ -129,6 +129,7 @@ async def get_client_card(
     for order in delivered_orders:
         for item in order.items:
             pid = item.product_id
+            qty = item.actual_qty if item.actual_qty is not None else item.ordered_qty
             if pid not in products_map:
                 products_map[pid] = {
                     "name": item.product_name,
@@ -151,7 +152,7 @@ async def get_client_card(
         await Contract.find(
             Contract.client_id == PydanticObjectId(client_id),
         )
-        .sort("-Contract.created_at")
+        .sort(-Contract.created_at)
         .to_list()
     )
 
@@ -160,7 +161,7 @@ async def get_client_card(
         await ClientNote.find(
             ClientNote.client_id == client_id,
         )
-        .sort("-ClientNote.created_at")
+        .sort(-ClientNote.created_at)
         .limit(20)
         .to_list()
     )
@@ -170,7 +171,7 @@ async def get_client_card(
         await ClientInteraction.find(
             ClientInteraction.client_id == client_id,
         )
-        .sort("-ClientInteraction.created_at")
+        .sort(-ClientInteraction.created_at)
         .limit(10)
         .to_list()
     )
@@ -214,7 +215,7 @@ async def get_client_card(
         # Договоры, заметки, взаимодействия
         "contracts": [
             {
-                "id": str(c.id),
+                "_id": str(c.id),
                 "contract_number": c.contract_number,
                 "contract_type": c.contract_type,
                 "total_amount": c.total_amount,
@@ -243,8 +244,8 @@ async def add_note(
     """Добавляет заметку администратора к карточке клиента."""
     try:
         client = await User.get(PydanticObjectId(client_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")
 
     if not client:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")
@@ -290,10 +291,10 @@ async def get_interactions(
             )
         query_filter["interaction_type"] = interaction_type
 
-    await ClientInteraction.find(query_filter).count()
+    total = await ClientInteraction.find(query_filter).count()
     interactions = (
         await ClientInteraction.find(query_filter)
-        .sort("-ClientInteraction.created_at")
+        .sort(-ClientInteraction.created_at)
         .skip((page - 1) * limit)
         .limit(limit)
         .to_list()
@@ -315,8 +316,8 @@ async def add_interaction(
     """Добавляет запись о взаимодействии с клиентом."""
     try:
         client = await User.get(PydanticObjectId(client_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")
 
     if not client:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")

@@ -10,7 +10,6 @@ UC-146: Бюджетный контроль 44-ФЗ лимит на питани
 + Все существующие функции из menu_service.py
 """
 
-import contextlib
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Optional
@@ -152,7 +151,7 @@ async def generate_order_from_menu(menu: Menu, user: Any) -> Any:
     cart_items = []
     skipped = []
 
-    for _key, ingredient in ingredients.items():
+    for key, ingredient in ingredients.items():
         if not ingredient["product_id"]:
             skipped.append(ingredient["name"])
             continue
@@ -474,11 +473,13 @@ async def calculate_menu_cost(
     total_cost = 0.0
     products_not_found = []
 
-    for _key, ingredient in ingredients.items():
+    for key, ingredient in ingredients.items():
         product = None
         if ingredient["product_id"]:
-            with contextlib.suppress(Exception):
+            try:
                 product = await Product.get(PydanticObjectId(ingredient["product_id"]))
+            except Exception:
+                pass
 
         qty_kg = ingredient["qty_kg"]
         if product:

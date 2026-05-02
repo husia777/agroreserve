@@ -3,17 +3,13 @@
 Коллекция: orders
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from datetime import date as DateType
 from enum import Enum
-from typing import Optional
+from typing import Annotated, Optional
 
-from beanie import Document, Link
+from beanie import Document, Indexed, Link
 from pydantic import BaseModel, Field
-
-from app.models.user import User
 
 
 class OrderStatus(str, Enum):
@@ -98,8 +94,9 @@ class Order(Document):
     """
 
     # ── Номер и клиент ────────────────────────────────────────
-    order_number: str = Field(..., description="Номер заказа (ORD-2026-00001)")
-    client_id: Link[User] = Field(..., description="Ссылка на клиента")
+    order_number: Annotated[str, Indexed()] = Field(..., description="Номер заказа (ORD-2026-00001)")
+    # type: ignore
+    client_id: Link["User"] = Field(..., description="Ссылка на клиента")
     client_name: str = Field(..., description="Имя клиента (кэш для отображения)")
     client_phone: str = Field(..., description="Телефон клиента (кэш)")
 
@@ -146,6 +143,8 @@ class Order(Document):
     # ── Метаданные ────────────────────────────────────────────
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    external_id_1c: str | None = Field(None, description="GUID документа реализации в 1С")
+    synced_to_1c: bool = Field(False, description="Отправлен ли заказ в 1С")
 
     class Settings:
         name = "orders"

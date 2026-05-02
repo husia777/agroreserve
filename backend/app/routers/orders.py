@@ -5,16 +5,15 @@
 
 from datetime import UTC
 from datetime import date as DateType
-from typing import Optional, cast
+from typing import Optional
 
 import structlog
-from beanie import Link, PydanticObjectId
+from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from app.models.cart import Cart
 from app.models.order import Order, OrderStatus
-from app.models.user import ClientType, UserRole, UserStatus
 from app.schemas.order import (
     OrderCreate,
     OrderDocumentResponse,
@@ -65,7 +64,7 @@ router = APIRouter(prefix="/api/v1/orders", tags=["Заказы"])
 def _order_to_response(order: Order) -> OrderResponse:
     """Конвертирует объект Order в ответ API."""
     # Безопасно получаем client_id строкой
-    client_id_str = str(order.client_id) if hasattr(order.client_id, "id") else str(order.client_id)
+    client_id_str = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
 
     return OrderResponse(
         id=str(order.id),
@@ -99,7 +98,10 @@ def _order_to_response(order: Order) -> OrderResponse:
         payment_status=order.payment_status.value if hasattr(order.payment_status, "value") else order.payment_status,
         paid_amount=order.paid_amount,
         note=order.note,
-        documents=[OrderDocumentResponse(doc_type=d.doc_type, url=d.url, doc_id=d.doc_id) for d in order.documents],
+        documents=[
+            OrderDocumentResponse(doc_type=d.doc_type, url=d.url, doc_id=d.doc_id)  # type: ignore[list-item]
+            for d in order.documents
+        ],
         status_history=[
             StatusHistoryResponse(
                 status=h.status.value if hasattr(h.status, "value") else h.status,
@@ -207,7 +209,7 @@ async def create_order(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        ) from e
+        )
 
     logger.info(
         "Заказ оформлен клиентом",
@@ -286,8 +288,8 @@ async def get_order(
     """
     try:
         order = await Order.get(PydanticObjectId(order_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
@@ -300,7 +302,7 @@ async def get_order(
             # DBRef
             client_id_str = str(cid.ref.id) if hasattr(cid.ref, "id") else str(cid.ref)
         elif hasattr(cid, "id"):
-            client_id_str = str(order.client_id)
+            client_id_str = str(cid.id)
         else:
             client_id_str = str(cid)
         if client_id_str != str(current_user.id):
@@ -335,15 +337,15 @@ async def repeat_order(
     # Загружаем исходный заказ
     try:
         source_order = await Order.get(PydanticObjectId(order_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     if not source_order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     # Клиент может повторять только свои заказы
     client_id_str = (
-        str(source_order.client_id) if hasattr(source_order.client_id, "id") else str(source_order.client_id)
+        str(source_order.client_id.id) if hasattr(source_order.client_id, "id") else str(source_order.client_id)
     )
     if client_id_str != str(current_user.id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
@@ -360,7 +362,7 @@ async def repeat_order(
 
     cart = await Cart.find_one(Cart.user_id == str(current_user.id))
     if not cart:
-        cart = Cart(user_id=str(current_user.id), items=[], items_count=0, total=0.0)
+        cart = Cart(user_id=str(current_user.id), items=[])
 
     added_count = 0
     skipped_products = []
@@ -435,7 +437,7 @@ async def repeat_order(
                 delivery_info=delivery_info,
             )
         except ValueError as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
         logger.info(
             "Повтор заказа — новый заказ оформлен",
@@ -462,15 +464,15 @@ async def track_order(
     """
     try:
         order = await Order.get(PydanticObjectId(order_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     # Проверяем принадлежность
     if current_user.role != "admin":
-        client_id_str = str(order.client_id) if hasattr(order.client_id, "id") else str(order.client_id)
+        client_id_str = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
         if client_id_str != str(current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -602,19 +604,19 @@ async def create_retail_order(data: RetailOrderCreate):
     if not guest_user:
         from app.utils.security import get_password_hash
 
-        guest_user = User(  # pyright: ignore[reportCallIssue]
+        guest_user = User(
             phone=data.phone,
             name=data.name,
             password_hash=get_password_hash("retail_guest_no_password"),
-            role=UserRole.CLIENT,
-            client_type=ClientType.B2C,
-            status=UserStatus.APPROVED,
+            role="client",
+            client_type="b2c",
+            status="approved",
         )
         await guest_user.insert()
 
     order = Order(
         order_number=order_number,
-        client_id=cast(Link["User"], guest_user),
+        client_id=guest_user,
         client_name=data.name,
         client_phone=data.phone,
         items=order_items,
@@ -639,15 +641,6 @@ async def create_retail_order(data: RetailOrderCreate):
         ],
         created_at=now,
         updated_at=now,
-        contract_id=None,
-        documents=[],
-        id=None,  # ID будет сгенерирован автоматически
-        paid_amount=0.0,
-        paid_at=None,
-        revision_id=None,
-        status=OrderStatus.NEW,
-        sync_1c_id=None,
-        synced_to_1c=False,
     )
     await order.insert()
 
@@ -659,7 +652,7 @@ async def create_retail_order(data: RetailOrderCreate):
     except ValueError as e:
         # Откатываем заказ при ошибке резервирования
         await order.delete()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     logger.info(
         "Розничный заказ без регистрации оформлен",

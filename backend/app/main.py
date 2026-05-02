@@ -9,12 +9,12 @@
 - Structlog настройка
 """
 
+import os
 import time
 from collections import defaultdict
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from datetime import UTC
-from pathlib import Path
 
 import structlog
 from fastapi import FastAPI, Request, Response, status
@@ -37,13 +37,9 @@ structlog.configure(
         structlog.stdlib.PositionalArgumentsFormatter(),
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
+        structlog.processors.format_exc_info,  # type: ignore[list-item]
         # В production — JSON, в dev — красивый формат
-        structlog.processors.JSONRenderer(
-            # type: ignore[list-item]
-        )
-        if not settings.DEBUG
-        else structlog.dev.ConsoleRenderer(),
+        structlog.processors.JSONRenderer() if not settings.DEBUG else structlog.dev.ConsoleRenderer(),
     ],
     wrapper_class=structlog.stdlib.BoundLogger,
     context_class=dict,
@@ -76,9 +72,10 @@ async def lifespan(app: FastAPI):
     await connect_to_mongo()
 
     # Создаём директории для хранения файлов
+    import os
 
     for directory in ["/app/media/documents", "/app/media/certificates", "/app/backups"]:
-        Path(directory).mkdir(parents=True, exist_ok=True)
+        os.makedirs(directory, exist_ok=True)
 
     # Создаём индексы (Beanie делает это автоматически при init)
     logger.info("Индексы MongoDB проверены/созданы")
@@ -99,17 +96,18 @@ async def lifespan(app: FastAPI):
 
 # ── Создание FastAPI приложения ────────────────────────────────
 app = FastAPI(
+    redirect_slashes=False,
     title=f"{settings.APP_NAME} API",
     description="""
-# Агрорезерв API
+    # Агрорезерв API
 
-Backend API платформы оптовой торговли овощами и фруктами.
+    Backend API платформы оптовой торговли овощами и фруктами.
 
-## Аутентификация
-Используйте Bearer токен в заголовке `Authorization: Bearer <access_token>`.
+    ## Аутентификация
+    Используйте Bearer токен в заголовке `Authorization: Bearer <access_token>`.
 
-## Версионирование
-Все эндпоинты находятся в `/api/v1/`.
+    ## Версионирование
+    Все эндпоинты находятся в `/api/v1/`.
     """,
     version=settings.APP_VERSION,
     lifespan=lifespan,
@@ -289,7 +287,7 @@ async def root():
 
 
 # ── Отдача загруженных медиафайлов ────────────────────────────
-Path("/app/media/products").mkdir(parents=True, exist_ok=True)
+os.makedirs("/app/media/products", exist_ok=True)
 app.mount("/media", StaticFiles(directory="/app/media"), name="media")
 
 # ── Подключение роутеров ──────────────────────────────────────

@@ -5,8 +5,9 @@
 """
 
 from datetime import UTC, datetime
+from typing import Annotated
 
-from beanie import Document
+from beanie import Document, Indexed
 from pydantic import BaseModel, Field
 
 
@@ -37,7 +38,7 @@ class Cart(Document):
     """
 
     # ── Владелец ──────────────────────────────────────────────
-    user_id: str = Field(..., description="ID пользователя — владельца корзины")
+    user_id: Annotated[str, Indexed()] = Field(..., description="ID пользователя — владельца корзины")
 
     # ── Позиции ───────────────────────────────────────────────
     items: list[CartItem] = Field(default_factory=list, description="Позиции корзины")

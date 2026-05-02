@@ -3,7 +3,7 @@
 Эндпоинты: /api/v1/admin/stock/
 """
 
-import contextlib
+from app.tasks.sync_tasks import push_receipt_to_1c
 import math
 from datetime import date
 from typing import Optional
@@ -58,8 +58,10 @@ def _receipt_to_response(receipt: StockReceipt) -> StockReceiptResponse:
     summary="Текущие остатки товаров",
 )
 async def get_stock(
-    category_id: Optional[str] = Query(None, description="Фильтр по категории"),
-    low_stock_only: bool = Query(False, description="Только товары с низким остатком"),
+    category_id: Optional[str] = Query(
+        None, description="Фильтр по категории"),
+    low_stock_only: bool = Query(
+        False, description="Только товары с низким остатком"),
     admin=Depends(require_admin),
 ):
     """
@@ -69,8 +71,10 @@ async def get_stock(
     query_filter: dict = {"is_active": True}
 
     if category_id:
-        with contextlib.suppress(Exception):
+        try:
             query_filter["category_id.$id"] = PydanticObjectId(category_id)
+        except Exception:
+            pass
 
     if low_stock_only:
         query_filter["$expr"] = {"$lt": ["$stock_qty", "$min_stock_qty"]}
@@ -89,7 +93,8 @@ async def get_stock(
     # { product_id, quantity, min_quantity, is_critical, product: { name, unit, category: { name } }, updated_at }
     items = []
     for p in products:
-        cat_id = str(p.category_id.ref.id) if hasattr(p.category_id, "ref") else str(p.category_id)
+        cat_id = str(p.category_id.ref.id) if hasattr(
+            p.category_id, "ref") else str(p.category_id)
         cat_name = category_map.get(cat_id, "")
 
         is_critical = p.stock_qty < p.min_stock_qty
@@ -152,6 +157,17 @@ async def get_receipts(
             "invoice_number": r.invoice_number,
             "date": str(r.date),
             "items_count": len(r.items),
+            "items": [
+                {
+                    "product_id": it.product_id,
+                    "product_name": it.product_name,
+                    "qty": it.qty,
+                    "cost_price": it.cost_price,
+                    "sell_price": getattr(it, "sell_price", 0),
+                    "total": it.total,
+                }
+                for it in r.items
+            ],
             "total": r.total,
             "synced_to_1c": r.synced_to_1c,
             "created_at": r.created_at.isoformat(),
@@ -197,7 +213,7 @@ async def create_receipt(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        ) from e
+        )
 
     logger.info(
         "Приход создан",
@@ -205,7 +221,7 @@ async def create_receipt(
         supplier=receipt.supplier_name,
         admin_id=str(admin.id),
     )
-
+    push_receipt_to_1c.delay(str(receipt.id))
     # Проверяем низкие остатки после прихода
     from app.services.stock_service import get_low_stock_products
 
@@ -216,7 +232,8 @@ async def create_receipt(
         try:
             await notify_admin_low_stock(low_products)
         except Exception as e:
-            logger.warning("Ошибка отправки уведомления о низких остатках", error=str(e))
+            logger.warning(
+                "Ошибка отправки уведомления о низких остатках", error=str(e))
 
     return _receipt_to_response(receipt)
 
@@ -232,11 +249,13 @@ async def get_receipt(
     """Детали конкретного приходного документа."""
     try:
         receipt = await StockReceipt.get(PydanticObjectId(receipt_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден") from e
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
 
     if not receipt:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
 
     return _receipt_to_response(receipt)
 
@@ -256,4 +275,79 @@ async def get_low_stock(
     return {
         "count": len(products),
         "products": products,
+    }
+
+
+@router.delete(
+    "/receipts/{receipt_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удалить приходный документ",
+)
+async def delete_receipt(
+    receipt_id: str,
+    _=Depends(require_admin),
+):
+    from beanie import PydanticObjectId
+
+    from app.models.stock import StockReceipt
+
+    try:
+        oid = PydanticObjectId(receipt_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Неверный формат ID",
+        ) from None
+
+    receipt = await StockReceipt.get(oid)
+    if not receipt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Приход не найден",
+        )
+
+    await receipt.delete()
+    return
+
+
+@router.post(
+    "/check-low-stock-now",
+    summary="Немедленная проверка низких остатков (для тестирования)",
+)
+async def trigger_low_stock_check(admin=Depends(require_admin)):
+    """
+    Запускает проверку низких остатков прямо сейчас
+    (обычно выполняется раз в день в 09:00).
+    Возвращает список товаров ниже min_stock_qty и создаёт уведомления.
+    """
+    from app.models.product import Product
+    from app.services.notification_service import notify_admin_low_stock
+
+    products = await Product.find(
+        {
+            "is_active": True,
+            "min_stock_qty": {"$gt": 0},
+            "$expr": {"$lte": ["$stock_qty", "$min_stock_qty"]},
+        }
+    ).to_list()
+
+    if not products:
+        return {"status": "ok", "low_count": 0, "products": []}
+
+    products_data = [
+        {
+            "name": p.name,
+            "stock_qty": p.stock_qty,
+            "min_stock_qty": p.min_stock_qty,
+            "unit": p.unit,
+        }
+        for p in products
+    ]
+
+    await notify_admin_low_stock(products_data)
+
+    return {
+        "status": "ok",
+        "low_count": len(products),
+        "products": products_data,
     }

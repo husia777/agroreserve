@@ -20,6 +20,7 @@ from app.schemas.auth import (
     UserRegister,
     UserResponse,
 )
+from app.tasks.sync_tasks import sync_contractor_to_1c
 from app.utils.security import (
     create_access_token,
     create_refresh_token,
@@ -97,7 +98,7 @@ def _build_tokens(user: User) -> TokenResponse:
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        token_type="bearer",  # nosec B106
+        token_type="bearer",
         expires_in=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
@@ -157,7 +158,7 @@ async def register(data: UserRegister):
             correspondent_account=None,
         )
 
-    new_user = User(  # pyright: ignore[reportCallIssue]
+    new_user = User(
         phone=data.phone,
         email=data.email,
         name=data.full_name,
@@ -178,7 +179,8 @@ async def register(data: UserRegister):
         client_type=data.client_type,
         status=initial_status.value,
     )
-
+    if client_type == ClientType.B2B:
+        sync_contractor_to_1c.delay(str(new_user.id))
     return AuthLoginResponse(
         tokens=_build_tokens(new_user),
         user=_build_user_response(new_user),

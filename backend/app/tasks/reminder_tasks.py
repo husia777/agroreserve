@@ -6,7 +6,6 @@ UC-53: Ежечасная проверка напоминаний и отпра�
 
 import asyncio
 from datetime import UTC, datetime
-from typing import Any
 
 import structlog
 
@@ -47,16 +46,16 @@ def check_reminders(self) -> dict:
     """
 
     async def _execute() -> dict:
-        from app.database import connect_to_mongo
+        from app.database import init_db
 
-        await connect_to_mongo()
+        await init_db()
 
         from app.config import settings
         from app.models.reminder import Reminder
         from app.utils.telegram_bot import send_message
 
         now = datetime.now(UTC)
-        result: dict[str, Any] = {
+        result: dict[str, object] = {
             "status": "ok",
             "checked_at": now.isoformat(),
             "reminders_found": 0,
@@ -71,7 +70,7 @@ def check_reminders(self) -> dict:
                 Reminder.remind_at <= now,
                 Reminder.is_completed == False,  # noqa: E712
             )
-            .sort("-Reminder.remind_at")
+            .sort(Reminder.remind_at)
             .to_list()
         )
 
@@ -173,4 +172,4 @@ def check_reminders(self) -> dict:
         return dict(_run_async(_execute()))
     except Exception as exc:
         logger.error("Ошибка задачи check_reminders", error=str(exc))
-        return {"status": "error", "error": str(exc)}
+        raise self.retry(exc=exc)

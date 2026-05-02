@@ -20,6 +20,7 @@ from app.models.order import (
     OrderStatus,
     StatusHistoryEntry,
 )
+from app.tasks.sync_tasks import push_order_to_1c
 
 logger = structlog.get_logger(__name__)
 
@@ -122,7 +123,10 @@ async def create_order(user, cart_items: list, delivery_info: dict) -> Order:
             raise ValueError(f"Минимальный заказ для «{product.name}»: " f"{product.min_order_qty:.1f} {product.unit}")
 
         # Определяем цену: B2B — оптовая, остальные — розничная
-        price = product.price_wholesale if user.client_type == ClientType.B2B else product.price_retail
+        if user.client_type == ClientType.B2B:
+            price = product.price_wholesale
+        else:
+            price = product.price_retail
 
         item_total = round(qty * price, 2)
         order_total += item_total
@@ -180,7 +184,7 @@ async def create_order(user, cart_items: list, delivery_info: dict) -> Order:
         ],
     )
     await order.insert()
-
+    push_order_to_1c.delay(str(order.id))
     logger.info(
         "Заказ создан",
         order_number=order_number,
@@ -188,7 +192,6 @@ async def create_order(user, cart_items: list, delivery_info: dict) -> Order:
         total=total,
         items_count=len(order_items),
     )
-
     # ── Шаг 4: Резервирование остатков ────────────────────────
     try:
         await stock_service.reserve_stock(order_items)

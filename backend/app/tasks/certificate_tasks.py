@@ -8,7 +8,6 @@ UC-26: Ежедневная проверка сроков сертификато
 
 import asyncio
 from datetime import UTC, date, timedelta
-from typing import Any
 
 import structlog
 
@@ -47,9 +46,9 @@ def check_expiring_certificates(self) -> dict:
     """
 
     async def _execute() -> dict:
-        from app.database import connect_to_mongo
+        from app.database import init_db
 
-        await connect_to_mongo()
+        await init_db()
 
         from app.models.certificate import Certificate, CertificateStatus
         from app.models.product import Product
@@ -57,7 +56,7 @@ def check_expiring_certificates(self) -> dict:
         today = date.today()
         warning_threshold = today + timedelta(days=30)
 
-        result: dict[str, Any] = {
+        result: dict[str, object] = {
             "status": "ok",
             "expiring_soon": [],
             "expired": [],
@@ -183,7 +182,7 @@ def check_expiring_certificates(self) -> dict:
         return dict(_run_async(_execute()))
     except Exception as exc:
         logger.error("Ошибка задачи check_expiring_certificates", error=str(exc))
-        return {"status": "error", "error": str(exc)}
+        raise self.retry(exc=exc)
 
 
 async def _send_admin_certificate_notification(

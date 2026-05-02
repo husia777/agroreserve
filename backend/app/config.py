@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     ODATA_1C_URL: str = ""
     ODATA_1C_LOGIN: str = ""
     ODATA_1C_PASSWORD: str = ""
+    ODATA_1C_ORGANIZATION_REF: str = ""
+    ODATA_1C_SKLAD_REF: str = ""
+    ODATA_1C_VAT_REF: str = ""
+    ODATA_1C_CURRENCY_REF: str = ""
+    ODATA_1C_SUPPLIER_REF: str = ""
     SYNC_1C_INTERVAL_MINUTES: int = 5
 
     # ── Telegram Bot ──────────────────────────────────────────

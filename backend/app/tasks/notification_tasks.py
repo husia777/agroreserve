@@ -80,13 +80,40 @@ def send_notification_task(self: Task, notification_id: str) -> dict:
 
         elif notification.channel == NotificationChannel.EMAIL:
             if user.email:
-                # TODO (Phase 4): Реализовать email через SMTP
-                logger.info(
-                    "ЗАГЛУШКА: Email уведомление",
+                from app.utils.email_sender import send_email
+
+                # Формируем HTML с кнопкой действия (если есть)
+                action_html = ""
+                if notification.action_url and notification.action_label:
+                    action_html = (
+                        f'<p style="margin-top:24px">'
+                        f'<a href="https://agroreserve.ru{notification.action_url}" '
+                        f'style="background:#16A34A;color:#fff;padding:10px 20px;'
+                        f'text-decoration:none;border-radius:6px;display:inline-block;">'
+                        f"{notification.action_label}</a></p>"
+                    )
+
+                body_html = (
+                    f'<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">'
+                    f'<h2 style="color:#16A34A">{notification.title}</h2>'
+                    f'<div style="white-space:pre-wrap;line-height:1.6;color:#374151">'
+                    f"{notification.message}</div>"
+                    f"{action_html}"
+                    f'<hr style="margin-top:32px;border:none;border-top:1px solid #E5E7EB">'
+                    f'<p style="color:#9CA3AF;font-size:12px">'
+                    f"Агрорезерв — оптовая поставка овощей и фруктов<br>"
+                    f"Это автоматическое уведомление, не отвечайте на него.</p>"
+                    f"</div>"
+                )
+
+                success = send_email(
                     to=user.email,
                     subject=notification.title,
+                    body_text=f"{notification.title}\n\n{notification.message}",
+                    body_html=body_html,
                 )
-                success = True  # Заглушка — считаем успехом
+                if not success:
+                    error_msg = "Ошибка SMTP"
             else:
                 error_msg = "Email не указан"
 
@@ -267,4 +294,60 @@ def check_overdue_debts() -> dict:
         return dict(_run_async(_execute()))
     except Exception as e:
         logger.error("Ошибка задачи проверки долгов", error=str(e))
+        return {"status": "error", "error": str(e)}
+
+
+@celery_app.task(
+    name="app.tasks.notification_tasks.check_low_stock",
+    queue="notifications",
+)
+def check_low_stock() -> dict:
+    """
+    Ежедневная проверка низких остатков.
+    Находит все активные товары, у которых stock_qty <= min_stock_qty,
+    и шлёт уведомление администратору (система + email).
+    """
+
+    async def _execute():
+        from app.models.product import Product
+
+        # Берём только активные товары с заданным min_stock_qty > 0
+        products = await Product.find(
+            {
+                "is_active": True,
+                "min_stock_qty": {"$gt": 0},
+                "$expr": {"$lte": ["$stock_qty", "$min_stock_qty"]},
+            }
+        ).to_list()
+
+        if not products:
+            logger.info("Проверка низких остатков: всё в норме")
+            return {"status": "ok", "low_count": 0}
+
+        # Формируем список для уведомления
+        products_data = [
+            {
+                "name": p.name,
+                "stock_qty": p.stock_qty,
+                "min_stock_qty": p.min_stock_qty,
+                "unit": p.unit,
+            }
+            for p in products
+        ]
+
+        from app.services.notification_service import notify_admin_low_stock
+
+        await notify_admin_low_stock(products_data)
+
+        logger.info(
+            "Проверка низких остатков: отправлено уведомление",
+            low_count=len(products),
+            products=[p["name"] for p in products_data[:5]],
+        )
+        return {"status": "ok", "low_count": len(products)}
+
+    try:
+        return dict(_run_async(_execute()))
+    except Exception as e:
+        logger.error("Ошибка проверки низких остатков", error=str(e))
         return {"status": "error", "error": str(e)}

@@ -143,7 +143,7 @@ def verify_token(token: str, expected_type: str = "access") -> dict:
 
     except JWTError as e:
         logger.warning("Ошибка валидации JWT", error=str(e))
-        raise credentials_exception from e
+        raise credentials_exception
 
 
 # ── FastAPI Dependencies ──────────────────────────────────────

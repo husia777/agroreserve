@@ -284,16 +284,16 @@ async def get_products_for_labels(
     for p in products:
         cert_number, cert_type = await _get_certificate_info(p)
         result.append(
-            {
-                "id": str(p.id),
-                "name": p.name,
-                "origin_country": p.origin_country,
-                "storage_conditions": p.storage_conditions,
-                "shelf_life_days": p.shelf_life_days,
-                "unit": p.unit.value if p.unit else "kg",
-                "certificate_number": cert_number,
-                "certificate_type": cert_type,
-            }
+            ProductForLabel(
+                id=str(p.id),
+                name=p.name,
+                origin_country=p.origin_country,
+                storage_conditions=p.storage_conditions,
+                shelf_life_days=p.shelf_life_days,
+                unit=p.unit.value if p.unit else "kg",
+                certificate_number=cert_number,
+                certificate_type=cert_type,
+            )
         )
 
     return result

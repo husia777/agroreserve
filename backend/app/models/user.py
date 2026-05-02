@@ -5,11 +5,10 @@
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional
+from typing import Annotated, Optional
 
-from beanie import Document
+from beanie import Document, Indexed
 from pydantic import BaseModel, EmailStr, Field
-from pymongo import IndexModel
 
 
 class UserRole(str, Enum):
@@ -87,8 +86,9 @@ class User(Document):
     """
 
     # ── Контактные данные ────────────────────────────────────
-    phone: str = Field(..., description="Телефон в формате +7XXXXXXXXXX")
-    email: Optional[EmailStr] = Field(None, description="Email адрес")
+    phone: Annotated[str, Indexed(unique=True)] = Field(..., description="Телефон в формате +7XXXXXXXXXX")
+    email: Annotated[Optional[EmailStr], Indexed(unique=True)] = Field(None, description="Email адрес")
+
     name: str = Field(..., description="Полное имя / название организации")
     password_hash: str = Field(..., description="Хэш пароля (bcrypt)")
 
@@ -122,14 +122,7 @@ class User(Document):
 
     # ── UC-265: Пакет документов клиента ──────────────────────
     document_preferences: DocumentPreferences = Field(
-        default_factory=lambda: DocumentPreferences(
-            torg12=True,
-            invoice=True,
-            upd=False,
-            scheta_factura=False,
-            act_sverki=False,
-            realization=False,
-        ),
+        default_factory=lambda: DocumentPreferences(),
         description="Какие документы формировать при отгрузке",
     )
 
@@ -143,13 +136,14 @@ class User(Document):
         description="Дата последнего обновления",
     )
     last_login_at: Optional[datetime] = Field(None, description="Последний вход в систему")
+    external_id_1c: str | None = Field(None, description="GUID контрагента в 1С")
 
     class Settings:
         name = "users"
         # Индексы MongoDB
         indexes = [
-            IndexModel([("phone", 1)], unique=True),
-            IndexModel([("email", 1)], unique=True, sparse=True),
+            [("phone", 1)],
+            [("email", 1)],
             [("role", 1)],
             [("status", 1)],
             [("created_at", -1)],

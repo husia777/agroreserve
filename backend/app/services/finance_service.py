@@ -289,7 +289,7 @@ async def auto_reconcile_payments(payments: list[dict]) -> dict:
         order_number = payment.get("order_number")
         client_id = payment.get("client_id")
         payment_date = payment.get("date")
-        payment.get("description", "")
+        description = payment.get("description", "")
 
         if amount <= 0:
             unmatched.append(

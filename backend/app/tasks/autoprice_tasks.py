@@ -9,7 +9,6 @@ from datetime import UTC
 
 import structlog
 
-from app.database import connect_to_mongo
 from app.tasks.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
@@ -63,7 +62,9 @@ def send_pricelist_telegram(self) -> dict:
     """
 
     async def _execute() -> dict:
-        await connect_to_mongo()
+        from app.database import init_db
+
+        await init_db()
 
         from datetime import datetime
 
@@ -75,9 +76,13 @@ def send_pricelist_telegram(self) -> dict:
         now = datetime.now(UTC)
         date_str = now.strftime("%d.%m.%Y")
 
-        clients_sent = 0
-        clients_failed = 0
-        products_count = 0
+        result = {
+            "status": "ok",
+            "date": date_str,
+            "products_count": 0,
+            "clients_sent": 0,
+            "clients_failed": 0,
+        }
 
         # ── 1. Собираем активные товары ───────────────────────
         products = (
@@ -90,20 +95,14 @@ def send_pricelist_telegram(self) -> dict:
 
         if not products:
             logger.warning("Нет активных товаров для прайс-листа")
-            return {
-                "status": "ok",
-                "date": date_str,
-                "products_count": 0,
-                "clients_sent": 0,
-                "clients_failed": 0,
-            }
+            return result
 
-        products_count = len(products)
+        result["products_count"] = len(products)
 
         # ── 2. Группируем по категориям ───────────────────────
         # Собираем категории
         category_ids = list(
-            {str(p.category_id) if hasattr(p.category_id, "id") else str(p.category_id) for p in products}
+            {str(p.category_id.id) if hasattr(p.category_id, "id") else str(p.category_id) for p in products}
         )
         categories: dict = {}
 
@@ -122,7 +121,7 @@ def send_pricelist_telegram(self) -> dict:
         # Группируем товары по категориям
         grouped: dict = {}
         for product in products:
-            cat_id = str(product.category_id) if hasattr(product.category_id, "id") else str(product.category_id)
+            cat_id = str(product.category_id.id) if hasattr(product.category_id, "id") else str(product.category_id)
             cat_name = categories.get(cat_id, "Прочее")
             if cat_name not in grouped:
                 grouped[cat_name] = []
@@ -195,39 +194,31 @@ def send_pricelist_telegram(self) -> dict:
             try:
                 success = await send_message(client.telegram_chat_id, full_message)
                 if success:
-                    clients_sent += 1
+                    result["clients_sent"] = int(result["clients_sent"]) + 1
                     logger.debug(
                         "Прайс-лист отправлен клиенту",
                         client_id=str(client.id),
                         client_name=client.name,
                     )
                 else:
-                    clients_failed += 1
+                    result["clients_failed"] = int(result["clients_failed"]) + 1
                     logger.warning(
                         "Не удалось отправить прайс-лист клиенту",
                         client_id=str(client.id),
                     )
             except Exception as e:
-                clients_failed += 1
+                result["clients_failed"] = int(result["clients_failed"]) + 1
                 logger.error(
                     "Ошибка отправки прайс-листа клиенту",
                     client_id=str(client.id),
                     error=str(e),
                 )
 
-        result = {
-            "status": "ok",
-            "date": date_str,
-            "products_count": products_count,
-            "clients_sent": clients_sent,
-            "clients_failed": clients_failed,
-        }
-
         logger.info(
             "Рассылка прайс-листа завершена",
-            products_count=products_count,
-            clients_sent=clients_sent,
-            clients_failed=clients_failed,
+            products_count=result["products_count"],
+            clients_sent=result["clients_sent"],
+            clients_failed=result["clients_failed"],
         )
 
         return result
@@ -236,4 +227,4 @@ def send_pricelist_telegram(self) -> dict:
         return dict(_run_async(_execute()))
     except Exception as exc:
         logger.error("Ошибка задачи send_pricelist_telegram", error=str(exc))
-        return {"status": "error", "error": str(exc)}
+        raise self.retry(exc=exc)

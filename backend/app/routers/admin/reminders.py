@@ -53,8 +53,8 @@ class ReminderCreate(BaseModel):
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=UTC)
             return dt
-        except ValueError as e:
-            raise ValueError(f"Некорректный формат даты: {self.remind_at}") from e
+        except ValueError:
+            raise ValueError(f"Некорректный формат даты: {self.remind_at}")
 
 
 class ReminderUpdate(BaseModel):
@@ -90,7 +90,7 @@ def _reminder_to_dict(reminder: Reminder) -> dict:
     is_overdue = not reminder.is_completed and remind_at < now
 
     return {
-        "id": str(reminder.id),  # Фронтенд: _id
+        "_id": str(reminder.id),  # Фронтенд: _id
         "title": reminder.title,
         "description": reminder.description,
         "remind_at": remind_at.isoformat(),
@@ -124,7 +124,7 @@ async def get_upcoming_reminders(
             Reminder.remind_at >= now,
             Reminder.remind_at <= threshold,
         )
-        .sort("-Reminder.remind_at")
+        .sort(Reminder.remind_at)
         .to_list()
     )
 
@@ -158,7 +158,7 @@ async def get_reminders(
 
     total = await Reminder.find(query_filter).count()
     reminders = (
-        await Reminder.find(query_filter).sort("-Reminder.remind_at").skip((page - 1) * limit).limit(limit).to_list()
+        await Reminder.find(query_filter).sort(Reminder.remind_at).skip((page - 1) * limit).limit(limit).to_list()
     )
 
     return {
@@ -187,7 +187,7 @@ async def create_reminder(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        ) from e
+        )
 
     # Валидация recurrence_rule
     if data.is_recurring and data.recurrence_rule:
@@ -202,11 +202,11 @@ async def create_reminder(
     if data.related_id:
         try:
             related_id = PydanticObjectId(data.related_id)
-        except Exception as e:
+        except Exception:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Некорректный формат related_id",
-            ) from e
+            )
 
     reminder = Reminder(
         title=data.title,
@@ -257,8 +257,8 @@ async def update_reminder(
     """Обновляет данные напоминания."""
     try:
         reminder = await Reminder.get(PydanticObjectId(reminder_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено")
 
     if not reminder:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено")
@@ -271,11 +271,11 @@ async def update_reminder(
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=UTC)
             update_data["remind_at"] = dt
-        except ValueError as e:
+        except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Некорректный формат даты remind_at",
-            ) from e
+            )
 
     if "recurrence_rule" in update_data:
         valid_rules = ["daily", "weekly", "monthly"]
@@ -288,11 +288,11 @@ async def update_reminder(
     if update_data.get("related_id"):
         try:
             update_data["related_id"] = PydanticObjectId(update_data["related_id"])
-        except Exception as e:
+        except Exception:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Некорректный формат related_id",
-            ) from e
+            )
 
     for field, value in update_data.items():
         setattr(reminder, field, value)
@@ -319,8 +319,8 @@ async def complete_reminder(
     """UC-53: Отмечает напоминание как выполненное. Если повторяющееся — создаёт следующее."""
     try:
         reminder = await Reminder.get(PydanticObjectId(reminder_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено")
 
     if not reminder:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено")
@@ -382,8 +382,8 @@ async def delete_reminder(
     """Удаляет напоминание."""
     try:
         reminder = await Reminder.get(PydanticObjectId(reminder_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено")
 
     if not reminder:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Напоминание не найдено")

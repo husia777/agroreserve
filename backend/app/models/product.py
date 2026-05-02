@@ -5,9 +5,9 @@
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Annotated, Optional
 
-from beanie import Document, Link
+from beanie import Document, Indexed, Link
 from pydantic import Field
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ class Category(Document):
 
     # ── Основные поля ─────────────────────────────────────────
     name: str = Field(..., description="Название категории", max_length=100)
-    slug: str = Field(..., description="URL-совместимый slug")
+    slug: Annotated[str, Indexed()] = Field(..., description="URL-совместимый slug")
     icon_url: Optional[str] = Field(None, description="URL иконки категории")
     description: Optional[str] = Field(None, description="Описание категории")
 
@@ -69,7 +69,7 @@ class Product(Document):
 
     # ── Основные данные ───────────────────────────────────────
     name: str = Field(..., description="Название товара", max_length=200)
-    slug: str = Field(..., description="URL slug (автогенерация из имени)")
+    slug: Annotated[str, Indexed()] = Field(..., description="URL slug (автогенерация из имени)")
     category_id: Link[Category] = Field(..., description="Категория товара")
     description: Optional[str] = Field(None, description="Описание товара")
     origin_country: str = Field("Россия", description="Страна происхождения")
@@ -115,6 +115,7 @@ class Product(Document):
     # ── Метаданные ────────────────────────────────────────────
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    external_id_1c: str | None = Field(None, description="GUID номенклатуры в 1С")
 
     class Settings:
         name = "products"

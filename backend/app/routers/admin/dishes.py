@@ -168,8 +168,8 @@ async def get_dish(
     """Детальная информация о блюде."""
     try:
         dish = await Dish.get(PydanticObjectId(dish_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     if not dish:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
@@ -192,15 +192,15 @@ async def update_dish(
     """
     try:
         dish = await Dish.get(PydanticObjectId(dish_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     if not dish:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     # Проверяем уникальность нового имени
     if data.name is not None and data.name != dish.name:
-        existing = await Dish.find_one({"name": data.name, "id": {"$ne": dish.id}})
+        existing = await Dish.find_one({"name": data.name, "_id": {"$ne": dish.id}})
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -265,8 +265,8 @@ async def delete_dish(
     """
     try:
         dish = await Dish.get(PydanticObjectId(dish_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")
 
     if not dish:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блюдо не найдено")

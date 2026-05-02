@@ -100,10 +100,10 @@ def _calculate_next_generation(schedule: str, from_now: Optional[datetime] = Non
             days_ahead += 7
         return now + timedelta(days=days_ahead)
 
-    if schedule == "biweekly":
+    elif schedule == "biweekly":
         return now + timedelta(weeks=2)
 
-    if schedule.startswith("monthly_"):
+    elif schedule.startswith("monthly_"):
         day_num = int(schedule.split("_")[1])
         # Следующий месяц, указанное число
         next_month = now.month + 1 if now.month < 12 else 1
@@ -137,7 +137,7 @@ async def get_my_standing_orders(
     if only_active:
         query["is_active"] = True
 
-    orders = await StandingOrder.find(query).sort("-StandingOrder.created_at").to_list()
+    orders = await StandingOrder.find(query).sort(-StandingOrder.created_at).to_list()
     total = len(orders)
 
     logger.info(
@@ -220,9 +220,6 @@ async def create_standing_order(
         next_generation_at=next_gen,
         note=data.note,
         created_at=datetime.now(UTC),
-        id=None,  # Явно указываем, что ID будет сгенерирован автоматически
-        last_generated_at=None,
-        revision_id=None,
     )
     await standing_order.insert()
 
@@ -252,8 +249,8 @@ async def update_standing_order(
     """
     try:
         so = await StandingOrder.get(PydanticObjectId(order_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
 
     if not so:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
@@ -340,8 +337,8 @@ async def delete_standing_order(
     """
     try:
         so = await StandingOrder.get(PydanticObjectId(order_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
 
     if not so:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
@@ -375,14 +372,12 @@ async def confirm_generated_order(
     Система генерирует черновой заказ перед датой доставки.
     Клиент должен подтвердить его — после чего заказ становится активным.
     """
-    so = None
     try:
         so = await StandingOrder.get(PydanticObjectId(order_id))
     except Exception:
-        logger.warning("Подтверждение заказа из регулярного заказа — заказ не найден", order_id=order_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
 
     if not so:
-        logger.warning("Подтверждение заказа из регулярного заказа — заказ не найден", order_id=order_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Регулярный заказ не найден")
 
     # Проверяем владельца
@@ -464,7 +459,7 @@ async def confirm_generated_order(
             delivery_info=delivery_info,
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Обновляем дату последней генерации и следующей
     so.last_generated_at = datetime.now(UTC)

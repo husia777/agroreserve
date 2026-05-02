@@ -52,7 +52,7 @@ def _to_response(contract: Contract) -> ContractResponse:
         ],
         delivery_schedule=[
             DeliveryScheduleSchema(
-                date=ds.date,
+                date=str(ds.date),
                 items=[
                     ContractItemSchema(
                         product_id=str(i.product_id),
@@ -102,16 +102,16 @@ async def get_contracts(
     if client_id:
         try:
             query["client_id"] = PydanticObjectId(client_id)
-        except Exception as e:
+        except Exception:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Неверный формат client_id",
-            ) from e
+            )
     if contract_type:
         query["contract_type"] = contract_type
 
     total = await Contract.find(query).count()
-    contracts = await Contract.find(query).sort("-Contract.created_at").skip((page - 1) * limit).limit(limit).to_list()
+    contracts = await Contract.find(query).sort(-Contract.created_at).skip((page - 1) * limit).limit(limit).to_list()
 
     return ContractListResponse(
         items=[_to_response(c) for c in contracts],
@@ -195,7 +195,6 @@ async def create_contract(
         notes=data.notes,
         created_at=now,
         updated_at=now,
-        completion_percent=0.0,
     )
     await contract.insert()
 
@@ -224,8 +223,8 @@ async def get_contract(
     """
     try:
         contract = await Contract.get(PydanticObjectId(contract_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
 
     if not contract:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
@@ -248,8 +247,8 @@ async def update_contract(
     """
     try:
         contract = await Contract.get(PydanticObjectId(contract_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
 
     if not contract:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Контракт не найден")
@@ -257,7 +256,7 @@ async def update_contract(
     # Обновляем поля
     if data.contract_number is not None:
         # Проверяем уникальность нового номера
-        existing = await Contract.find_one({"contract_number": data.contract_number, "id": {"$ne": contract.id}})
+        existing = await Contract.find_one({"contract_number": data.contract_number, "_id": {"$ne": contract.id}})
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -369,7 +368,7 @@ async def mark_delivery(
             order_id=data.order_id,
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     logger.info(
         "Поставка отмечена через API",
@@ -401,6 +400,6 @@ async def get_delivery_act(
     try:
         act_data = await generate_delivery_act(contract_id, delivery_index)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return act_data

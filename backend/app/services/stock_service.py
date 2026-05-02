@@ -10,7 +10,7 @@
 """
 
 from datetime import UTC, datetime
-from typing import Optional, cast
+from typing import Optional
 
 import structlog
 
@@ -33,7 +33,7 @@ async def get_next_receipt_number() -> str:
     # Ищем последний приход этого года
     last_receipt = (
         await StockReceipt.find({"receipt_number": {"$regex": f"^{prefix}"}})
-        .sort("-StockReceipt.receipt_number")
+        .sort(-StockReceipt.receipt_number)
         .first_or_none()
     )
 
@@ -109,6 +109,7 @@ async def create_stock_receipt(data: dict, created_by: Optional[str] = None) -> 
         product_id = item_data["product_id"]
         qty = float(item_data.get("quantity", item_data.get("qty", 0)))
         cost_price = float(item_data.get("purchase_price", item_data.get("cost_price", 0)))
+        sell_price = float(item_data.get("sell_price", 0))
         unit = item_data.get("unit", "kg")
 
         # Загружаем товар
@@ -130,6 +131,7 @@ async def create_stock_receipt(data: dict, created_by: Optional[str] = None) -> 
                 qty=qty,
                 unit=unit,
                 cost_price=cost_price,
+                sell_price=sell_price,
                 total=item_total,
             )
         )
@@ -163,11 +165,6 @@ async def create_stock_receipt(data: dict, created_by: Optional[str] = None) -> 
         total=round(total_amount, 2),
         notes=data.get("note", data.get("notes")),
         created_by=created_by,
-        created_at=datetime.now(UTC),
-        id=None,  # Явно указываем, что ID будет сгенерирован автоматически
-        revision_id=None,
-        sync_1c_id=None,
-        synced_to_1c=False,
     )
     await receipt.insert()
 
@@ -332,15 +329,15 @@ async def create_batch(receipt_item: StockReceiptItem, receipt: StockReceipt) ->
         Созданная партия
     """
 
-    from beanie import PydanticObjectId
+    from beanie import PydanticObjectId as PO_ID
 
     from app.models.batch import Batch
 
     batch = Batch(
-        product_id=PydanticObjectId(receipt_item.product_id),
+        product_id=PO_ID(receipt_item.product_id),
         product_name=receipt_item.product_name,
-        receipt_id=cast(PydanticObjectId, receipt.id),
-        supplier_id=PydanticObjectId(receipt.supplier_id) if receipt.supplier_id else None,
+        receipt_id=receipt.id,
+        supplier_id=PO_ID(receipt.supplier_id) if receipt.supplier_id else None,
         supplier_name=receipt.supplier_name,
         qty_initial=receipt_item.qty,
         qty_remaining=receipt_item.qty,
@@ -349,10 +346,6 @@ async def create_batch(receipt_item: StockReceiptItem, receipt: StockReceipt) ->
         received_date=receipt.date,
         is_exhausted=False,
         created_at=datetime.now(UTC),
-        expiry_date=None,  # Можно расширить StockReceiptItem, чтобы принимать дату истечения
-        id=None,  # Явно указываем, что ID будет сгенерирован автоматически
-        revision_id=None,
-        production_date=None,
     )
     await batch.insert()
 
@@ -384,7 +377,7 @@ async def consume_batches_fifo(product_id: str, qty: float) -> list:
     Raises:
         ValueError: Если суммарного остатка в партиях недостаточно
     """
-    from beanie import PydanticObjectId
+    from beanie import PydanticObjectId as PO_ID
 
     from app.models.batch import Batch
 
@@ -392,12 +385,12 @@ async def consume_batches_fifo(product_id: str, qty: float) -> list:
     batches = (
         await Batch.find(
             {
-                "product_id": PydanticObjectId(product_id),
+                "product_id": PO_ID(product_id),
                 "is_exhausted": False,
                 "qty_remaining": {"$gt": 0},
             }
         )
-        .sort("Batch.received_date")
+        .sort(+Batch.received_date)
         .to_list()
     )
 
@@ -469,7 +462,7 @@ async def get_expiring_batches(days: int = 7) -> list:
                 "qty_remaining": {"$gt": 0},
             }
         )
-        .sort("Batch.expiry_date")
+        .sort(+Batch.expiry_date)
         .to_list()
     )
 

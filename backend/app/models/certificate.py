@@ -6,17 +6,16 @@
 from datetime import UTC, datetime
 from datetime import date as DateType
 from enum import Enum
-from typing import Optional
+from typing import Annotated, Optional
 
-from beanie import Document
+from beanie import Document, Indexed
 from pydantic import Field
 
 
 class CertificateType(str, Enum):
     """Типы сертификационных документов."""
 
-    # Декларация ТР ТС (технический регламент)
-    DECLARATION_TR_TS = "declaration_tr_ts"
+    DECLARATION_TR_TS = "declaration_tr_ts"  # Декларация ТР ТС (технический регламент)
     CERTIFICATE = "certificate"  # Сертификат соответствия
     VET_CERTIFICATE = "vet_certificate"  # Ветеринарный сертификат
     QUALITY_CERTIFICATE = "quality_certificate"  # Удостоверение качества
@@ -40,7 +39,7 @@ class Certificate(Document):
     """
 
     # ── Номер и тип ───────────────────────────────────────────
-    number: str = Field(..., description="Номер сертификата / декларации")
+    number: Annotated[str, Indexed()] = Field(..., description="Номер сертификата / декларации")
     cert_type: CertificateType = Field(..., description="Тип сертификационного документа")
 
     # ── Даты ──────────────────────────────────────────────────

@@ -8,9 +8,9 @@
 """
 
 from datetime import UTC, datetime
-from typing import Optional
+from typing import Annotated, Optional
 
-from beanie import Document
+from beanie import Document, Indexed
 from pydantic import EmailStr, Field
 
 
@@ -23,7 +23,7 @@ class StockWaitlist(Document):
     """
 
     # ── Товар ─────────────────────────────────────────────────
-    product_id: str = Field(..., description="ID товара (Product)")
+    product_id: Annotated[str, Indexed(), Field(..., description="ID товара (Product)")] = Field(...)
     product_name: str = Field(..., max_length=200, description="Название товара (для удобства в уведомлении)")
 
     # ── Подписчик ─────────────────────────────────────────────

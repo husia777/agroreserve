@@ -11,16 +11,14 @@ import structlog
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.models.order import Order, OrderStatus, PaymentStatus
+from app.models.order import Order, OrderStatus
 from app.schemas.order import (
     ActualQtyUpdate,
-    OrderDocumentResponse,
     OrderItemResponse,
     OrderListItem,
     OrderListResponse,
     OrderResponse,
     OrderStatusUpdate,
-    StatusHistoryResponse,
 )
 from app.utils.security import require_admin
 
@@ -31,7 +29,7 @@ router = APIRouter(prefix="/api/v1/admin/orders", tags=["Админ: Заказ�
 
 def _order_to_response(order: Order) -> OrderResponse:
     """Конвертирует Order в ответ API."""
-    client_id_str = str(order.client_id) if hasattr(order.client_id, "id") else str(order.client_id)
+    client_id_str = str(order.client_id.id) if hasattr(order.client_id, "id") else str(order.client_id)
 
     return OrderResponse(
         id=str(order.id),
@@ -65,14 +63,17 @@ def _order_to_response(order: Order) -> OrderResponse:
         payment_status=order.payment_status.value if hasattr(order.payment_status, "value") else order.payment_status,
         paid_amount=order.paid_amount,
         note=order.note,
-        documents=[OrderDocumentResponse(doc_type=d.doc_type, url=d.url, doc_id=d.doc_id) for d in order.documents],
+        documents=[
+            {"doc_type": d.doc_type, "url": d.url, "doc_id": d.doc_id}  # type: ignore[list-item]
+            for d in order.documents
+        ],
         status_history=[
-            StatusHistoryResponse(
-                status=h.status.value if hasattr(h.status, "value") else h.status,
-                timestamp=h.timestamp.isoformat(),
-                by=h.by,
-                comment=h.comment,
-            )
+            {  # type: ignore[list-item]
+                "status": h.status.value if hasattr(h.status, "value") else h.status,
+                "timestamp": h.timestamp.isoformat(),
+                "by": h.by,
+                "comment": h.comment,
+            }
             for h in order.status_history
         ],
         created_at=order.created_at.isoformat(),
@@ -119,6 +120,7 @@ async def get_all_orders(
         query_filter["delivery_priority"] = priority
 
     # Определяем сортировку
+    sort_field = Order.created_at
     sort_asc = True
     if sort.startswith("-"):
         sort_asc = False
@@ -130,16 +132,17 @@ async def get_all_orders(
     query = Order.find(query_filter)
 
     if sort_field_name == "created_at":
-        query = query.sort("Order.created_at" if not sort_asc else "-Order.created_at")
+        query = query.sort(-Order.created_at if not sort_asc else Order.created_at)
     elif sort_field_name == "delivery_date":
-        query = query.sort("Order.delivery_date" if not sort_asc else "-Order.delivery_date")
+        query = query.sort(-Order.delivery_date if not sort_asc else Order.delivery_date)
     else:
-        query = query.sort("Order.created_at")
+        query = query.sort(-Order.created_at)
+
     orders = await query.skip((page - 1) * limit).limit(limit).to_list()
 
     items = [
         OrderListItem(
-            id=str(o.id),
+            _id=str(o.id),
             order_number=o.order_number,
             client_name=o.client_name,
             status=o.status.value,
@@ -174,8 +177,8 @@ async def get_order(
     """Детальная информация о заказе (для администратора)."""
     try:
         order = await Order.get(PydanticObjectId(order_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
@@ -217,7 +220,7 @@ async def update_order_status(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        ) from e
+        )
 
     logger.info(
         "Статус заказа изменён администратором",
@@ -247,8 +250,8 @@ async def update_actual_qty(
     """
     try:
         order = await Order.get(PydanticObjectId(order_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
@@ -267,7 +270,7 @@ async def update_actual_qty(
     try:
         order = await update_actual_quantities(order_id, data.items)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     logger.info(
         "Фактические количества обновлены",
@@ -295,8 +298,8 @@ async def confirm_payment(
 
     try:
         order = await Order.get(PydanticObjectId(order_id))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден") from e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
 
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заказ не найден")
@@ -336,13 +339,13 @@ async def confirm_order_payment(
 
     try:
         order = await Order.get(PydanticObjectId(order_id))
-    except Exception as e:
-        raise HTTPException(status_code=404, detail="Заказ не найден") from e
+    except Exception:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
 
     if not order:
         raise HTTPException(status_code=404, detail="Заказ не найден")
 
-    order.payment_status = PaymentStatus.PAID
+    order.payment_status = "paid"
     order.paid_at = datetime.now(UTC)
 
     # Добавляем в историю статусов
@@ -351,7 +354,7 @@ async def confirm_order_payment(
     order.status_history.append(
         StatusHistoryEntry(
             status=OrderStatus.CONFIRMED,  # payment_confirmed maps to confirmed
-            by=str(admin.id),
+            changed_by=str(admin.id),
             comment="Оплата подтверждена администратором",
             timestamp=datetime.now(UTC),
         )
@@ -374,7 +377,7 @@ async def confirm_order_payment(
 
         await notify_client_status_change(order, "payment_confirmed")
     except Exception:
-        logger.error("Ошибка при отправке уведомления о подтверждении оплаты", order_id=order.id)
+        pass  # Не блокируем при ошибке уведомления
 
     return {
         "success": True,

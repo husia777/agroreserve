@@ -54,8 +54,8 @@ async def get_events(year: int, month: int) -> list[dict]:
     month_end = date(year, month, last_day)
 
     # Немного захватываем окрестности для удобства (±3 дня)
-    month_start - timedelta(days=3)
-    month_end + timedelta(days=3)
+    range_start = month_start - timedelta(days=3)
+    range_end = month_end + timedelta(days=3)
 
     events: list[dict] = []
 

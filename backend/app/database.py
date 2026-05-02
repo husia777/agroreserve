@@ -109,7 +109,7 @@ async def connect_to_mongo() -> None:
     # Инициализируем Beanie со всеми документами
     await init_beanie(
         database=_database,
-        document_models=document_models,  # type: ignore[arg-type]
+        document_models=document_models,
     )
 
     logger.info(
